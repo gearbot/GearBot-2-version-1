@@ -1,2 +1,2 @@
-# GearBot-2.0
-where gearbot meets ferris
+# GearBot 2
+Where GearBot meets Ferris
