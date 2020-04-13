@@ -1,7 +1,7 @@
 use std::error;
 use std::sync::Arc;
 
-use log::info;
+use log::{info, warn};
 use tokio::stream::StreamExt;
 use twilight::cache::InMemoryCache;
 use twilight::cache::twilight_cache_inmemory::config::{EventType as CacheEventType, InMemoryConfigBuilder};
@@ -9,21 +9,21 @@ use twilight::command_parser::{CommandParserConfig, Parser};
 use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::gateway::cluster::config::ShardScheme;
 use twilight::gateway::cluster::Event;
-use twilight::http::{Client as HttpClient, Client};
+use twilight::http::{Client as HttpClient};
 use twilight::model::gateway::GatewayIntents;
-use twilight::model::id::WebhookId;
 
-use crate::{COMMAND_LIST, CommandResult, Error, gearbot_info};
+use crate::{COMMAND_LIST, Error, gearbot_info, gearbot_error};
 use crate::core::{BotConfig, Context};
 use crate::gears::basic;
 
+// In the future, this will need to be a RwLock when there is a database, etc
 pub struct GearBot<'a> {
     config: BotConfig,
     context: Arc<Context<'a>>,
 }
 
 impl GearBot<'_> {
-    pub async fn run(config: BotConfig, http: Client) -> Result<(), Box<dyn error::Error + Send + Sync>> {
+    pub async fn run(config: BotConfig, http: HttpClient) -> Result<(), Box<dyn error::Error + Send + Sync>> {
         // gearbot_info!("GearBot startup initiated!");
         let sharding_scheme = ShardScheme::Auto;
 
@@ -56,7 +56,7 @@ impl GearBot<'_> {
 
         let cache = InMemoryCache::from(cache_config);
 
-//TODO: autogen and move to own section
+        //TODO: autogen and move to own section
         let cmd_parser = {
             let mut commands_config = CommandParserConfig::new();
             commands_config.add_prefix("?");
@@ -65,7 +65,6 @@ impl GearBot<'_> {
             }
             Parser::new(commands_config)
         };
-
 
         gearbot_info!("Cluster going online!");
         let cluster = Cluster::new(cluster_config);
@@ -80,17 +79,16 @@ impl GearBot<'_> {
 
         let mut bot_events = context.cluster.events().await;
         while let Some(event) = bot_events.next().await {
-            context.cache.update(&event.1).await;
+            println!("Found an Event: {:?}", event);
+            context.cache.update(&event.1).await?;
 
-
-            tokio::spawn( handle_event(event, context.clone()) );
+            if let Err(e) = tokio::spawn(handle_event(event, context.clone())).await {
+                gearbot_error!("{}", e);
+            }
         }
-
 
         Ok(())
     }
-
-
 }
 
 // TODO: Fix the silly default error handling
@@ -107,6 +105,20 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), 
     // Since we handled anything with a id we care about, we can make the
     // next match simpler.
     let event = event.1;
+    // Handle all the Gateway events
+    match &event {
+        Event::GatewayHello(u) => info!("Registered with gateway {}", u),
+        Event::GatewayInvalidateSession(recon) => {
+            if *recon {
+                warn!("The gateway has invalidated our session, but it is reconnectable!");
+            } else {
+                return Err(Error::InvalidSession)
+            }
+        }
+        Event::GatewayReconnect => info!("We reconnected to the gateway!"),
+        _ => {},
+    }
+
     match event {
         Event::MessageCreate(msg) => {
             info!("Received a message from {}, saying {}", msg.author.name, msg.content);
@@ -116,12 +128,11 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), 
                     "ping" => basic::ping(&ctx, &msg).await?,
                     "about" => basic::about(&ctx, &msg).await?,
                     "echo" => basic::echo(&ctx, &msg, args).await?,
-                    _ => Ok(())?
+                    _ => ()
                 }
             }
-            Ok(())?
         }
-        _ => Ok(())?
+        _ => ()
     }
 
     Ok(())

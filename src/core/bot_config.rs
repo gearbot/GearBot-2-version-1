@@ -1,6 +1,6 @@
-use std::fs;
-
 use serde::Deserialize;
+use std::fs;
+use crate::Error;
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {
@@ -20,16 +20,11 @@ pub struct Logging {
 }
 
 impl BotConfig {
-    pub fn new(filename: &str) -> Result<Self, String> {
-        match fs::read_to_string(filename) {
-            Err(_e) => Err(String::from("Failed to open config file")),
-            Ok(content) => {
-                match toml::from_str(content.as_str()) {
-                    Err(e) => Err(e.to_string()),
-                    Ok(c) => Ok(c)
-                }
-            }
+    pub fn new(filename: &str) -> Result<Self, Error> {
+        let config_file = fs::read_to_string(filename).map_err(|_| Error::NoConfig)?;
+        match toml::from_str(&config_file) {
+            Err(_) => Err(Error::InvalidConfig),
+            Ok(c) => Ok(c)
         }
-
     }
 }

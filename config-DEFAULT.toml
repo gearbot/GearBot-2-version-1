@@ -1,0 +1,6 @@
+[tokens]
+discord = ""
+
+[logging]
+important_logs = "https://canary.discordapp.com/api/webhooks/id/token"
+info_logs = "https://canary.discordapp.com/api/webhooks/id/token"

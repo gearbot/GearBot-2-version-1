@@ -13,4 +13,6 @@ logconfig.toml
 # ingore logs
 logs
 
+# Ignore IDE specific configs
 .idea
+.vscode
