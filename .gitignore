@@ -7,5 +7,10 @@
 
 # Config and tokens
 .env
+config.toml
+logconfig.toml
+
+# ingore logs
+logs
 
 .idea

@@ -9,9 +9,11 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 chrono = "0.4"
-dotenv = "0.15"
 git-version = "0.3"
-log = "0.4"
-pretty_env_logger = "0.4"
 tokio = "0.2"
 twilight = { git = "https://github.com/twilight-rs/twilight.git" }
+toml = "0.5.6"
+serde = { version = "1.0", features = ["derive"] }
+flexi_logger = {version = "0.15.2", features = ["specfile", "ziplogs"] }
+log = "0.4"
+once_cell = "1.3.1"
