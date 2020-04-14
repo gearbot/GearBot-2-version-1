@@ -606,9 +606,9 @@ checksum = "b294d6fa9ee409a054354afc4352b0b9ef7ca222c69b8812cbea9e7d2bf3783f"
 
 [[package]]
 name = "libc"
-version = "0.2.68"
+version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dea0c0405123bba743ee3f91f49b1c7cfb684eef0da0a50110f758ccf24cdff0"
+checksum = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
 
 [[package]]
 name = "libz-sys"
@@ -1386,8 +1386,9 @@ dependencies = [
 [[package]]
 name = "twilight"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight.git#b99f027af68473cd5e6e3ad6f2c7f17efbc883c7"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
 dependencies = [
+ "twilight-builders",
  "twilight-cache",
  "twilight-command-parser",
  "twilight-gateway",
@@ -1396,9 +1397,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "twilight-builders"
+version = "0.1.0"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
+dependencies = [
+ "twilight-model",
+]
+
+[[package]]
 name = "twilight-cache"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight.git#b99f027af68473cd5e6e3ad6f2c7f17efbc883c7"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
 dependencies = [
  "twilight-cache-inmemory",
  "twilight-cache-trait",
@@ -1407,7 +1416,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-inmemory"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight.git#b99f027af68473cd5e6e3ad6f2c7f17efbc883c7"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -1421,7 +1430,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-trait"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight.git#b99f027af68473cd5e6e3ad6f2c7f17efbc883c7"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
 dependencies = [
  "async-trait",
  "twilight-model",
@@ -1430,7 +1439,7 @@ dependencies = [
 [[package]]
 name = "twilight-command-parser"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight.git#b99f027af68473cd5e6e3ad6f2c7f17efbc883c7"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
 dependencies = [
  "unicase",
 ]
@@ -1438,7 +1447,7 @@ dependencies = [
 [[package]]
 name = "twilight-gateway"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight.git#b99f027af68473cd5e6e3ad6f2c7f17efbc883c7"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -1458,7 +1467,7 @@ dependencies = [
 [[package]]
 name = "twilight-http"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight.git#b99f027af68473cd5e6e3ad6f2c7f17efbc883c7"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
 dependencies = [
  "futures",
  "log",
@@ -1474,7 +1483,7 @@ dependencies = [
 [[package]]
 name = "twilight-model"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight.git#b99f027af68473cd5e6e3ad6f2c7f17efbc883c7"
+source = "git+https://github.com/twilight-rs/twilight.git#1742d6881497a388226ac03715f73190c5390004"
 dependencies = [
  "bitflags",
  "serde",

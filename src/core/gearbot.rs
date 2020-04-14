@@ -16,7 +16,6 @@ use crate::{COMMAND_LIST, Error, gearbot_info, gearbot_error};
 use crate::core::{BotConfig, Context};
 use crate::gears::basic;
 
-// In the future, this will need to be a RwLock when there is a database, etc
 pub struct GearBot<'a> {
     config: BotConfig,
     context: Arc<Context<'a>>,
@@ -77,9 +76,10 @@ impl GearBot<'_> {
             http,
         ));
 
+        // TODO: Look into splitting this into two streams: 
+        // One for user messages, and the other for internal bot things
         let mut bot_events = context.cluster.events().await;
         while let Some(event) = bot_events.next().await {
-            println!("Found an Event: {:?}", event);
             context.cache.update(&event.1).await?;
 
             if let Err(e) = tokio::spawn(handle_event(event, context.clone())).await {
@@ -93,7 +93,7 @@ impl GearBot<'_> {
 
 // TODO: Fix the silly default error handling
 async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), Error> {
-    // Process anything that uses the event ID that we care about
+    // Process anything that uses the event ID that we care about, aka shard events
     match &event {
         (id, Event::ShardConnected(_)) => gearbot_info!("Shard {} has connected", id),
         (id, Event::ShardDisconnected(_)) => gearbot_info!("Shard {} has disconnected", id),
@@ -105,6 +105,15 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), 
     // Since we handled anything with a id we care about, we can make the
     // next match simpler.
     let event = event.1;
+    // Bot stat handling "hooks"
+    match &event {
+        Event::Ready(ready) => gearbot_info!("Connected to the gatway as {}", ready.user.name),
+        Event::MessageCreate(msg) => ctx.stats.new_message(&ctx, msg).await,
+        Event::GuildCreate(_) => ctx.stats.new_guild().await,
+        Event::GuildDelete(_) => ctx.stats.left_guild().await,
+        _ => {}
+    }
+
     // Handle all the Gateway events
     match &event {
         Event::GatewayHello(u) => info!("Registered with gateway {}", u),
@@ -119,8 +128,9 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), 
         _ => {},
     }
 
+    // Handle commands and other user actions that require some form of processing
     match event {
-        Event::MessageCreate(msg) => {
+        Event::MessageCreate(msg) if !msg.author.bot => {
             info!("Received a message from {}, saying {}", msg.author.name, msg.content);
             if let Some(command) = ctx.command_parser.parse(&msg.content) {
                 let args = command.arguments.as_str();
@@ -130,6 +140,9 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), 
                     "echo" => basic::echo(&ctx, &msg, args).await?,
                     _ => ()
                 }
+
+                // TODO: Recognize custom commands.
+                ctx.stats.command_used(false).await
             }
         }
         _ => ()

@@ -64,8 +64,6 @@ async fn main() -> Result<(), Error> {
     // Read config file
     let config = BotConfig::new("config.toml")?;
 
-    println!("{:?}", config);
-
     let http = HttpClient::new(&config.tokens.discord);
 
     // Initialize logger
