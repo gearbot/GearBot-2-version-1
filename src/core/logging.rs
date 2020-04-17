@@ -5,6 +5,7 @@ use flexi_logger::writers::LogWriter;
 use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
 use tokio;
+use twilight::builders::embed::EmbedBuilder;
 use twilight::http::Client as HttpClient;
 use twilight::model::channel::embed::{Embed, EmbedFooter};
 
@@ -18,31 +19,22 @@ pub fn initialize(http: HttpClient, config: &BotConfig) -> Result<(), Error> {
     // TODO: validate webhook by doing a get to it
     // If invalid, `return Err(Error::InvalidLoggingWebhook(url))
 
-    let gearbot_important = Box::new(
-        WebhookLogger { 
-            http: http.clone(), 
-            url: config.logging.important_logs.to_owned()
-        }
-    );
+    let gearbot_important = Box::new(WebhookLogger { http: http.clone(), url: config.logging.important_logs.to_owned() });
 
-    let gearbot_info = Box::new(
-        WebhookLogger { 
-            http, 
-            url: config.logging.info_logs.to_owned() 
-        }
-    );
+    let gearbot_info = Box::new(WebhookLogger { http, url: config.logging.info_logs.to_owned() });
 
-    let log_init_status = LOGGER_HANDLE.set(Logger::with_str("info")
-        .duplicate_to_stderr(Duplicate::Info)
-        .log_to_file()
-        .directory("logs")
-        .format(opt_format)
-        .o_timestamp(true)
-        .rotate(Criterion::Age(Age::Day), Naming::Timestamps, Cleanup::KeepLogAndZipFiles(10, 30))
-        .add_writer("gearbot_important", gearbot_important)
-        .add_writer("gearbot_info", gearbot_info)
-        .start_with_specfile("logconfig.toml")
-        .map_err(|_| Error::NoLoggingSpec)?
+    let log_init_status = LOGGER_HANDLE.set(
+        Logger::with_str("info")
+            .duplicate_to_stderr(Duplicate::Info)
+            .log_to_file()
+            .directory("logs")
+            .format(opt_format)
+            .o_timestamp(true)
+            .rotate(Criterion::Age(Age::Day), Naming::Timestamps, Cleanup::KeepLogAndZipFiles(10, 30))
+            .add_writer("gearbot_important", gearbot_important)
+            .add_writer("gearbot_info", gearbot_info)
+            .start_with_specfile("logconfig.toml")
+            .map_err(|_| Error::NoLoggingSpec)?,
     );
 
     if log_init_status.is_err() {
@@ -59,33 +51,19 @@ struct WebhookLogger {
 
 impl LogWriter for WebhookLogger {
     fn write(&self, now: &mut DeferredNow, record: &Record) -> Result<(), io::Error> {
-        let e = Embed {
-            author: None,
-            color: Some(0x0043FF),
-            description: Some(record.args().to_string()),
-            fields: vec![],
-            footer: Some(EmbedFooter {text: record.level().to_string(), icon_url: Some(get_icon(record.level())), proxy_icon_url: None}),
-            image: None,
-            kind: String::from("rich"),
-            provider: None,
-            thumbnail: None,
-            timestamp: Some(now.now().naive_utc().to_string()),
-            title: None,
-            url: None,
-            video: None,
-        };
+        let embed_builder = EmbedBuilder::new().color(0x0043FF).description(record.args().to_string()).timestamp(now.now().naive_utc().to_string()).footer(record.level().to_string()).icon_url(get_icon(record.level())).commit();
 
         let url = self.url.to_owned();
         let http = self.http.clone();
-        let embeds = vec![e];
-        tokio::spawn(async move {
-           send_webhook(http, &url, embeds).await
-        });
+        let embeds = vec![embed_builder.build()];
+        tokio::spawn(async move { send_webhook(http, &url, embeds).await });
 
         Ok(())
     }
 
-    fn flush(&self) -> Result<(), io::Error> { Ok(()) }
+    fn flush(&self) -> Result<(), io::Error> {
+        Ok(())
+    }
 
     fn max_log_level(&self) -> LevelFilter {
         LevelFilter::Info
@@ -93,12 +71,7 @@ impl LogWriter for WebhookLogger {
 }
 
 async fn send_webhook(http: HttpClient, url: &str, embeds: Vec<Embed>) -> Result<(), Error> {
-    http
-        .execute_webhook_from_url(url)?
-        .embeds(embeds)
-        .await
-        .map_err(Error::TwilightError)
-        .map(|_| ())
+    http.execute_webhook_from_url(url)?.embeds(embeds).await.map_err(Error::TwilightError).map(|_| ())
 }
 
 fn get_icon(level: Level) -> String {

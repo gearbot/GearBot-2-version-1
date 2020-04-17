@@ -1,6 +1,6 @@
 use std::{error, fmt, io};
 
-use twilight::{http::Client as HttpClient, http};
+use twilight::{http, http::Client as HttpClient};
 
 use crate::core::BotConfig;
 use crate::core::GearBot;
@@ -18,7 +18,7 @@ pub enum Error {
     InvalidLoggingWebhook(String),
     NoLoggingSpec,
     IoError(io::Error),
-    TwilightError(http::Error)
+    TwilightError(http::Error),
 }
 
 impl error::Error for Error {}
@@ -33,8 +33,7 @@ impl fmt::Display for Error {
             Error::InvalidLoggingWebhook(wurl) => write!(f, "The webhook URL {} was invalid", wurl),
             Error::NoLoggingSpec => write!(f, "The logging configuration couldn't be found!"),
             Error::IoError(e) => write!(f, "An IO error occured during a task: {}", e),
-            Error::TwilightError(e) => write!(f, "An error occured making a Discord request: {}", e),
-            // For errors that actually happen during runtime, we can have the logging macros here too
+            Error::TwilightError(e) => write!(f, "An error occured making a Discord request: {}", e), // For errors that actually happen during runtime, we can have the logging macros here too
         }
     }
 }
@@ -53,11 +52,7 @@ impl From<http::Error> for Error {
 
 pub type CommandResult = Result<(), Error>;
 
-pub const COMMAND_LIST: [&str; 3] = [
-    "about",
-    "ping",
-    "echo",
-];
+pub const COMMAND_LIST: [&str; 3] = ["about", "ping", "echo"];
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -71,7 +66,7 @@ async fn main() -> Result<(), Error> {
     // and the rate limits on that are completely separate from all other rate limits
     if let Err(e) = logging::initialize(http.clone(), &config) {
         gearbot_error!("{}", e);
-        return Err(e)
+        return Err(e);
     }
 
     gearbot_important!("Starting Gearbot. Hello there, Ferris!");
@@ -81,7 +76,6 @@ async fn main() -> Result<(), Error> {
     if let Err(e) = GearBot::run(config, http).await {
         gearbot_error!("Failed to start the bot: {}", e)
     }
-
 
     // end of the critical failure zone, everything from here on out should be properly wrapped
     // and handled

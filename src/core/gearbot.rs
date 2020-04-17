@@ -9,12 +9,14 @@ use twilight::command_parser::{CommandParserConfig, Parser};
 use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::gateway::cluster::config::ShardScheme;
 use twilight::gateway::cluster::Event;
-use twilight::http::{Client as HttpClient};
+use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
+use twilight::model::gateway::payload::RequestGuildMembers;
+use twilight::model::id::UserId;
 
-use crate::{COMMAND_LIST, Error, gearbot_info, gearbot_error};
+use crate::{COMMAND_LIST, Error, gearbot_error, gearbot_info};
 use crate::core::{BotConfig, Context};
-use crate::gears::basic;
+use crate::core::handlers::{cache, commands, shard_event_logger};
 
 pub struct GearBot<'a> {
     config: BotConfig,
@@ -26,32 +28,11 @@ impl GearBot<'_> {
         // gearbot_info!("GearBot startup initiated!");
         let sharding_scheme = ShardScheme::Auto;
 
-        let intents = Some(
-            GatewayIntents::GUILDS |
-                GatewayIntents::GUILD_MEMBERS |
-                GatewayIntents::GUILD_BANS |
-                GatewayIntents::GUILD_EMOJIS |
-                GatewayIntents::GUILD_INVITES |
-                GatewayIntents::GUILD_VOICE_STATES |
-                GatewayIntents::GUILD_MESSAGES |
-                GatewayIntents::GUILD_MESSAGE_REACTIONS |
-                GatewayIntents::DIRECT_MESSAGES |
-                GatewayIntents::DIRECT_MESSAGE_REACTIONS
-        );
+        let intents = Some(GatewayIntents::GUILDS | GatewayIntents::GUILD_MEMBERS | GatewayIntents::GUILD_BANS | GatewayIntents::GUILD_EMOJIS | GatewayIntents::GUILD_INVITES | GatewayIntents::GUILD_VOICE_STATES | GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_MESSAGE_REACTIONS | GatewayIntents::DIRECT_MESSAGES | GatewayIntents::DIRECT_MESSAGE_REACTIONS);
 
-        let cluster_config = ClusterConfig::builder(&config.tokens.discord)
-            .shard_scheme(sharding_scheme)
-            .intents(intents)
-            .build();
+        let cluster_config = ClusterConfig::builder(&config.tokens.discord).shard_scheme(sharding_scheme).intents(intents).build();
 
-        let cache_config = InMemoryConfigBuilder::new()
-            .event_types(
-                CacheEventType::MESSAGE_CREATE |
-                    CacheEventType::MESSAGE_DELETE |
-                    CacheEventType::MESSAGE_DELETE_BULK |
-                    CacheEventType::MESSAGE_UPDATE
-            )
-            .build();
+        let cache_config = InMemoryConfigBuilder::new().event_types(CacheEventType::MESSAGE_CREATE | CacheEventType::MESSAGE_DELETE | CacheEventType::MESSAGE_DELETE_BULK | CacheEventType::MESSAGE_UPDATE).build();
 
         let cache = InMemoryCache::from(cache_config);
 
@@ -69,16 +50,13 @@ impl GearBot<'_> {
         let cluster = Cluster::new(cluster_config);
         cluster.up().await?;
 
-        let context = Arc::new(Context::new(
-            cmd_parser,
-            cache,
-            cluster,
-            http,
-        ));
+        let context = Arc::new(Context::new(cmd_parser, cache, cluster, http));
 
-        // TODO: Look into splitting this into two streams: 
+        // TODO: Look into splitting this into two streams:
         // One for user messages, and the other for internal bot things
         let mut bot_events = context.cluster.events().await;
+
+        // context.cluster.command()
         while let Some(event) = bot_events.next().await {
             context.cache.update(&event.1).await?;
 
@@ -94,58 +72,20 @@ impl GearBot<'_> {
 // TODO: Fix the silly default error handling
 async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), Error> {
     // Process anything that uses the event ID that we care about, aka shard events
-    match &event {
-        (id, Event::ShardConnected(_)) => gearbot_info!("Shard {} has connected", id),
-        (id, Event::ShardDisconnected(_)) => gearbot_info!("Shard {} has disconnected", id),
-        (id, Event::ShardReconnecting(_)) => gearbot_info!("Shard {} is attempting to reconnect", id),
-        (id, Event::ShardResuming(_)) => gearbot_info!("Shard {} is resuming itself", id),
-        _ => ()
-    }
+    info!("Got a {:?} event", event.1.event_type());
+    cache::handle_event(event.0.clone(), &event.1, ctx.clone()).await?;
+    shard_event_logger::handle_event(&event.0, &event.1, ctx.clone()).await?;
+    commands::handle_event(&event.0, &event.1, ctx.clone()).await?;
 
     // Since we handled anything with a id we care about, we can make the
     // next match simpler.
     let event = event.1;
     // Bot stat handling "hooks"
     match &event {
-        Event::Ready(ready) => gearbot_info!("Connected to the gatway as {}", ready.user.name),
+
         Event::MessageCreate(msg) => ctx.stats.new_message(&ctx, msg).await,
-        Event::GuildCreate(_) => ctx.stats.new_guild().await,
         Event::GuildDelete(_) => ctx.stats.left_guild().await,
         _ => {}
-    }
-
-    // Handle all the Gateway events
-    match &event {
-        Event::GatewayHello(u) => info!("Registered with gateway {}", u),
-        Event::GatewayInvalidateSession(recon) => {
-            if *recon {
-                warn!("The gateway has invalidated our session, but it is reconnectable!");
-            } else {
-                return Err(Error::InvalidSession)
-            }
-        }
-        Event::GatewayReconnect => info!("We reconnected to the gateway!"),
-        _ => {},
-    }
-
-    // Handle commands and other user actions that require some form of processing
-    match event {
-        Event::MessageCreate(msg) if !msg.author.bot => {
-            info!("Received a message from {}, saying {}", msg.author.name, msg.content);
-            if let Some(command) = ctx.command_parser.parse(&msg.content) {
-                let args = command.arguments.as_str();
-                match command.name {
-                    "ping" => basic::ping(&ctx, &msg).await?,
-                    "about" => basic::about(&ctx, &msg).await?,
-                    "echo" => basic::echo(&ctx, &msg, args).await?,
-                    _ => ()
-                }
-
-                // TODO: Recognize custom commands.
-                ctx.stats.command_used(false).await
-            }
-        }
-        _ => ()
     }
 
     Ok(())

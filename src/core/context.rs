@@ -1,11 +1,13 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use chrono::{DateTime, Utc};
-use git_version::git_version;
 use twilight::cache::InMemoryCache;
 use twilight::command_parser::Parser;
-use twilight::model::channel::Message;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use twilight::model::channel::Message;
+
+use git_version::git_version;
 
 const GIT_VERSION: &str = git_version!();
 
@@ -45,7 +47,7 @@ impl BotStats {
     pub async fn new_guild(&self) {
         self.guilds.fetch_add(1, Ordering::Relaxed);
     }
-    
+
     pub async fn left_guild(&self) {
         self.guilds.fetch_sub(1, Ordering::Relaxed);
     }
@@ -57,7 +59,6 @@ impl BotStats {
             self.custom_commands_ran.fetch_add(1, Ordering::Relaxed);
         }
     }
-
 }
 
 impl Default for BotStats {
@@ -88,29 +89,18 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(
-        parser: Parser<'a>,
-        cache: InMemoryCache,
-        cluster: Cluster,
-        http: HttpClient,
-    ) -> Self {
-        Context {
-            command_parser: parser,
-            cache,
-            cluster,
-            http,
-            stats: BotStats::default()
-        }
+    pub fn new(parser: Parser<'a>, cache: InMemoryCache, cluster: Cluster, http: HttpClient) -> Self {
+        Context { command_parser: parser, cache, cluster, http, stats: BotStats::default() }
     }
 
     /// Returns if a message was sent by us.
-    /// 
+    ///
     /// Returns None if we couldn't currently get a lock on the cache, but
     /// rarely, if ever should this happen.
     pub async fn is_own(&self, other: &Message) -> Option<bool> {
         // This will always exist when called.
         let bot = self.cache.current_user().await.unwrap();
-            
+
         if let Some(bot) = bot {
             Some(bot.id == other.author.id)
         } else {

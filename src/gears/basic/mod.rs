@@ -1,8 +1,7 @@
-mod about;
 pub use about::about;
-
-mod ping;
+pub use echo::echo;
 pub use ping::ping;
 
+mod about;
+mod ping;
 mod echo;
-pub use echo::echo;

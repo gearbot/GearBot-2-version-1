@@ -1,10 +1,10 @@
 use std::fmt;
 use std::sync::{Arc, atomic::Ordering};
 
-use chrono::{DateTime, Utc, NaiveTime};
+use chrono::{DateTime, NaiveTime, Utc};
 use chrono::Duration;
-use twilight::model::channel::Message;
 use twilight::builders::embed::EmbedBuilder;
+use twilight::model::channel::Message;
 
 use crate::CommandResult;
 use crate::core::Context;
@@ -57,18 +57,17 @@ impl AboutDescription {
         println!("We have been up for: {}", uptime);
 
         let tacos_eaten = {
-            let seconds_running = 3; // uptime.timestamp() as usize;    
-            // Below assumes that every user has been with us since the start. Maybe 
-            // this could be changed
-            // If a person can eat a taco every 5 mins, the following formula applies:
-            
+            let seconds_running = 3; // uptime.timestamp() as usize;
+                                     // Below assumes that every user has been with us since the start. Maybe
+                                     // this could be changed
+                                     // If a person can eat a taco every 5 mins, the following formula applies:
+
             let tacos_per_user = seconds_running / 300; // 300 seconds = 5 minutes
 
             println!("Each user has eaten {} tacos themselves!", tacos_per_user);
-    
+
             tacos_per_user * unique_users
         };
-
 
         AboutDescription {
             uptime: uptime,
@@ -82,14 +81,16 @@ impl AboutDescription {
             users,
             unique_users,
             tacos_eaten,
-            version: stats.version
+            version: stats.version,
         }
     }
 }
 
 impl fmt::Display for AboutDescription {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result { 
-        write!(f, "
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "
             The Gears have been spinning for {}
             I have received {} user messages, {} bot messages ({} were mine)
             Number of times people have grinded my gears: {}
@@ -98,32 +99,42 @@ impl fmt::Display for AboutDescription {
             With a total of {} users ({} unique)
             Together we could of eaten {} tacos in this time
             GearBot version {}
-        ",  self.uptime.format(EMBED_UPTIME_FORMAT), self.user_messages, self.bot_messages, self.my_messages, 
-            self.errors, self.commands_ran, self.custom_commands_ran, self.guilds,
-            self.users,  self.unique_users, self.tacos_eaten, self.version
+        ",
+            self.uptime.format(EMBED_UPTIME_FORMAT),
+            self.user_messages,
+            self.bot_messages,
+            self.my_messages,
+            self.errors,
+            self.commands_ran,
+            self.custom_commands_ran,
+            self.guilds,
+            self.users,
+            self.unique_users,
+            self.tacos_eaten,
+            self.version
         )
     }
 }
 
-
 pub async fn about(ctx: &Arc<Context<'_>>, msg: &Message) -> CommandResult {
     let about_stats = AboutDescription::from(ctx).await;
 
-    let about_embed = {
-        let mut embed = EmbedBuilder::new()
-            .color(0x00cea2)
-            .description(about_stats.to_string())
-            .timestamp(Utc::now().to_rfc3339());
+    let embed = EmbedBuilder::new()
+        .color(0x00cea2)
+        .description(about_stats.to_string())
+        .timestamp(Utc::now().to_rfc3339())
+        .add_field("Support Server", "[Click Here](https://discord.gg/vddW3D9)")
+        .inline()
+        .commit()
+        .add_field("Website", "[Click Here](https://gearbot.rocks)")
+        .inline()
+        .commit()
+        .add_field("GitHub", "[Click Here](https://github.com/gearbot/GearBot)")
+        .inline()
+        .commit()
+        .build();
 
-        embed.add_field("Support Server", "[Click Here](https://discord.gg/vddW3D9)").inline().commit();
-        embed.add_field("Website", "[Click Here](https://gearbot.rocks)").inline().commit();
-        embed.add_field("GitHub", "[Click Here](https://github.com/gearbot/GearBot)").inline().commit();
-        embed.build()
-    }; 
-    
-    ctx.http.create_message(msg.channel_id)
-        .embed(about_embed)
-        .await?;
-    
+    ctx.http.create_message(msg.channel_id).embed(embed).await?;
+
     Ok(())
 }
