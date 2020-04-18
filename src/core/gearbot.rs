@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::error;
 use std::sync::Arc;
 
@@ -26,7 +27,7 @@ pub struct GearBot<'a> {
 impl GearBot<'_> {
     pub async fn run(config: BotConfig, http: HttpClient) -> Result<(), Box<dyn error::Error + Send + Sync>> {
         // gearbot_info!("GearBot startup initiated!");
-        let sharding_scheme = ShardScheme::Auto;
+        let sharding_scheme = ShardScheme::try_from((0..2, 2)).unwrap();
 
         let intents = Some(GatewayIntents::GUILDS | GatewayIntents::GUILD_MEMBERS | GatewayIntents::GUILD_BANS | GatewayIntents::GUILD_EMOJIS | GatewayIntents::GUILD_INVITES | GatewayIntents::GUILD_VOICE_STATES | GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILD_MESSAGE_REACTIONS | GatewayIntents::DIRECT_MESSAGES | GatewayIntents::DIRECT_MESSAGE_REACTIONS);
 
@@ -72,7 +73,7 @@ impl GearBot<'_> {
 // TODO: Fix the silly default error handling
 async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), Error> {
     // Process anything that uses the event ID that we care about, aka shard events
-    info!("Got a {:?} event", event.1.event_type());
+    info!("Got a {:?} event on shard {}", event.1.event_type(), event.0);
     cache::handle_event(event.0.clone(), &event.1, ctx.clone()).await?;
     general::handle_event(&event.0, &event.1, ctx.clone()).await?;
     commands::handle_event(&event.0, &event.1, ctx.clone()).await?;

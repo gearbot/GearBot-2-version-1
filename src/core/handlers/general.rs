@@ -9,13 +9,14 @@ use crate::core::logging;
 
 pub async fn handle_event(shard_id: &u64, event: &Event, ctx: Arc<Context<'_>>) -> Result<(), Error> {
     match &event {
+        Event::ShardConnecting(_) => info!("Shard {} is connecting", shard_id),
         Event::ShardConnected(_) => gearbot_info!("Shard {} has connected", shard_id),
         Event::ShardDisconnected(_) => gearbot_info!("Shard {} has disconnected", shard_id),
         Event::ShardReconnecting(_) => gearbot_info!("Shard {} is attempting to reconnect", shard_id),
         Event::ShardResuming(_) => gearbot_info!("Shard {} is resuming", shard_id),
         Event::Ready(ready) => {
             logging::set_user(ready.user.clone());
-            gearbot_info!("Connected to the gateway!")
+            gearbot_info!("Connected to the gateway on shard {}!", shard_id)
         },
         Event::GatewayInvalidateSession(recon) => {
             if *recon {
