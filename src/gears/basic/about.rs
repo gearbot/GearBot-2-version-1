@@ -1,18 +1,34 @@
 use std::fmt;
-use std::sync::{Arc, atomic::Ordering};
+use std::sync::{atomic::Ordering, Arc};
 
-use chrono::{DateTime, NaiveTime, Utc};
-use chrono::Duration;
+use chrono::Utc;
 use twilight::builders::embed::EmbedBuilder;
 use twilight::model::channel::Message;
 
-use crate::CommandResult;
 use crate::core::Context;
+use crate::CommandResult;
 
-const EMBED_UPTIME_FORMAT: &str = "TODO days, %H hours, %M minutes, %S seconds";
+const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
+
+struct AboutUptime {
+    days: u64,
+    hours: u64,
+    minutes: u64,
+    seconds: u64,
+}
+
+impl fmt::Display for AboutUptime {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} days, {} hours, {} minutes, {} seconds",
+            self.days, self.hours, self.minutes, self.seconds
+        )
+    }
+}
 
 struct AboutDescription {
-    uptime: NaiveTime,
+    uptime: AboutUptime,
     user_messages: usize,
     bot_messages: usize,
     my_messages: usize,
@@ -34,7 +50,7 @@ impl AboutDescription {
             // means that it has no duplicates.
             // TODO: Find a way to access this
             let unique_users = 1_000_000; // ctx.cache.0.members.len();
-            // let mut total_users: usize = 0;
+                                          // let mut total_users: usize = 0;
             let total_users = 1_500_000;
 
             // for guild_id in ctx.cache.0.guilds {
@@ -46,21 +62,30 @@ impl AboutDescription {
             (total_users as usize, unique_users as usize)
         };
 
-        // TODO: Fix this
         let uptime = {
             let current_time = Utc::now();
-            let old_dur = Duration::seconds(stats.start_time.timestamp());
-            let diff = current_time - old_dur;
-            diff.time()
+            let diff = current_time - stats.start_time;
+
+            let total_secs = diff.to_std().unwrap().as_secs();
+
+            let (hours, remainder) = (total_secs / 3600, total_secs % 3600);
+            let (days, hours) = (hours / 24, hours % 24);
+            let (minutes, seconds) = (remainder / 60, remainder % 60);
+
+            AboutUptime {
+                days,
+                hours,
+                minutes,
+                seconds,
+            }
         };
 
-        println!("We have been up for: {}", uptime);
-
         let tacos_eaten = {
-            let seconds_running = 3; // uptime.timestamp() as usize;
-                                     // Below assumes that every user has been with us since the start. Maybe
-                                     // this could be changed
-                                     // If a person can eat a taco every 5 mins, the following formula applies:
+            let seconds_running = 3;
+            // uptime.timestamp() as usize;
+            // Below assumes that every user has been with us since the start. Maybe
+            // this could be changed
+            // If a person can eat a taco every 5 mins, the following formula applies:
 
             let tacos_per_user = seconds_running / 300; // 300 seconds = 5 minutes
 
@@ -100,7 +125,7 @@ impl fmt::Display for AboutDescription {
             Together we could of eaten {} tacos in this time
             GearBot version {}
         ",
-            self.uptime.format(EMBED_UPTIME_FORMAT),
+            self.uptime.to_string(),
             self.user_messages,
             self.bot_messages,
             self.my_messages,
@@ -120,7 +145,7 @@ pub async fn about(ctx: &Arc<Context<'_>>, msg: &Message) -> CommandResult {
     let about_stats = AboutDescription::from(ctx).await;
 
     let embed = EmbedBuilder::new()
-        .color(0x00cea2)
+        .color(ABOUT_EMBED_COLOR)
         .description(about_stats.to_string())
         .timestamp(Utc::now().to_rfc3339())
         .add_field("Support Server", "[Click Here](https://discord.gg/vddW3D9)")

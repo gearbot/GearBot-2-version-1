@@ -7,20 +7,27 @@ use twilight::model::gateway::payload::RequestGuildMembers;
 use crate::core::Context;
 use crate::Error;
 
-pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context<'_>>) -> Result<(), Error> {
+pub async fn handle_event(
+    shard_id: u64,
+    event: &Event,
+    ctx: Arc<Context<'_>>,
+) -> Result<(), Error> {
     match &event {
         Event::GuildCreate(guild) => {
             ctx.stats.new_guild().await;
             let c = ctx.cluster.clone();
             let data = RequestGuildMembers::new_all(guild.id, None);
             info!("Requesting members for guild {}", guild.id);
-            tokio::spawn(async move {
-                c.command(shard_id, &data).await;
-            });
-            ()
-        },
-        Event::MemberChunk(chunk) => {
+            let res = tokio::spawn(async move { c.command(shard_id, &data).await }).await;
+
+            if let Ok(handle) = res {
+                match handle {
+                    Ok(_) => return Ok(()),
+                    Err(e) => return Err(Error::TwilightCluster(e)),
+                }
+            }
         }
+        Event::MemberChunk(_chunk) => {}
         _ => (),
     }
     Ok(())

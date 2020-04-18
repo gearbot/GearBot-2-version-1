@@ -1,14 +1,14 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::RwLock;
 
 use chrono::{DateTime, Utc};
+use git_version::git_version;
+use tokio::sync::RwLock;
+
 use twilight::cache::InMemoryCache;
 use twilight::command_parser::Parser;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
 use twilight::model::channel::Message;
-
-use git_version::git_version;
 
 const GIT_VERSION: &str = git_version!();
 
@@ -88,12 +88,25 @@ pub struct Context<'a> {
     pub http: HttpClient,
     pub stats: BotStats,
     pub status_type: RwLock<u16>,
-    pub status_text: RwLock<String>
+    pub status_text: RwLock<String>,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(parser: Parser<'a>, cache: InMemoryCache, cluster: Cluster, http: HttpClient) -> Self {
-        Context { command_parser: parser, cache, cluster, http, stats: BotStats::default() , status_type : RwLock::new(3), status_text: RwLock::new(String::from("the gears turn"))}
+    pub fn new(
+        parser: Parser<'a>,
+        cache: InMemoryCache,
+        cluster: Cluster,
+        http: HttpClient,
+    ) -> Self {
+        Context {
+            command_parser: parser,
+            cache,
+            cluster,
+            http,
+            stats: BotStats::default(),
+            status_type: RwLock::new(3),
+            status_text: RwLock::new(String::from("the gears turn")),
+        }
     }
 
     /// Returns if a message was sent by us.

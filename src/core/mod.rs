@@ -5,5 +5,5 @@ pub use gearbot::GearBot;
 mod bot_config;
 mod context;
 mod gearbot;
-pub mod logging;
 mod handlers;
+pub mod logging;

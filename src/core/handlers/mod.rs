@@ -1,3 +1,3 @@
-pub mod general;
-pub mod commands;
 pub mod cache;
+pub mod commands;
+pub mod general;

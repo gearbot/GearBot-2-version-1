@@ -1,12 +1,13 @@
 use std::{error, fmt, io};
 
+use twilight::gateway::cluster;
 use twilight::{http, http::Client as HttpClient};
 
 use git_version::git_version;
 
+use crate::core::logging;
 use crate::core::BotConfig;
 use crate::core::GearBot;
-use crate::core::logging;
 
 mod core;
 mod gears;
@@ -20,7 +21,8 @@ pub enum Error {
     InvalidLoggingWebhook(String),
     NoLoggingSpec,
     IoError(io::Error),
-    TwilightError(http::Error),
+    TwilightHttp(http::Error),
+    TwilightCluster(cluster::Error),
 }
 
 impl error::Error for Error {}
@@ -28,14 +30,18 @@ impl error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::InvalidSession => write!(f, "The gateway invalidated our session unrecoverably!"),
+            Error::InvalidSession => {
+                write!(f, "The gateway invalidated our session unrecoverably!")
+            }
+            // For errors that actually happen during runtime, we can have the logging macros here too
             Error::MissingToken => write!(f, "The bot was missing its token, unable to start!"),
             Error::NoConfig => write!(f, "The config file couldn't be found, unable to start!"),
             Error::InvalidConfig => write!(f, "The config file was not in the correct format!"),
             Error::InvalidLoggingWebhook(wurl) => write!(f, "The webhook URL {} was invalid", wurl),
             Error::NoLoggingSpec => write!(f, "The logging configuration couldn't be found!"),
             Error::IoError(e) => write!(f, "An IO error occured during a task: {}", e),
-            Error::TwilightError(e) => write!(f, "An error occured making a Discord request: {}", e), // For errors that actually happen during runtime, we can have the logging macros here too
+            Error::TwilightHttp(e) => write!(f, "An error occured making a Discord request: {}", e),
+            Error::TwilightCluster(e) => write!(f, "An error occured on a cluster request: {}", e),
         }
     }
 }
@@ -48,13 +54,17 @@ impl From<io::Error> for Error {
 
 impl From<http::Error> for Error {
     fn from(e: http::Error) -> Self {
-        Error::TwilightError(e)
+        Error::TwilightHttp(e)
+    }
+}
+
+impl From<cluster::Error> for Error {
+    fn from(e: cluster::Error) -> Self {
+        Error::TwilightCluster(e)
     }
 }
 
 pub type CommandResult = Result<(), Error>;
-
-pub const COMMAND_LIST: [&str; 3] = ["about", "ping", "echo"];
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -75,7 +85,7 @@ async fn main() -> Result<(), Error> {
 
     //generate command list
 
-    if let Err(e) = GearBot::run(config, http).await {
+    if let Err(e) = GearBot::run(&config, http).await {
         gearbot_error!("Failed to start the bot: {}", e)
     }
 
