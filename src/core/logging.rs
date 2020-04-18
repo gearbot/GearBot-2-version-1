@@ -8,12 +8,14 @@ use tokio;
 use twilight::builders::embed::EmbedBuilder;
 use twilight::http::Client as HttpClient;
 use twilight::model::channel::embed::{Embed, EmbedFooter};
+use twilight::model::user::CurrentUser;
 
 use crate::core::BotConfig;
 use crate::Error;
 use crate::gearbot_error;
 
 static LOGGER_HANDLE: OnceCell<ReconfigurationHandle> = OnceCell::new();
+static BOT_USER: OnceCell<CurrentUser> = OnceCell::new();
 
 pub fn initialize(http: HttpClient, config: &BotConfig) -> Result<(), Error> {
     // TODO: validate webhook by doing a get to it
@@ -44,6 +46,10 @@ pub fn initialize(http: HttpClient, config: &BotConfig) -> Result<(), Error> {
     Ok(())
 }
 
+pub fn set_user(user: CurrentUser) {
+    BOT_USER.set(user).unwrap()
+}
+
 struct WebhookLogger {
     http: HttpClient,
     url: String,
@@ -51,10 +57,19 @@ struct WebhookLogger {
 
 impl LogWriter for WebhookLogger {
     fn write(&self, now: &mut DeferredNow, record: &Record) -> Result<(), io::Error> {
-        let embed_builder = EmbedBuilder::new().color(0x0043FF).description(record.args().to_string()).timestamp(now.now().naive_utc().to_string()).footer(record.level().to_string()).icon_url(get_icon(record.level())).commit();
-
+        let mut embed_builder = EmbedBuilder::new().color(0x0043FF).description(record.args().to_string()).timestamp(now.now().naive_utc().to_string()).footer(record.level().to_string()).icon_url(get_icon(record.level())).commit();
+        if BOT_USER.get().is_some() {
+            let user = BOT_USER.get().unwrap();
+            let mut ab = embed_builder.author()
+                .name(&user.name);
+            if user.avatar.is_some() {
+                ab = ab.icon_url(String::from("https://cdn.discordapp.com/avatars/") + &user.id.to_string() + "/" + user.avatar.as_ref().unwrap() + ".png");
+            }
+            embed_builder = ab.commit();
+        }
         let url = self.url.to_owned();
         let http = self.http.clone();
+        // println!("{:?}", embed_builder.build());
         let embeds = vec![embed_builder.build()];
         tokio::spawn(async move { send_webhook(http, &url, embeds).await });
 

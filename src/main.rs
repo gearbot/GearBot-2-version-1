@@ -2,6 +2,8 @@ use std::{error, fmt, io};
 
 use twilight::{http, http::Client as HttpClient};
 
+use git_version::git_version;
+
 use crate::core::BotConfig;
 use crate::core::GearBot;
 use crate::core::logging;
@@ -69,7 +71,7 @@ async fn main() -> Result<(), Error> {
         return Err(e);
     }
 
-    gearbot_important!("Starting Gearbot. Hello there, Ferris!");
+    gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", git_version!());
 
     //generate command list
 

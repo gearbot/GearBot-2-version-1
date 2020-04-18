@@ -1,3 +1,3 @@
-pub mod shard_event_logger;
+pub mod general;
 pub mod commands;
 pub mod cache;

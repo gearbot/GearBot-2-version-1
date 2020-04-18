@@ -1,4 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::RwLock;
 
 use chrono::{DateTime, Utc};
 use twilight::cache::InMemoryCache;
@@ -86,11 +87,13 @@ pub struct Context<'a> {
     pub cluster: Cluster,
     pub http: HttpClient,
     pub stats: BotStats,
+    pub status_type: RwLock<u16>,
+    pub status_text: RwLock<String>
 }
 
 impl<'a> Context<'a> {
     pub fn new(parser: Parser<'a>, cache: InMemoryCache, cluster: Cluster, http: HttpClient) -> Self {
-        Context { command_parser: parser, cache, cluster, http, stats: BotStats::default() }
+        Context { command_parser: parser, cache, cluster, http, stats: BotStats::default() , status_type : RwLock::new(3), status_text: RwLock::new(String::from("the gears turn"))}
     }
 
     /// Returns if a message was sent by us.

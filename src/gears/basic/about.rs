@@ -70,7 +70,7 @@ impl AboutDescription {
         };
 
         AboutDescription {
-            uptime: uptime,
+            uptime,
             user_messages: stats.user_messages.load(Ordering::Relaxed),
             bot_messages: stats.bot_messages.load(Ordering::Relaxed),
             my_messages: stats.my_messages.load(Ordering::Relaxed),

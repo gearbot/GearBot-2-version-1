@@ -16,7 +16,7 @@ use twilight::model::id::UserId;
 
 use crate::{COMMAND_LIST, Error, gearbot_error, gearbot_info};
 use crate::core::{BotConfig, Context};
-use crate::core::handlers::{cache, commands, shard_event_logger};
+use crate::core::handlers::{cache, commands, general};
 
 pub struct GearBot<'a> {
     config: BotConfig,
@@ -74,7 +74,7 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), 
     // Process anything that uses the event ID that we care about, aka shard events
     info!("Got a {:?} event", event.1.event_type());
     cache::handle_event(event.0.clone(), &event.1, ctx.clone()).await?;
-    shard_event_logger::handle_event(&event.0, &event.1, ctx.clone()).await?;
+    general::handle_event(&event.0, &event.1, ctx.clone()).await?;
     commands::handle_event(&event.0, &event.1, ctx.clone()).await?;
 
     // Since we handled anything with a id we care about, we can make the
