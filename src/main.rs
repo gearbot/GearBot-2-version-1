@@ -11,9 +11,11 @@ use crate::core::GearBot;
 
 mod core;
 mod gears;
+pub mod utils;
 
 #[derive(Debug)]
 pub enum Error {
+    CmdError(CommandError),
     InvalidSession,
     MissingToken,
     NoConfig,
@@ -25,14 +27,37 @@ pub enum Error {
     TwilightCluster(cluster::Error),
 }
 
+#[derive(Debug)]
+pub enum CommandError {
+    WrongArgCount {
+        expected: u8,
+        provided: u8,
+    }
+}
+
+impl error::Error for CommandError {}
+
+impl fmt::Display for CommandError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CommandError::WrongArgCount { expected, provided } => {
+                if expected > provided {
+                    write!(f, "Too many arguments were provided! Expected {}, but found {}", expected, provided)
+                } else {
+                    write!(f, "Not enough arguments were provided! Expected {}, but found {}", expected, provided)
+                }
+            }  
+        }
+    }
+}
+
 impl error::Error for Error {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::InvalidSession => {
-                write!(f, "The gateway invalidated our session unrecoverably!")
-            }
+            Error::CmdError(e) => write!(f, "{}", e),
+            Error::InvalidSession => write!(f, "The gateway invalidated our session unrecoverably!"),
             // For errors that actually happen during runtime, we can have the logging macros here too
             Error::MissingToken => write!(f, "The bot was missing its token, unable to start!"),
             Error::NoConfig => write!(f, "The config file couldn't be found, unable to start!"),
@@ -43,6 +68,12 @@ impl fmt::Display for Error {
             Error::TwilightHttp(e) => write!(f, "An error occured making a Discord request: {}", e),
             Error::TwilightCluster(e) => write!(f, "An error occured on a cluster request: {}", e),
         }
+    }
+}
+
+impl From<CommandError> for Error {
+    fn from(e: CommandError) -> Self {
+        Error::CmdError(e)
     }
 }
 

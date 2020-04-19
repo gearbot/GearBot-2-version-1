@@ -7,7 +7,9 @@ use crate::core::Context;
 use crate::gears::basic;
 use crate::Error;
 
-pub const COMMAND_LIST: [&str; 3] = ["about", "ping", "echo"];
+// TODO: How to use this to make sure we have registered all of them.
+// Maybe a macro could check the match statements arms?
+pub const COMMAND_LIST: [&str; 4] = ["about", "ping", "echo", "coinflip"];
 
 pub async fn handle_event(event: &Event, ctx: Arc<Context<'_>>) -> Result<(), Error> {
     match &event {
@@ -17,11 +19,12 @@ pub async fn handle_event(event: &Event, ctx: Arc<Context<'_>>) -> Result<(), Er
                 msg.author.name, msg.content
             );
             if let Some(command) = ctx.command_parser.parse(&msg.content) {
-                let args = command.arguments.as_str();
+                let args = command.arguments;
                 match command.name {
-                    "ping" => basic::ping(&ctx, &msg).await?,
                     "about" => basic::about(&ctx, &msg).await?,
-                    "echo" => basic::echo(&ctx, &msg, args).await?,
+                    "coinflip" => basic::coinflip(&ctx, &msg, &args).await?,
+                    "echo" => basic::echo(&ctx, &msg, &args).await?,
+                    "ping" => basic::ping(&ctx, &msg).await?,
                     _ => (),
                 }
 

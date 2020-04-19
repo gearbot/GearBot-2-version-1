@@ -26,7 +26,6 @@ pub async fn handle_event(shard_id: u64, event: &Event) -> Result<(), Error> {
         }
         Event::GatewayReconnect => info!("We reconnected to the gateway!"),
         Event::GatewayHello(u) => info!("Registered with gateway {}", u),
-
         _ => (),
     }
     Ok(())
