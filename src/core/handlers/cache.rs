@@ -5,7 +5,7 @@ use twilight::gateway::cluster::Event;
 use twilight::model::gateway::payload::RequestGuildMembers;
 
 use crate::core::Context;
-use crate::Error;
+use crate::utils::errors::Error;
 
 pub async fn handle_event(
     shard_id: u64,

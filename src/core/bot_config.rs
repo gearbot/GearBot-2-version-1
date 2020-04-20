@@ -2,12 +2,13 @@ use std::fs;
 
 use serde::Deserialize;
 
-use crate::Error;
+use crate::utils::errors::Error;
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {
     pub tokens: Tokens,
     pub logging: Logging,
+    pub database: Database
 }
 
 #[derive(Deserialize, Debug)]
@@ -19,6 +20,11 @@ pub struct Tokens {
 pub struct Logging {
     pub important_logs: String,
     pub info_logs: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Database {
+    pub postgres: String
 }
 
 impl BotConfig {

@@ -5,7 +5,7 @@ use twilight::gateway::cluster::Event;
 
 use crate::core::Context;
 use crate::gears::basic;
-use crate::Error;
+use crate::utils::errors::Error;
 
 // TODO: How to use this to make sure we have registered all of them.
 // Maybe a macro could check the match statements arms?
