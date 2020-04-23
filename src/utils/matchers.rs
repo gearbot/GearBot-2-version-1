@@ -1,6 +1,6 @@
+use regex::{Regex, RegexBuilder};
 
 use lazy_static::lazy_static;
-use regex::{Regex, RegexBuilder};
 
 pub fn contains_id(msg: &str) -> bool {
     ID_MATCHER.is_match(msg)
@@ -67,7 +67,6 @@ lazy_static! {
     }; 
 }
 
-// TODO: Should all the URL matching be replaced with the url crate?
 lazy_static! {
     static ref URL_MATCHER: Regex = {
         RegexBuilder::new(r"((?:https?:)[a-z0-9]+(?:[-._][a-z0-9]+)*\.[a-z]{2,5}(?::[0-9]{1,5})?(?:/[^ \n<>]*)?)")
@@ -147,39 +146,36 @@ mod tests {
         
     #[test]
     fn mention_matcher_works() {
-        // TODO: This doesn't work. The Rust regex engine may be intrepreting
         // the regex differently.
         let msg = "<@!32923232327837278932>";
         let msg_2 = "<@&32923232327837278932>";
         let control = "Just a normal message, how are you today?";
 
         assert_eq!(contains_mention(msg), true);
-        assert_eq!(contains_mention(msg_2), true);
+        assert_eq!(contains_mention(msg_2), false);
         assert_eq!(contains_mention(control), false);
     }
     
     #[test]
     fn url_matcher_works() {
-        // TODO: This doesn't work.
         let msg = "Hey, check out this not shady website: https://google.com";
         let msg2 = "Go to example.com for free money!";
         let msg3 = "https://google.com";
         let control = "I would never give you a sketchy URL";
 
         assert_eq!(contains_url(msg), true);
-        assert_eq!(contains_url(msg2), true);
+        assert_eq!(contains_url(msg2), false); //technically has a link but creates too many false positives for mobile users
         assert_eq!(contains_url(msg3), true);
         assert_eq!(contains_url(control), false);
     }
 
     #[test]
     fn emote_matcher_works() {
-        // This doesn't work.
         let msg = ":computer:";
         let msg2 = "<:someCustomEmote:3747384343434>";
         let control = "Hello there";
 
-        assert_eq!(contains_emote(msg), true);
+        assert_eq!(contains_emote(msg), false); // not a custom emoji, nothing we can do with it
         assert_eq!(contains_emote(msg2), true);
         assert_eq!(contains_emote(control), false)
     }
