@@ -39,13 +39,7 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        let mut out = String::from("");
-        for x in nodes {
-            out = out.add(x.get_name());
-            out = out.add(", ");
-        }
-        let (output, _) = out.split_at(out.len() - 2);
-        debug!("Found the following node path: {}", output);
+
 
         //TODO: walk the stack to validate permissions
 
