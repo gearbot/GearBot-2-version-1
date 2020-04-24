@@ -93,17 +93,15 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Erro
     );
     cache::handle_event(event.0, &event.1, ctx.clone()).await?;
     general::handle_event(event.0, &event.1).await?;
-    commands::handle_event(&event.1, ctx.clone()).await?;
 
-    // Since we handled anything with a id we care about, we can make the
-    // next match simpler.
-    let event = event.1;
     // Bot stat handling "hooks"
-    match &event {
+    match &event.1 {
         Event::MessageCreate(msg) => ctx.stats.new_message(&ctx, msg).await,
         Event::GuildDelete(_) => ctx.stats.left_guild().await,
         _ => {}
-    }
+    }    
+
+    commands::handle_event(event.1, ctx.clone()).await?;
 
     Ok(())
 }

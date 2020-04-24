@@ -14,7 +14,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub async fn figure_it_out(message: &Box<MessageCreate>, ctx: Arc<Context>) -> Result<(), Error> {
+    pub async fn figure_it_out(message: Box<MessageCreate>, ctx: Arc<Context>) -> Result<(), Error> {
         //TODO: verify permissions
         let parts: Vec<&str> = message.content.split_whitespace().collect();
         debug!("Parser processing message: {:?}", message.content);
@@ -42,7 +42,8 @@ impl<'a> Parser<'a> {
 
 
         //TODO: walk the stack to validate permissions
-
+        
+        
         let parser = Parser {
             parts,
             index
@@ -51,7 +52,7 @@ impl<'a> Parser<'a> {
         match to_execute
         {
             Some(node) => {
-                node.execute(ctx, message).await?;
+                node.execute(ctx, message.0).await?;
                 Ok(())
             },
             None => Ok(())

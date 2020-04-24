@@ -19,7 +19,7 @@ use crate::utils::errors::Error;
 pub mod basic;
 type CommandResult = Result<(), Error>;
 type CommandResultOuter = Pin<Box<dyn Future<Output = CommandResult> + Send>>;
-type CommandHandler = Box<dyn Fn(Arc<Context>, &Message) -> CommandResultOuter + Send + Sync>;
+type CommandHandler = Box<dyn Fn(Arc<Context>, Message) -> CommandResultOuter + Send + Sync>;
 
 pub struct Command {
     name: String,
@@ -70,7 +70,7 @@ impl CommandNode {
 
     }
 
-    pub async fn execute(&self, ctx: Arc<Context>, msg: &Message) -> CommandResult {
+    pub async fn execute(&self, ctx: Arc<Context>, msg: Message) -> CommandResult {
         match &self {
             CommandNode::CommandNodeInner {command} => {
                 let test = &command.handler;
@@ -105,7 +105,7 @@ lazy_static! {
  let mut commands : HashMap<String, CommandNode> = HashMap::new();
 
  //add commands here
- commands.insert(String::from("ping"), CommandNode::create_command(String::from("ping"), Box::new(|ctx, msg | Box::pin(basic::ping(ctx.clone(), msg.clone())))));
+ commands.insert(String::from("ping"), CommandNode::create_command(String::from("ping"), Box::new(|ctx, msg | Box::pin(basic::ping(ctx, msg)))));
 
 
 

@@ -8,8 +8,8 @@ use crate::gears::basic;
 use crate::parser::parser::Parser;
 use crate::utils::errors::Error;
 
-pub async fn handle_event(event: &Event, ctx: Arc<Context>) -> Result<(), Error> {
-    match &event {
+pub async fn handle_event<'a>(event: Event, ctx: Arc<Context>) -> Result<(), Error> {
+    match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
             info!(
                 "Received a message from {}, saying {}",
