@@ -1,14 +1,14 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use chrono::{DateTime, Utc};
-use git_version::git_version;
 use tokio::sync::RwLock;
-
 use twilight::cache::InMemoryCache;
 use twilight::command_parser::Parser;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
 use twilight::model::channel::Message;
+
+use git_version::git_version;
 
 const GIT_VERSION: &str = git_version!();
 
@@ -26,7 +26,7 @@ pub struct BotStats {
 }
 
 impl BotStats {
-    pub async fn new_message(&self, ctx: &Context<'_>, msg: &Message) {
+    pub async fn new_message(&self, ctx: &Context, msg: &Message) {
         if msg.author.bot {
             // This will simply skip incrementing it if we couldn't get
             // a lock on the cache. No harm done.
@@ -81,8 +81,7 @@ impl Default for BotStats {
 // In the future, any database handles or anything that holds real state will need
 // put behind a `RwLock`.
 #[derive(Debug)]
-pub struct Context<'a> {
-    pub command_parser: Parser<'a>,
+pub struct Context {
     pub cache: InMemoryCache,
     pub cluster: Cluster,
     pub http: HttpClient,
@@ -91,15 +90,13 @@ pub struct Context<'a> {
     pub status_text: RwLock<String>,
 }
 
-impl<'a> Context<'a> {
+impl Context {
     pub fn new(
-        parser: Parser<'a>,
         cache: InMemoryCache,
         cluster: Cluster,
         http: HttpClient,
     ) -> Self {
         Context {
-            command_parser: parser,
             cache,
             cluster,
             http,

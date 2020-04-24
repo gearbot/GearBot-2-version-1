@@ -17,7 +17,7 @@ use twilight::model::gateway::GatewayIntents;
 
 use crate::{gearbot_error, gearbot_info};
 use crate::core::{BotConfig, Context};
-use crate::core::handlers::{cache, commands::{self, COMMAND_LIST}, general};
+use crate::core::handlers::{cache, commands, general};
 use crate::utils::errors::Error;
 
 pub struct GearBot;
@@ -59,21 +59,11 @@ impl GearBot {
 
         let cache = InMemoryCache::from(cache_config);
 
-        //TODO: autogen and move to own section
-        let cmd_parser = {
-            let mut commands_config = CommandParserConfig::new();
-            commands_config.add_prefix("?");
-            for cmd in &COMMAND_LIST {
-                commands_config.command(*cmd).case_insensitive().add()
-            }
-            Parser::new(commands_config)
-        };
-
         gearbot_info!("The cluster is going online!");
         let cluster = Cluster::new(cluster_config);
         cluster.up().await?;
 
-        let context = Arc::new(Context::new(cmd_parser, cache, cluster, http));
+        let context = Arc::new(Context::new(cache, cluster, http));
 
         // TODO: Look into splitting this into two streams:
         // One for user messages, and the other for internal bot things
@@ -93,7 +83,7 @@ impl GearBot {
     }
 }
 
-async fn handle_event(event: (u64, Event), ctx: Arc<Context<'_>>) -> Result<(), Error> {
+async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Error> {
     // Process anything that uses the event ID that we care about, aka shard events
     // TODO: Why doesn't this print?
     debug!(

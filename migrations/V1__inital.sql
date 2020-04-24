@@ -13,20 +13,6 @@ create index message_channel_index on message (channel_id);
 create index message_guild_index on message (guild_id);
 create index message_pinned_index on message (channel_id, pinned) where pinned = true;
 
-create table message_archive
-(
-    id         bigint        not null primary key,
-    content    varchar(2000) not null,
-    author_id  bigint        not null,
-    channel_id bigint        not null,
-    guild_id   bigint        not null,
-    type       int2          not null,
-    pinned     bool default false
-);
-create index message_archive_ag_index on message_archive (author_id, guild_id);
-create index message_archive_channel_index on message_archive (channel_id);
-create index message_archive_guild_index on message_archive (guild_id);
-create index message_archive_pinned_index on message_archive (channel_id, pinned) where pinned = true;
 
 create table attachment
 (
@@ -94,7 +80,7 @@ create table customCommand
 create unique index custom_command_guild_trigger_unique on customCommand (guild_id, trigger);
 
 
-create table guild_config
+create table guildConfig
 (
     id bigint primary key not null,
     config json not null,

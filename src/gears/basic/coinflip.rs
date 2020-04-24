@@ -1,13 +1,14 @@
-use rand;
 use std::sync::Arc;
 
+use rand;
 use twilight::command_parser::Arguments;
 use twilight::model::channel::Message;
 
 use crate::core::Context;
-use crate::CommandResult;
+use crate::gears::CommandResult;
+use crate::utils::errors::Error;
 
-pub async fn coinflip(ctx: &Arc<Context<'_>>, msg: &Message, args: &Arguments<'_>) -> CommandResult {
+pub async fn coinflip(ctx: &Arc<Context>, msg: &Message, args: &Arguments<'_>) -> CommandResult {
     // TODO: This needs sanatized with the clean function.
     let thing_todo = args.as_str();
 

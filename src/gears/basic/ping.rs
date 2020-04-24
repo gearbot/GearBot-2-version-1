@@ -1,13 +1,15 @@
 use std::sync::Arc;
 use std::time::Duration;
-use chrono::Utc;
 
+use chrono::Utc;
 use twilight::model::channel::Message;
 
 use crate::core::Context;
-use crate::CommandResult;
+use crate::gears::CommandResult;
+use crate::parser::parser::Parser;
+use crate::utils::errors::Error;
 
-pub async fn ping(ctx: &Arc<Context<'_>>, msg: &Message) -> CommandResult {
+pub async fn ping(ctx: Arc<Context>, msg: Message) -> CommandResult {
     let start = Utc::now().time();
     let sent_msg = ctx.http
         .create_message(msg.channel_id)

@@ -10,7 +10,7 @@ use crate::utils::errors::Error;
 pub async fn handle_event(
     shard_id: u64,
     event: &Event,
-    ctx: Arc<Context<'_>>,
+    ctx: Arc<Context>,
 ) -> Result<(), Error> {
     match &event {
         Event::GuildCreate(guild) => {

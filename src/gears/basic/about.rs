@@ -1,12 +1,13 @@
 use std::fmt;
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::{Arc, atomic::Ordering};
 
 use chrono::Utc;
 use twilight::builders::embed::EmbedBuilder;
 use twilight::model::channel::Message;
 
 use crate::core::Context;
-use crate::CommandResult;
+use crate::gears::CommandResult;
+use crate::utils::errors::Error;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
 
@@ -43,7 +44,7 @@ struct AboutDescription {
 }
 
 impl AboutDescription {
-    async fn from(ctx: &Context<'_>) -> Self {
+    async fn from(ctx: &Context) -> Self {
         let stats = &ctx.stats;
         let (users, unique_users) = {
             // This is the list of all the users that we can see, which
@@ -141,7 +142,7 @@ impl fmt::Display for AboutDescription {
     }
 }
 
-pub async fn about(ctx: &Arc<Context<'_>>, msg: &Message) -> CommandResult {
+pub async fn about(ctx: &Arc<Context>, msg: &Message) -> CommandResult {
     let about_stats = AboutDescription::from(ctx).await;
 
     let embed = EmbedBuilder::new()
@@ -159,7 +160,7 @@ pub async fn about(ctx: &Arc<Context<'_>>, msg: &Message) -> CommandResult {
         .commit()
         .build();
 
-    ctx.http.create_message(msg.channel_id).embed(embed).await?;
+    ctx.http.create_message(msg.channel_id).embed(embed).await;
 
     Ok(())
 }

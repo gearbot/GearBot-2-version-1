@@ -16,6 +16,7 @@ mod core;
 mod gears;
 mod utils;
 mod database;
+mod parser;
 
 pub type CommandResult = Result<(), Error>;
 
