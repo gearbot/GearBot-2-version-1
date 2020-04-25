@@ -13,7 +13,7 @@ use crate::core::logging;
 use crate::database::migrations::embedded;
 
 mod core;
-mod gears;
+mod commands;
 mod utils;
 mod database;
 mod parser;

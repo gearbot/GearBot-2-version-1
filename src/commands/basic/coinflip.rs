@@ -4,8 +4,8 @@ use rand;
 use twilight::command_parser::Arguments;
 use twilight::model::channel::Message;
 
+use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
-use crate::gears::CommandResult;
 use crate::utils::errors::Error;
 
 pub async fn coinflip(ctx: &Arc<Context>, msg: &Message, args: &Arguments<'_>) -> CommandResult {

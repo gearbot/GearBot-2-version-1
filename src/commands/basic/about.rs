@@ -5,8 +5,8 @@ use chrono::Utc;
 use twilight::builders::embed::EmbedBuilder;
 use twilight::model::channel::Message;
 
+use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
-use crate::gears::CommandResult;
 use crate::utils::errors::Error;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
@@ -119,7 +119,7 @@ impl fmt::Display for AboutDescription {
             "
             The Gears have been spinning for {}
             I have received {} user messages, {} bot messages ({} were mine)
-            Number of times people have grinded my gears: {}
+            Number of times people have grinded my commands: {}
             {} commands have been executed, as well as {} custom commands
             Working in {} guilds
             With a total of {} users ({} unique)

@@ -102,7 +102,7 @@ impl Context {
             http,
             stats: BotStats::default(),
             status_type: RwLock::new(3),
-            status_text: RwLock::new(String::from("the gears turn")),
+            status_text: RwLock::new(String::from("the commands turn")),
         }
     }
 

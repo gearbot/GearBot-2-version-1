@@ -4,12 +4,12 @@ use std::time::Duration;
 use chrono::Utc;
 use twilight::model::channel::Message;
 
+use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
-use crate::gears::CommandResult;
 use crate::parser::parser::Parser;
 use crate::utils::errors::Error;
 
-pub async fn ping(ctx: Arc<Context>, msg: Message) -> CommandResult {
+pub async fn ping(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
     let start = Utc::now().time();
     let sent_msg = ctx.http
         .create_message(msg.channel_id)

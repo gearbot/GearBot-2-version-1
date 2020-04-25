@@ -3,8 +3,8 @@ use std::sync::Arc;
 use log::info;
 use twilight::gateway::cluster::Event;
 
+use crate::commands::basic;
 use crate::core::Context;
-use crate::gears::basic;
 use crate::parser::parser::Parser;
 use crate::utils::errors::Error;
 
