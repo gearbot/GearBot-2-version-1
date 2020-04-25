@@ -3,7 +3,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use twilight::cache::InMemoryCache;
-use twilight::command_parser::Parser;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
 use twilight::model::channel::Message;

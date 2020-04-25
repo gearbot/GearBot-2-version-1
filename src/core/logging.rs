@@ -1,10 +1,10 @@
 use std::io;
 
-use flexi_logger::writers::LogWriter;
 use flexi_logger::{
-    colored_opt_format, Age, Cleanup, Criterion, DeferredNow, Duplicate, Logger, Naming,
+    Age, Cleanup, colored_opt_format, Criterion, DeferredNow, Duplicate, Logger, Naming,
     ReconfigurationHandle,
 };
+use flexi_logger::writers::LogWriter;
 use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
 use tokio;
@@ -14,8 +14,8 @@ use twilight::model::channel::embed::Embed;
 use twilight::model::user::CurrentUser;
 
 use crate::core::BotConfig;
-use crate::gearbot_error;
 use crate::Error;
+use crate::gearbot_error;
 
 static LOGGER_HANDLE: OnceCell<ReconfigurationHandle> = OnceCell::new();
 static BOT_USER: OnceCell<CurrentUser> = OnceCell::new();

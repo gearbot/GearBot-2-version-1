@@ -1,8 +1,8 @@
 use log::{info, warn};
 use twilight::gateway::cluster::Event;
 
-use crate::gearbot_info;
 use crate::core::logging;
+use crate::gearbot_info;
 use crate::utils::errors::Error;
 
 pub async fn handle_event(shard_id: u64, event: &Event) -> Result<(), Error> {

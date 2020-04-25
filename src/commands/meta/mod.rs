@@ -1,6 +1,5 @@
 use crate::commands::meta::nodes::CommandNode;
 
-pub mod builder;
 pub mod nodes;
 
 #[macro_use]

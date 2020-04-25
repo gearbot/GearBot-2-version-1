@@ -8,7 +8,6 @@ use twilight::cache::InMemoryCache;
 use twilight::cache::twilight_cache_inmemory::config::{
     EventType as CacheEventType, InMemoryConfigBuilder,
 };
-use twilight::command_parser::{CommandParserConfig, Parser};
 use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::gateway::cluster::config::ShardScheme;
 use twilight::gateway::cluster::Event;

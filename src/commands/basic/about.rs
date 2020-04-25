@@ -160,7 +160,7 @@ pub async fn about(ctx: &Arc<Context>, msg: &Message) -> CommandResult {
         .commit()
         .build();
 
-    ctx.http.create_message(msg.channel_id).embed(embed).await;
+    ctx.http.create_message(msg.channel_id).embed(embed).await?;
 
     Ok(())
 }

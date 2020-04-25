@@ -1,7 +1,3 @@
-use core::fmt;
-use std::collections::HashMap;
-use std::fmt::{Display, write};
-use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -33,8 +29,7 @@ pub fn get_root() -> &'static CommandNode {
                 command!("echo", basic::echo),
                 subcommands!("sub", None,
                         command!("ping", basic::ping))
- ));
-            ROOT_NODE.get().unwrap()
+ )).unwrap()
         }
     }
 }
