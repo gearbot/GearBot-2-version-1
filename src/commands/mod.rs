@@ -29,7 +29,8 @@ pub fn get_root() -> &'static CommandNode {
                 command!("echo", basic::echo),
                 subcommands!("sub", None,
                         command!("ping", basic::ping))
- )).unwrap()
+ ));
+            ROOT_NODE.get().unwrap()
         }
     }
 }
