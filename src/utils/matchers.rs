@@ -31,10 +31,6 @@ pub fn contains_jump_link(msg: &str) -> bool {
     JUMP_LINK_MATCHER.is_match(msg)
 }
 
-pub fn contains_modifier(msg: &str) -> bool {
-    MODIFIER_MATCHER.is_match(msg)
-}
-
 pub fn starts_with_number(msg: &str) -> bool {
     START_WITH_NUMBER_MATCHER.is_match(msg)
 }
@@ -56,17 +52,17 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref MENTION_MATCHER: Regex = { Regex::new(r"<@[!&]?\\d+>").unwrap() };
+    static ref MENTION_MATCHER: Regex = {
+        Regex::new(r"<@!?\d+>").unwrap()
+    };
 }
 
 lazy_static! {
     static ref URL_MATCHER: Regex = {
-        RegexBuilder::new(
-            r"((?:https?:)[a-z0-9]+(?:[-._][a-z0-9]+)*\.[a-z]{2,5}(?::[0-9]{1,5})?(?:/[^ \n<>]*)?)",
-        )
-        .case_insensitive(true)
-        .build()
-        .unwrap()
+        RegexBuilder::new(r"((?:https?://)[a-z0-9]+(?:[-._][a-z0-9]+)*\.[a-z]{2,5}(?::[0-9]{1,5})?(?:/[^ \n<>]*)?)")
+            .case_insensitive(true)
+            .build()
+            .unwrap()
     };
 }
 
@@ -78,10 +74,6 @@ lazy_static! {
     static ref JUMP_LINK_MATCHER: Regex = {
         Regex::new(r"https://(?:canary|ptb)?\.?discordapp.com/channels/\d*/(\d*)/(\d*)").unwrap()
     };
-}
-
-lazy_static! {
-    static ref MODIFIER_MATCHER: Regex = { Regex::new(r"^\[(.*):(.*)\]$").unwrap() };
 }
 
 lazy_static! {
@@ -178,18 +170,6 @@ mod tests {
         assert_eq!(contains_jump_link(msg2), true);
         assert_eq!(contains_jump_link(msg3), true);
         assert_eq!(contains_jump_link(control), false);
-    }
-
-    #[test]
-    fn modifier_matcher_works() {
-        // This doesnt work
-        let msg = "TODO";
-        let msg2 = "TODO2";
-        let control = "Test";
-
-        assert_eq!(contains_modifier(msg), true);
-        assert_eq!(contains_modifier(msg2), true);
-        assert_eq!(contains_modifier(control), false)
     }
 
     #[test]
