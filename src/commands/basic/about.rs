@@ -7,7 +7,7 @@ use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
-use crate::utils::errors::Error;
+use crate::parser::Parser;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
 
@@ -142,8 +142,8 @@ impl fmt::Display for AboutDescription {
     }
 }
 
-pub async fn about(ctx: &Arc<Context>, msg: &Message) -> CommandResult {
-    let about_stats = AboutDescription::from(ctx).await;
+pub async fn about(ctx: Arc<Context>, msg: Message, _: Parser) -> CommandResult {
+    let about_stats = AboutDescription::from(&ctx).await;
 
     let embed = EmbedBuilder::new()
         .color(ABOUT_EMBED_COLOR)

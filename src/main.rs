@@ -5,7 +5,7 @@ use tokio_postgres::{Config, NoTls};
 use twilight::http::Client as HttpClient;
 
 use git_version::git_version;
-use utils::errors::Error;
+use utils::Error;
 
 use crate::core::BotConfig;
 use crate::core::GearBot;

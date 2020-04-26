@@ -6,10 +6,9 @@ use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
-use crate::parser::parser::Parser;
-use crate::utils::errors::Error;
+use crate::parser::Parser;
 
-pub async fn ping(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
+pub async fn ping(ctx: Arc<Context>, msg: Message, _: Parser) -> CommandResult {
     let start = Utc::now().time();
     let sent_msg = ctx.http
         .create_message(msg.channel_id)

@@ -1,5 +1,8 @@
+mod utils;
 pub use utils::*;
 
 pub mod matchers;
-pub mod errors;
-mod utils;
+
+mod errors;
+pub use errors::*;
+

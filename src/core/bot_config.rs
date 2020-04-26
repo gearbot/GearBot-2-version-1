@@ -2,7 +2,7 @@ use std::fs;
 
 use serde::Deserialize;
 
-use crate::utils::errors::Error;
+use crate::utils::Error;
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {

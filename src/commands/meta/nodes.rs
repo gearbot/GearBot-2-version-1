@@ -9,8 +9,8 @@ use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandNode::{CommandNodeInner, GroupNode};
 use crate::core::Context;
-use crate::parser::parser::Parser;
-use crate::utils::errors::Error;
+use crate::parser::Parser;
+use crate::utils::Error;
 
 pub type CommandResult = Result<(), Error>;
 pub type CommandResultOuter = Pin<Box<dyn Future<Output = CommandResult> + Send>>;
@@ -97,7 +97,6 @@ impl CommandNode {
 }
 
 
-
 impl Display for CommandNode {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -107,10 +106,8 @@ impl Display for CommandNode {
     }
 }
 
-
 pub enum PermMode {
     ALLOWED,
     MAYBE,
     DENIED,
 }
-

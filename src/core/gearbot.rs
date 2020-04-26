@@ -17,7 +17,7 @@ use twilight::model::gateway::GatewayIntents;
 use crate::{gearbot_error, gearbot_info};
 use crate::core::{BotConfig, Context};
 use crate::core::handlers::{cache, commands, general};
-use crate::utils::errors::Error;
+use crate::utils::Error;
 
 pub struct GearBot;
 
@@ -39,7 +39,8 @@ impl GearBot {
                 | GatewayIntents::GUILD_MESSAGES
                 | GatewayIntents::GUILD_MESSAGE_REACTIONS
                 | GatewayIntents::DIRECT_MESSAGES
-                | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
+                | GatewayIntents::DIRECT_MESSAGE_REACTIONS
+                | GatewayIntents::GUILD_PRESENCES
         );
 
         let cluster_config = ClusterConfig::builder(&config.tokens.discord)

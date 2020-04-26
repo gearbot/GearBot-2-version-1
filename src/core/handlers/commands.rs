@@ -4,8 +4,8 @@ use log::info;
 use twilight::gateway::cluster::Event;
 
 use crate::core::Context;
-use crate::parser::parser::Parser;
-use crate::utils::errors::Error;
+use crate::parser::Parser;
+use crate::utils::Error;
 
 pub async fn handle_event<'a>(event: Event, ctx: Arc<Context>) -> Result<(), Error> {
     match event {
@@ -15,8 +15,6 @@ pub async fn handle_event<'a>(event: Event, ctx: Arc<Context>) -> Result<(), Err
                 msg.author.name, msg.content
             );
             Parser::figure_it_out(msg, ctx).await?;
-
-
 
             // if let Some(command) = ctx.command_parser.parse(&msg.content) {
             //     let args = command.arguments;

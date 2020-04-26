@@ -1297,9 +1297,9 @@ dependencies = [
 
 [[package]]
 name = "refinery-migrations"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca8ee8f6d05c1ec851faae51f4db5449eb816b48ef93d03a932a45ee2332dc37"
+checksum = "e6eccf8a4224758f3f1147bc219bed0d0f3e39a1e7a506786bf28c74312e0fbd"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -1691,9 +1691,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "0.2.18"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34ef16d072d2b6dc8b4a56c70f5c5ced1a37752116f8e7c1e80c659aa7cb6713"
+checksum = "7d9c43f1bb96970e153bcbae39a65e249ccb942bd9d36dbdf086024920417c9c"
 dependencies = [
  "bytes",
  "fnv",

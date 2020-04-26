@@ -1,2 +1,3 @@
 pub mod arguments;
-pub mod parser;
+mod parser;
+pub use parser::Parser;

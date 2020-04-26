@@ -3,7 +3,7 @@ use twilight::gateway::cluster::Event;
 
 use crate::core::logging;
 use crate::gearbot_info;
-use crate::utils::errors::Error;
+use crate::utils::Error;
 
 pub async fn handle_event(shard_id: u64, event: &Event) -> Result<(), Error> {
     match &event {

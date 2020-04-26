@@ -1,16 +1,16 @@
-use std::ops::Add;
 use std::sync::Arc;
 
-use log::{debug, info, trace};
+use log::debug;
 use twilight::model::gateway::payload::MessageCreate;
 
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
 use crate::core::Context;
-use crate::utils::errors::Error;
+use crate::utils::Error;
 
 pub struct Parser {
-    parts: Vec<String>,
+    // TODO: Clean way to access the non-command parts of a message
+    pub parts: Vec<String>,
     index: usize,
 }
 
@@ -62,7 +62,8 @@ impl Parser {
         match command
         {
             Some(node) => {
-                node.execute(ctx, test, Parser::new(&message.0.content)).await?;
+                node.execute(ctx.clone(), test, Parser::new(&message.0.content)).await?;
+                ctx.stats.command_used(false).await;
                 Ok(())
             },
             None => Ok(())
