@@ -111,6 +111,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
 
         _ => (),
     }
+    ctx.cache.update(event).await?;
     Ok(())
 }
 

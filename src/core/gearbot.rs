@@ -99,7 +99,6 @@ impl GearBot {
                 gearbot_error!("{}", e);
                 context.stats.had_error().await
             }
-            context.cache.update(&event.1).await?;
         }
 
         Ok(())
