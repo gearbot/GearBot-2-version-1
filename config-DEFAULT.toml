@@ -7,3 +7,12 @@ info_logs = "https://canary.discordapp.com/api/webhooks/id/token"
 
 [database]
 postgres="postgres://database?user=user&password=password&host=localhost"
+
+[emoji]
+# emoji overrides go here
+
+
+#Yes = "<:gearYes:459697272326848520>"
+#No = "<:gearNo:459697272314265600>"
+#Warn = "<:gearWarning:473506219919802388>"
+#Info = "<:gearAE:585879894232137739>"

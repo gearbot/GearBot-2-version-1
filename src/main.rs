@@ -1,15 +1,16 @@
 use std::str::FromStr;
 
 use deadpool_postgres::{Manager, Pool};
+use log::{debug, info};
 use tokio_postgres::{Config, NoTls};
 use twilight::http::Client as HttpClient;
 
 use git_version::git_version;
 use utils::Error;
 
-use crate::core::logging;
 use crate::core::BotConfig;
 use crate::core::GearBot;
+use crate::core::logging;
 use crate::database::migrations::embedded;
 
 mod commands;
@@ -18,24 +19,33 @@ mod database;
 mod parser;
 mod utils;
 
+pub static VERSION: &str = env!("CARGO_PKG_VERSION");
+pub static GIT_VERSION: &str = git_version!();
+
 pub type CommandResult = Result<(), Error>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    // Read config file
-    let config = BotConfig::new("config.toml")?;
-
-    let http = HttpClient::new(&config.tokens.discord);
-
-    // Initialize logger
-    // Cloning http here is fine because this instance is only used for calling our global log webhook
-    // and the rate limits on that are completely separate from all other rate limits
-    if let Err(e) = logging::initialize(http.clone(), &config) {
+    if let Err(e) = logging::initialize() {
         gearbot_error!("{}", e);
         return Err(e);
     }
 
-    gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", git_version!());
+    info!("Gearbot v{} starting!", VERSION);
+    // Read config file
+    let config = BotConfig::new("config.toml")?;
+    debug!("Loaded config file");
+    let http = HttpClient::new(&config.tokens.discord);
+    //validate token and figure out who we are
+    let user = http.current_user().await?;
+    info!("Token validated, connecting to discord as {}#{}", user.name, user.discriminator);
+    logging::initialize_discord_webhooks(http.clone(), &config, user);
+
+
+
+    gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", VERSION);
+    gearbot_error!("test error");
+    gearbot_warn!("test warning");
 
     //connect to the database
     let manager = Manager::new(Config::from_str(&config.database.postgres)?, NoTls);

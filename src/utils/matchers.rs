@@ -1,4 +1,4 @@
-use regex::{Regex, RegexBuilder};
+use regex::{CaptureMatches, Regex, RegexBuilder};
 
 use lazy_static::lazy_static;
 
@@ -37,6 +37,27 @@ pub fn starts_with_number(msg: &str) -> bool {
 
 pub fn contains_invite_link(msg: &str) -> bool {
     INVITE_MATCHER.is_match(msg)
+}
+
+pub struct EmojiInfo {
+    pub animated: bool,
+    pub name: String,
+    pub id: u64
+}
+
+pub fn get_emoji_parts(msg: &str) -> Vec<EmojiInfo> {
+    if !contains_emote(msg) {
+        return vec![]
+    }
+    let mut results: Vec<EmojiInfo> = vec![];
+    for m in EMOJI_MATCHER.captures_iter(msg) {
+        results.push(EmojiInfo {
+            animated: m[0] == String::from("a"),
+            name: m[1].to_owned(),
+            id: m[3].parse::<u64>().unwrap()
+        });
+    }
+    results
 }
 
 lazy_static! {

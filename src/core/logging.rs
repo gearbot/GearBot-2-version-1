@@ -1,10 +1,10 @@
 use std::io;
 
-use flexi_logger::writers::LogWriter;
 use flexi_logger::{
-    colored_opt_format, Age, Cleanup, Criterion, DeferredNow, Duplicate, Logger, Naming,
+    Age, Cleanup, colored_opt_format, Criterion, DeferredNow, Duplicate, Logger, Naming,
     ReconfigurationHandle,
 };
+use flexi_logger::writers::LogWriter;
 use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
 use tokio;
@@ -14,11 +14,15 @@ use twilight::model::channel::embed::Embed;
 use twilight::model::user::CurrentUser;
 
 use crate::core::BotConfig;
-use crate::gearbot_error;
 use crate::Error;
+use crate::gearbot_error;
+use crate::utils::Emoji;
 
 static LOGGER_HANDLE: OnceCell<ReconfigurationHandle> = OnceCell::new();
 static BOT_USER: OnceCell<CurrentUser> = OnceCell::new();
+static HTTP_CLIENT: OnceCell<HttpClient> = OnceCell::new();
+static IMPORTANT_WEBHOOK: OnceCell<String> = OnceCell::new();
+static INFO_WEBHOOK: OnceCell<String> = OnceCell::new();
 
 const DISCORD_AVATAR_URL: &str = "https://cdn.discordapp.com/avatars/";
 const EMBED_LOG_BLUE: u32 = 0x00_43FF;
@@ -28,21 +32,14 @@ const LOGGING_WARN_EMOTE: &str = "https://cdn.discordapp.com/emojis/473506219919
 const LOGGING_INFO_EMOTE: &str = "https://cdn.discordapp.com/emojis/459697272326848520.png?v=1";
 const LOGGING_DEBUG_EMOTE: &str = "https://cdn.discordapp.com/emojis/528335315593723914.png?v=1";
 
-pub fn initialize(http: HttpClient, config: &BotConfig) -> Result<(), Error> {
+pub fn initialize() -> Result<(), Error> {
+
     // TODO: validate webhook by doing a get to it
     // If invalid, `return Err(Error::InvalidLoggingWebhook(url))
 
-    let gearbot_important = Box::new(WebhookLogger {
-        http: http.clone(),
-        url: config.logging.important_logs.to_owned(),
-    });
+    let gearbot_important = Box::new(WebhookLogger {cell: &IMPORTANT_WEBHOOK});
 
-    let gearbot_info = Box::new(WebhookLogger {
-        http,
-        url: config.logging.info_logs.to_owned(),
-    });
-
-    // let x = Logger::
+    let gearbot_info = Box::new(WebhookLogger {cell: &INFO_WEBHOOK});
 
     let log_init_status = LOGGER_HANDLE.set(
         Logger::with_env_or_str("info")
@@ -69,42 +66,29 @@ pub fn initialize(http: HttpClient, config: &BotConfig) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn set_user(user: CurrentUser) {
-    BOT_USER.set(user).unwrap()
+pub fn initialize_discord_webhooks(http: HttpClient, config: &BotConfig, user: CurrentUser) {
+    HTTP_CLIENT.set(http).unwrap();
+    IMPORTANT_WEBHOOK.set(config.logging.important_logs.to_owned()).unwrap();
+    INFO_WEBHOOK.set(config.logging.info_logs.to_owned()).unwrap();
+    BOT_USER.set(user).unwrap();
 }
 
-struct WebhookLogger {
-    http: HttpClient,
-    url: String,
+struct WebhookLogger<'a> {
+    cell: &'a OnceCell<String>
 }
 
-impl LogWriter for WebhookLogger {
+impl LogWriter for WebhookLogger<'_> {
     fn write(&self, now: &mut DeferredNow, record: &Record) -> Result<(), io::Error> {
-        let embed_builder = EmbedBuilder::new()
-            .color(EMBED_LOG_BLUE)
-            .description(record.args().to_string())
-            .timestamp(now.now().naive_utc().to_string())
-            .footer(record.level().to_string())
-            .icon_url(get_icon(record.level()))
-            .commit();
+        let mut message = String::from("``[");
+        message += &now.now().naive_utc().format("%Y-%m-%d %H:%M:%S").to_string();
+        message += "]`` ";
+        message += get_emoji(record.level()).for_chat();
+        message += " ";
+        message += &record.args().to_string();
 
-        let embed_builder = if let Some(user) = BOT_USER.get() {
-            if let Some(avatar) = &user.avatar {
-                let mut ab = embed_builder.author().name(&user.name);
-                ab = ab.icon_url(format!("{}{}/{}.png", DISCORD_AVATAR_URL, &user.id, avatar));
-                ab.commit()
-            } else {
-                embed_builder
-            }
-        } else {
-            embed_builder
-        };
-
-        let url = self.url.to_owned();
-        let http = self.http.clone();
-        // println!("{:?}", embed_builder.build());
-        let embeds = vec![embed_builder.build()];
-        tokio::spawn(async move { send_webhook(http, &url, embeds).await });
+        let url = self.cell.get().unwrap().to_owned();
+        let http = HTTP_CLIENT.get().unwrap().clone();
+        tokio::spawn(async move { send_webhook(http, &url, message).await });
 
         Ok(())
     }
@@ -118,21 +102,27 @@ impl LogWriter for WebhookLogger {
     }
 }
 
-async fn send_webhook(http: HttpClient, url: &str, embeds: Vec<Embed>) -> Result<(), Error> {
-    http.execute_webhook_from_url(url)?
-        .embeds(embeds)
+async fn send_webhook(http: HttpClient, url: &str, message: String) -> Result<(), Error> {
+    let user = BOT_USER.get().unwrap();
+    let mut executor = http.execute_webhook_from_url(url)?
+        .content(message)
+        .username(&user.name);
+
+    match &user.avatar {
+        Some(avatar) => executor.avatar_url(format!("{}{}/{}.png", DISCORD_AVATAR_URL, &user.id, avatar)),
+        None => executor
+    }
         .await
         .map_err(Error::TwilightHttp)
         .map(|_| ())
 }
 
-fn get_icon(level: Level) -> &'static str {
+fn get_emoji(level: Level) -> Emoji {
     match level {
-        Level::Error => LOGGING_ERROR_EMOTE,
-        Level::Warn => LOGGING_WARN_EMOTE,
-        Level::Info => LOGGING_INFO_EMOTE,
-        Level::Debug => LOGGING_DEBUG_EMOTE,
-        Level::Trace => LOGGING_DEBUG_EMOTE,
+        Level::Error => Emoji::No,
+        Level::Warn => Emoji::Warn,
+        Level::Info => Emoji::Info,
+        _ => Emoji::Info, // never send to discord so doesn't matter
     }
 }
 
@@ -156,6 +146,13 @@ pub mod macros {
     macro_rules! gearbot_error {
         ($($arg:tt)*) => (
             log::error!(target: "{gearbot_important,gearbot_info,_Default}", $($arg)*);
+        )
+    }
+
+    #[macro_export]
+    macro_rules! gearbot_warn {
+        ($($arg:tt)*) => (
+            log::warn!(target: "{gearbot_important,gearbot_info,_Default}", $($arg)*);
         )
     }
 }

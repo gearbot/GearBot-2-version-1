@@ -19,8 +19,10 @@ regex = "1.3"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "0.2", default_features = false, features = ["macros", "sync", "rt-core"] }
 toml = "0.5"
-twilight = { git = "https://github.com/twilight-rs/twilight.git" }
+twilight = { git = "https://github.com/Erk-/dawn", branch="fix/lost-events" }
 tokio-postgres = "0.5.3"
 refinery = {version= "0.2.1", features=["tokio-postgres"]}
-refinery-migrations = "0.2.2"
 deadpool-postgres={version = "0.5.5", features=["config"]}
+
+[profile.dev]
+debug = 0

@@ -1,4 +1,7 @@
+pub use emoji::*;
+pub use errors::*;
+
 pub mod matchers;
 
 mod errors;
-pub use errors::*;
+pub mod emoji;

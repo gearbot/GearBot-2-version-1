@@ -23,6 +23,7 @@ pub enum Error {
     DatabaseError(tokio_postgres::error::Error),
     PoolError(PoolError),
     DatabaseMigrationError(String),
+    UnknownEmoji(String)
 }
 
 #[derive(Debug)]
@@ -74,14 +75,11 @@ impl fmt::Display for Error {
                 write!(f, "An error occurred making a Discord request: {}", e)
             }
             Error::TwilightCluster(e) => write!(f, "An error occurred on a cluster request: {}", e),
-            Error::CacheError(e) => write!(
-                f,
-                "An error occured attempting to fetch an object from the cache: {}",
-                e
-            ),
-            Error::DatabaseError(e) => write!(f, "A database error occurred: {}", e),
-            Error::PoolError(e) => write!(f, "An error occurred in the database pool: {}", e),
-            Error::DatabaseMigrationError(e) => write!(f, "Failed to migrate the database: {}", e),
+            Error::CacheError(e) => write!(f, "An error occured attempting to fetch an object from the cache: {}", e),
+            Error::DatabaseError(e) => {write!(f, "A database error occurred: {}", e)}
+            Error::PoolError(e) => {write!(f, "An error occurred in the database pool: {}", e)}
+            Error::DatabaseMigrationError(e) => {write!(f, "Failed to migrate the database: {}", e)}
+            Error::UnknownEmoji(e) => {write!(f, "Unknown emoji: {}", e)}
         }
     }
 }

@@ -4,20 +4,20 @@ use std::sync::Arc;
 
 use log::debug;
 use tokio::stream::StreamExt;
+use twilight::cache::InMemoryCache;
 use twilight::cache::twilight_cache_inmemory::config::{
     EventType as CacheEventType, InMemoryConfigBuilder,
 };
-use twilight::cache::InMemoryCache;
+use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::gateway::cluster::config::ShardScheme;
 use twilight::gateway::cluster::Event;
-use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
 
-use crate::core::handlers::{cache, commands, general};
-use crate::core::{BotConfig, Context};
-use crate::utils::Error;
 use crate::{gearbot_error, gearbot_info};
+use crate::core::{BotConfig, Context};
+use crate::core::handlers::{cache, commands, general};
+use crate::utils::Error;
 
 pub struct GearBot;
 
@@ -40,7 +40,6 @@ impl GearBot {
                 | GatewayIntents::GUILD_MESSAGE_REACTIONS
                 | GatewayIntents::DIRECT_MESSAGES
                 | GatewayIntents::DIRECT_MESSAGE_REACTIONS
-                | GatewayIntents::GUILD_PRESENCES,
         );
 
         let cluster_config = ClusterConfig::builder(&config.tokens.discord)
@@ -61,13 +60,13 @@ impl GearBot {
 
         gearbot_info!("The cluster is going online!");
         let cluster = Cluster::new(cluster_config);
-        cluster.up().await?;
+        // cluster.up().await?;
 
         let context = Arc::new(Context::new(cache, cluster, http));
 
         // TODO: Look into splitting this into two streams:
         // One for user messages, and the other for internal bot things
-        let mut bot_events = context.cluster.events().await;
+        let mut bot_events = context.cluster.events().await?;
 
         // context.cluster.command()
         gearbot_info!("Ready to process events!");
@@ -93,7 +92,7 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Erro
         event.0
     );
     cache::handle_event(event.0, &event.1, ctx.clone()).await?;
-    general::handle_event(event.0, &event.1).await?;
+    general::handle_event(event.0, &event.1, ctx.clone()).await?;
 
     // Bot stat handling "hooks"
     match &event.1 {
