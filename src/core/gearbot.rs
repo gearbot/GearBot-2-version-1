@@ -4,20 +4,20 @@ use std::sync::Arc;
 
 use log::debug;
 use tokio::stream::StreamExt;
-use twilight::cache::InMemoryCache;
 use twilight::cache::twilight_cache_inmemory::config::{
     EventType as CacheEventType, InMemoryConfigBuilder,
 };
-use twilight::gateway::{Cluster, ClusterConfig};
+use twilight::cache::InMemoryCache;
 use twilight::gateway::cluster::config::ShardScheme;
 use twilight::gateway::cluster::Event;
+use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
 
-use crate::{gearbot_error, gearbot_info};
-use crate::core::{BotConfig, Context};
 use crate::core::handlers::{cache, commands, general};
+use crate::core::{BotConfig, Context};
 use crate::utils::Error;
+use crate::{gearbot_error, gearbot_info};
 
 pub struct GearBot;
 
@@ -40,7 +40,7 @@ impl GearBot {
                 | GatewayIntents::GUILD_MESSAGE_REACTIONS
                 | GatewayIntents::DIRECT_MESSAGES
                 | GatewayIntents::DIRECT_MESSAGE_REACTIONS
-                | GatewayIntents::GUILD_PRESENCES
+                | GatewayIntents::GUILD_PRESENCES,
         );
 
         let cluster_config = ClusterConfig::builder(&config.tokens.discord)
@@ -70,6 +70,7 @@ impl GearBot {
         let mut bot_events = context.cluster.events().await;
 
         // context.cluster.command()
+        gearbot_info!("Ready to process events!");
         while let Some(event) = bot_events.next().await {
             context.cache.update(&event.1).await?;
 
@@ -99,7 +100,7 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Erro
         Event::MessageCreate(msg) => ctx.stats.new_message(&ctx, msg).await,
         Event::GuildDelete(_) => ctx.stats.left_guild().await,
         _ => {}
-    }    
+    }
 
     commands::handle_event(event.1, ctx.clone()).await?;
 
