@@ -1,4 +1,4 @@
-use regex::{Regex, RegexBuilder};
+use regex::{Match, Regex, RegexBuilder};
 use url::{Url, Host};
 
 use lazy_static::lazy_static;
@@ -32,8 +32,18 @@ pub fn contains_url(msg: &str) -> bool {
     URL_MATCHER.is_match(msg)
 }
 
+pub fn get_urls<'a>(msg: &'a str) -> Vec<Match<'a>> {
+    URL_MATCHER.find_iter(msg)
+    .collect()
+}
+
 pub fn contains_emote(msg: &str) -> bool {
     EMOJI_MATCHER.is_match(msg)
+}
+
+pub fn get_emotes<'a>(msg: &'a str) -> Vec<Match<'a>> {
+    EMOJI_MATCHER.find_iter(msg)
+    .collect()
 }
 
 pub fn contains_jump_link(msg: &str) -> bool {

@@ -4,15 +4,18 @@ use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
+use crate::utils;
 use crate::parser::Parser;
 
 pub async fn echo(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
     // TODO: Sanitize this
-    let echo_contents: Vec<String> = parser.parts.into_iter().skip(1).collect();
-    let echo_contents = echo_contents.join(" ");
+    let ec: Vec<String> = parser.parts.into_iter().skip(1).collect();
+    let echo_contents = utils::clean(&ec.join(" "), true, true, true, true);
     ctx.http
         .create_message(msg.channel_id)
         .content(echo_contents)
+        .allowed_mentions()
+        .build()
         .await
         .unwrap();
 
