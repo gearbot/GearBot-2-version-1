@@ -7,16 +7,16 @@ use twilight::http::Client as HttpClient;
 use git_version::git_version;
 use utils::Error;
 
+use crate::core::logging;
 use crate::core::BotConfig;
 use crate::core::GearBot;
-use crate::core::logging;
 use crate::database::migrations::embedded;
 
-mod core;
 mod commands;
-mod utils;
+mod core;
 mod database;
 mod parser;
+mod utils;
 
 pub type CommandResult = Result<(), Error>;
 
@@ -45,8 +45,10 @@ async fn main() -> Result<(), Error> {
     gearbot_info!("Connected to the database!");
 
     //TODO: wrap this
-    embedded::migrations::runner().run_async(&mut **connection).await.map_err(|e| Error::DatabaseMigrationError(e.to_string()))?;
-
+    embedded::migrations::runner()
+        .run_async(&mut **connection)
+        .await
+        .map_err(|e| Error::DatabaseMigrationError(e.to_string()))?;
 
     // tokio::spawn(async move {
     //     if let Err(e) = connection.await {

@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::{Arc, atomic::Ordering};
+use std::sync::{atomic::Ordering, Arc};
 
 use chrono::Utc;
 use twilight::builders::embed::EmbedBuilder;

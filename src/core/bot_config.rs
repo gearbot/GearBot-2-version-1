@@ -8,7 +8,7 @@ use crate::utils::Error;
 pub struct BotConfig {
     pub tokens: Tokens,
     pub logging: Logging,
-    pub database: Database
+    pub database: Database,
 }
 
 #[derive(Deserialize, Debug)]
@@ -24,7 +24,7 @@ pub struct Logging {
 
 #[derive(Deserialize, Debug)]
 pub struct Database {
-    pub postgres: String
+    pub postgres: String,
 }
 
 impl BotConfig {

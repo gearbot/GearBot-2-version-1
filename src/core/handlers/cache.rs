@@ -122,7 +122,7 @@ async fn generate_role_display(roles: &[RoleId], ctx: &Context) -> Result<String
             let disp = if pos != roles.len() {
                 format!("{}, ", role.name)
             } else {
-                format!("{}", role.name)
+                role.name.to_string()
             };
 
             display_string.push_str(&disp);

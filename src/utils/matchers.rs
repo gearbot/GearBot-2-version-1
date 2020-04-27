@@ -44,61 +44,48 @@ pub fn contains_invite_link(msg: &str) -> bool {
 }
 
 lazy_static! {
-    static ref ID_MATCHER: Regex = {
-        Regex::new(r"<@!?([0-9]+)>").unwrap()
-    }; 
+    static ref ID_MATCHER: Regex = { Regex::new(r"<@!?([0-9]+)>").unwrap() };
 }
 
 lazy_static! {
-    static ref ROLE_ID_MATCHER: Regex = {
-        Regex::new(r"<@&([0-9]+)>").unwrap()
-    };
+    static ref ROLE_ID_MATCHER: Regex = { Regex::new(r"<@&([0-9]+)>").unwrap() };
 }
 
 lazy_static! {
-    static ref CHANNEL_ID_MATCHER: Regex = {
-        Regex::new(r"<#([0-9]+)>").unwrap()
-    }; 
+    static ref CHANNEL_ID_MATCHER: Regex = { Regex::new(r"<#([0-9]+)>").unwrap() };
 }
 
 lazy_static! {
-    static ref MENTION_MATCHER: Regex = {
-        Regex::new(r"<@[!&]?\\d+>").unwrap()
-    }; 
+    static ref MENTION_MATCHER: Regex = { Regex::new(r"<@[!&]?\\d+>").unwrap() };
 }
 
 lazy_static! {
     static ref URL_MATCHER: Regex = {
-        RegexBuilder::new(r"((?:https?:)[a-z0-9]+(?:[-._][a-z0-9]+)*\.[a-z]{2,5}(?::[0-9]{1,5})?(?:/[^ \n<>]*)?)")
-            .case_insensitive(true)
-            .build()
-            .unwrap()
-    }; 
+        RegexBuilder::new(
+            r"((?:https?:)[a-z0-9]+(?:[-._][a-z0-9]+)*\.[a-z]{2,5}(?::[0-9]{1,5})?(?:/[^ \n<>]*)?)",
+        )
+        .case_insensitive(true)
+        .build()
+        .unwrap()
+    };
 }
 
 lazy_static! {
-    static ref EMOJI_MATCHER: Regex = {
-        Regex::new(r"<(a?):([^:\n]+):([0-9]+)>").unwrap()
-    }; 
+    static ref EMOJI_MATCHER: Regex = { Regex::new(r"<(a?):([^:\n]+):([0-9]+)>").unwrap() };
 }
 
 lazy_static! {
     static ref JUMP_LINK_MATCHER: Regex = {
         Regex::new(r"https://(?:canary|ptb)?\.?discordapp.com/channels/\d*/(\d*)/(\d*)").unwrap()
-    }; 
-}
-
-lazy_static! {
-    static ref MODIFIER_MATCHER: Regex = {
-        Regex::new(r"^\[(.*):(.*)\]$").unwrap()
     };
-
 }
 
 lazy_static! {
-    static ref START_WITH_NUMBER_MATCHER: Regex = {
-        Regex::new(r"^(\d+)").unwrap()
-    }; 
+    static ref MODIFIER_MATCHER: Regex = { Regex::new(r"^\[(.*):(.*)\]$").unwrap() };
+}
+
+lazy_static! {
+    static ref START_WITH_NUMBER_MATCHER: Regex = { Regex::new(r"^(\d+)").unwrap() };
 }
 
 lazy_static! {
@@ -108,7 +95,7 @@ lazy_static! {
             .case_insensitive(true)
             .build()
             .unwrap()
-    }; 
+    };
 }
 
 #[cfg(test)]
@@ -125,7 +112,7 @@ mod tests {
         assert_eq!(contains_id(msg_2), true);
         assert_eq!(contains_id(control), false);
     }
-    
+
     #[test]
     fn role_id_works() {
         let msg = "<@&3892320392392>";
@@ -143,7 +130,7 @@ mod tests {
         assert_eq!(contains_channel_id(msg), true);
         assert_eq!(contains_channel_id(control), false);
     }
-        
+
     #[test]
     fn mention_matcher_works() {
         // the regex differently.
@@ -155,7 +142,7 @@ mod tests {
         assert_eq!(contains_mention(msg_2), false);
         assert_eq!(contains_mention(control), false);
     }
-    
+
     #[test]
     fn url_matcher_works() {
         let msg = "Hey, check out this not shady website: https://google.com";

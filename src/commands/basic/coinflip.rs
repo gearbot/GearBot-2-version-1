@@ -9,7 +9,7 @@ use crate::parser::Parser;
 
 pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
     // TODO: This needs sanatized with the clean function.
-    let thing_todo = match parser.parts.into_iter().skip(1).next() {
+    let thing_todo = match parser.parts.into_iter().nth(1) {
         Some(thing) => thing,
         None => {
             ctx.http
@@ -17,7 +17,7 @@ pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> Comman
                 .content("You didn't give me anything to flip on!")
                 .await?;
 
-            return Ok(())
+            return Ok(());
         }
     };
 

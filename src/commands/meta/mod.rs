@@ -6,15 +6,18 @@ pub mod nodes;
 pub mod macros {
     #[macro_export]
     macro_rules! pin_box {
-    ($e: expr) => (
-            Box::new(move |ctx, msg, parser | Box::pin($e(ctx, msg, parser)))
-        )
+        ($e: expr) => {
+            Box::new(move |ctx, msg, parser| Box::pin($e(ctx, msg, parser)))
+        };
     }
 
     #[macro_export]
     macro_rules! command {
         ($name: literal, $e: expr) => {
-         CommandNode::create_command(String::from($name), Box::new(move |ctx, msg, parser | Box::pin($e(ctx, msg, parser))))
+            CommandNode::create_command(
+                String::from($name),
+                Box::new(move |ctx, msg, parser| Box::pin($e(ctx, msg, parser))),
+            )
         };
     }
 

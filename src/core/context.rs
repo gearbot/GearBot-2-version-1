@@ -90,11 +90,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(
-        cache: InMemoryCache,
-        cluster: Cluster,
-        http: HttpClient,
-    ) -> Self {
+    pub fn new(cache: InMemoryCache, cluster: Cluster, http: HttpClient) -> Self {
         Context {
             cache,
             cluster,
