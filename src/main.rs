@@ -45,8 +45,6 @@ async fn main() -> Result<(), Error> {
     logging::initialize_discord_webhooks(http.clone(), &config, user);
 
     gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", VERSION);
-    gearbot_error!("test error");
-    gearbot_warn!("test warning");
 
     //connect to the database
     let manager = Manager::new(Config::from_str(&config.database.postgres)?, NoTls);
