@@ -5,7 +5,7 @@ use twilight::gateway::cluster::Event;
 use twilight::model::gateway::payload::UpdateStatus;
 use twilight::model::gateway::presence::{Activity, ActivityType, Status};
 
-use crate::core::{Context, logging};
+use crate::core::{logging, Context};
 use crate::gearbot_info;
 use crate::utils::Error;
 

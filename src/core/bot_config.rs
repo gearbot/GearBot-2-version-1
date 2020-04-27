@@ -3,8 +3,8 @@ use std::fs;
 
 use serde::Deserialize;
 
-use crate::utils::{emoji, Error, matchers};
 use crate::utils::Emoji;
+use crate::utils::{emoji, matchers, Error};
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {

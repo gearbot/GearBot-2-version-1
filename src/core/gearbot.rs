@@ -4,20 +4,20 @@ use std::sync::Arc;
 
 use log::debug;
 use tokio::stream::StreamExt;
-use twilight::cache::InMemoryCache;
 use twilight::cache::twilight_cache_inmemory::config::{
     EventType as CacheEventType, InMemoryConfigBuilder,
 };
-use twilight::gateway::{Cluster, ClusterConfig};
+use twilight::cache::InMemoryCache;
 use twilight::gateway::cluster::config::ShardScheme;
 use twilight::gateway::cluster::Event;
+use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
 
-use crate::{gearbot_error, gearbot_info};
-use crate::core::{BotConfig, Context};
 use crate::core::handlers::{cache, commands, general};
+use crate::core::{BotConfig, Context};
 use crate::utils::Error;
+use crate::{gearbot_error, gearbot_info};
 
 pub struct GearBot;
 

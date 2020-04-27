@@ -8,9 +8,9 @@ use twilight::http::Client as HttpClient;
 use git_version::git_version;
 use utils::Error;
 
+use crate::core::logging;
 use crate::core::BotConfig;
 use crate::core::GearBot;
-use crate::core::logging;
 use crate::database::migrations::embedded;
 
 mod commands;
