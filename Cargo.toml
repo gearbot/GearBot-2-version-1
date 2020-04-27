@@ -27,3 +27,6 @@ deadpool-postgres={version = "0.5.5", features=["config"]}
 
 [profile.dev]
 debug = 0
+
+[profile.release]
+lto = true
