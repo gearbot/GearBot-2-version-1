@@ -8,9 +8,7 @@ use flexi_logger::{
 use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
 use tokio;
-use twilight::builders::embed::EmbedBuilder;
 use twilight::http::Client as HttpClient;
-use twilight::model::channel::embed::Embed;
 use twilight::model::user::CurrentUser;
 
 use crate::core::BotConfig;
@@ -25,12 +23,6 @@ static IMPORTANT_WEBHOOK: OnceCell<String> = OnceCell::new();
 static INFO_WEBHOOK: OnceCell<String> = OnceCell::new();
 
 const DISCORD_AVATAR_URL: &str = "https://cdn.discordapp.com/avatars/";
-const EMBED_LOG_BLUE: u32 = 0x00_43FF;
-
-const LOGGING_ERROR_EMOTE: &str = "https://cdn.discordapp.com/emojis/528335386238255106.png?v=1";
-const LOGGING_WARN_EMOTE: &str = "https://cdn.discordapp.com/emojis/473506219919802388.png?v=1";
-const LOGGING_INFO_EMOTE: &str = "https://cdn.discordapp.com/emojis/459697272326848520.png?v=1";
-const LOGGING_DEBUG_EMOTE: &str = "https://cdn.discordapp.com/emojis/528335315593723914.png?v=1";
 
 pub fn initialize() -> Result<(), Error> {
     // TODO: validate webhook by doing a get to it
@@ -86,16 +78,11 @@ struct WebhookLogger<'a> {
 
 impl LogWriter for WebhookLogger<'_> {
     fn write(&self, now: &mut DeferredNow, record: &Record) -> Result<(), io::Error> {
-        let mut message = String::from("``[");
-        message += &now
-            .now()
-            .naive_utc()
-            .format("%Y-%m-%d %H:%M:%S")
-            .to_string();
-        message += "]`` ";
-        message += get_emoji(record.level()).for_chat();
-        message += " ";
-        message += &record.args().to_string();
+        let timestamp = now.now().naive_utc().format("%Y-%m-%d %H:%M:%S");
+        let log_emote = get_emoji(record.level()).for_chat();
+        let log_info = &record.args();
+
+        let message = format!("``[{}]`` {} {}", timestamp, log_emote, log_info);
 
         let url = self.cell.get().unwrap().to_owned();
         let http = HTTP_CLIENT.get().unwrap().clone();
@@ -115,7 +102,7 @@ impl LogWriter for WebhookLogger<'_> {
 
 async fn send_webhook(http: HttpClient, url: &str, message: String) -> Result<(), Error> {
     let user = BOT_USER.get().unwrap();
-    let mut executor = http
+    let executor = http
         .execute_webhook_from_url(url)?
         .content(message)
         .username(&user.name);

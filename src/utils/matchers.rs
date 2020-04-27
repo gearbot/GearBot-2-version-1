@@ -1,6 +1,16 @@
-use regex::{CaptureMatches, Regex, RegexBuilder};
+use regex::{Regex, RegexBuilder};
+use url::{Url, Host};
 
 use lazy_static::lazy_static;
+
+const KNOWN_INVITE_DOMAINS: [&str; 6] = [
+    "discordapp.com",
+    "discord.com",
+    "discord.gg",
+    "discord.me",
+    "discord.io",
+    "discord.li",
+];
 
 pub fn contains_id(msg: &str) -> bool {
     ID_MATCHER.is_match(msg)
@@ -19,7 +29,6 @@ pub fn contains_mention(msg: &str) -> bool {
 }
 
 pub fn contains_url(msg: &str) -> bool {
-    // Url::parse(msg).is_ok()
     URL_MATCHER.is_match(msg)
 }
 
@@ -36,7 +45,46 @@ pub fn starts_with_number(msg: &str) -> bool {
 }
 
 pub fn contains_invite_link(msg: &str) -> bool {
-    INVITE_MATCHER.is_match(msg)
+    if let Some(captures) = URL_MATCHER.captures(msg) {
+        match captures.get(0) {
+            Some(url) => {
+                let parsed = Url::parse(url.as_str()).unwrap();
+                let host = match parsed.host().unwrap() {
+                    Host::Domain(host) => host,
+                    // If it doesn't have a domain type host, then its not an invite link
+                    _ => return false,
+                };
+                
+                if KNOWN_INVITE_DOMAINS.contains(&host) {
+                    // discordapp.com and discord.com 
+                    if host == KNOWN_INVITE_DOMAINS[0] || host == KNOWN_INVITE_DOMAINS[1] {
+                        let segments = match parsed.path_segments() {
+                            Some(segs) => segs,
+                            None => return false
+                        };
+
+                        println!("The segments were: {:?}", segments);
+
+                        for seg in segments {
+                            if seg.contains("invite") {
+                                return true
+                            }
+                        }
+                    } else {
+                        // The other links are used solely for inviting people to a server
+                        // in one form or another
+                        return true
+                    }
+
+                } else {
+                    return false
+                }
+            },
+            None => return false
+        } 
+    }
+
+    false
 }
 
 pub struct EmojiInfo {
@@ -52,7 +100,7 @@ pub fn get_emoji_parts(msg: &str) -> Vec<EmojiInfo> {
     let mut results: Vec<EmojiInfo> = vec![];
     for m in EMOJI_MATCHER.captures_iter(msg) {
         results.push(EmojiInfo {
-            animated: m[0] == String::from("a"),
+            animated: &m[0] == "a",
             name: m[1].to_owned(),
             id: m[3].parse::<u64>().unwrap(),
         });
@@ -97,16 +145,6 @@ lazy_static! {
 
 lazy_static! {
     static ref START_WITH_NUMBER_MATCHER: Regex = { Regex::new(r"^(\d+)").unwrap() };
-}
-
-lazy_static! {
-    static ref INVITE_MATCHER: Regex = {
-        // TODO: This needs re-written without look-around/behind, Rust Regex doesn't support it in favor of higher performance.
-        RegexBuilder::new(r"(?:https?://)?(?:www\.)?(?:discord(?:\.| |\[?\(?'?'?dot'?'?\)?\]?)?(?:gg|io|me|li)|discordapp\.com/invite)/+((?:(?!https?)[\w\d-])+)")
-            .case_insensitive(true)
-            .build()
-            .unwrap()
-    };
 }
 
 #[cfg(test)]
@@ -204,10 +242,21 @@ mod tests {
 
     #[test]
     fn invite_matcher_works() {
-        let msg = "https://discord.gg/vddW3D9";
+        let msg = "Bam, check it out: https://discord.gg/vddW3D9";
+        let msg2 = "https://discordapp.com/invite/vddW3D9";
+        let msg3 = "https://discord.me/whoknowswhatshere";
+        let msg4 = "https://discord.io/whatever";
+        let msg5 = "https://discord.li/neatstuff";
+
         let control = "I don't have my own server :(";
 
         assert_eq!(contains_invite_link(msg), true);
+        assert_eq!(contains_invite_link(msg2), true);
+        assert_eq!(contains_invite_link(msg3), true);
+        assert_eq!(contains_invite_link(msg4), true);
+        assert_eq!(contains_invite_link(msg5), true);
+
+
         assert_eq!(contains_invite_link(control), false);
     }
 }

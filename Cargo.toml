@@ -21,6 +21,7 @@ tokio = { version = "0.2", default_features = false, features = ["macros", "sync
 toml = "0.5"
 twilight = { git = "https://github.com/Erk-/dawn", branch="fix/lost-events" }
 tokio-postgres = "0.5.3"
+url = "2.1"
 refinery = {version= "0.2.1", features=["tokio-postgres"]}
 deadpool-postgres={version = "0.5.5", features=["config"]}
 

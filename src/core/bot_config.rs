@@ -3,7 +3,6 @@ use std::fs;
 
 use serde::Deserialize;
 
-use crate::utils::Emoji;
 use crate::utils::{emoji, matchers, Error};
 
 #[derive(Deserialize, Debug)]
@@ -44,7 +43,7 @@ impl BotConfig {
                     let id: u64 = matchers::get_emoji_parts(value)[0].id;
                     id_map.insert(name.clone(), id);
                 }
-                emoji::EMOJI_OVERRIDES.set(override_map);
+                emoji::EMOJI_OVERRIDES.set(override_map).unwrap();
                 Ok(c)
             }
         }

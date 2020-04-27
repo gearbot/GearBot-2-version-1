@@ -15,11 +15,11 @@ pub struct Parser {
 }
 
 impl Parser {
-    fn new(content: &String) -> Self {
+    fn new(content: &str) -> Self {
         Parser {
             parts: content
                 .split_whitespace()
-                .map(std::borrow::ToOwned::to_owned)
+                .map(String::from)
                 .collect::<Vec<String>>(),
             index: 0,
         }
@@ -56,7 +56,7 @@ impl Parser {
         ctx: Arc<Context>,
     ) -> Result<(), Error> {
         //TODO: verify permissions
-        let mut parser = Parser::new(&message.0.content);
+        let parser = Parser::new(&message.0.content);
         debug!("Parser processing message: {:?}", &message.content);
 
         //TODO: walk the stack to validate permissions
@@ -65,16 +65,17 @@ impl Parser {
 
         match command_nodes.last() {
             Some(node) => {
-                let mut name = String::from("");
-                for i in 0..command_nodes.len() {
+                let mut name = String::new();
+                for (i, node) in command_nodes.iter().enumerate() {
                     if i > 0 {
                         name += "__"
                     }
-                    name += command_nodes[i].get_name()
+                    name += node.get_name()
                 }
                 debug!("Executing command: {}", name);
 
-                node.execute(ctx, message.0, parser).await?;
+                node.execute(ctx.clone(), message.0, parser).await?;
+                ctx.stats.command_used(false).await;
                 Ok(())
             }
             None => Ok(()),

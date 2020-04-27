@@ -29,13 +29,10 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
             println!("{:?}", update);
         }
         Event::MemberUpdate(update) => {
-            println!("Member update triggered?");
-            println!("{:?}", update);
             // According to the docs, cache commands can never error, but just to be safe and
             // not spam unwraps everywhere, wrap it.
             let old_member = ctx.cache.member(update.guild_id, update.user.id).await?;
             // TODO: Figure out why this is always `None`.
-            println!("{:?}", old_member);
 
             let old_member = match old_member {
                 Some(om) => om,
@@ -81,21 +78,21 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
 
             info!("A member update occured: ");
 
-            if let Some((new_alias, old_alias)) = nickname_change {
+            if let Some((old_alias, new_alias)) = nickname_change {
                 info!(
-                    "User {} changed their nicknamename from {} to {}",
+                    "User {} changed their nickname from '{}' to '{}'",
                     new_member.name, old_alias, new_alias
                 );
             }
 
             if let Some((new_name, past_name)) = username_change {
-                info!("User {} changed their name to {}", past_name, new_name);
+                info!("User '{}' changed their name to '{}'", past_name, new_name);
             }
 
             if !roles_lost.is_empty() {
                 let roles_lost_display = generate_role_display(&roles_lost, &ctx).await?;
                 info!(
-                    "User {} lost the following roles: {}",
+                    "User '{}' lost the following roles: {}",
                     new_member.name, roles_lost_display
                 );
             }
@@ -103,7 +100,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
             if !roles_gained.is_empty() {
                 let roles_gained_display = generate_role_display(&roles_lost, &ctx).await?;
                 info!(
-                    "User {} gained the following roles: {}",
+                    "User '{}' gained the following roles: {}",
                     new_member.name, roles_gained_display
                 );
             }
@@ -111,6 +108,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
 
         _ => (),
     }
+
     ctx.cache.update(event).await?;
     Ok(())
 }

@@ -26,6 +26,9 @@ pub type CommandResult = Result<(), Error>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    info!("Gearbot v{} starting!", VERSION);
+    debug!("Lets try this out!");
+
     if let Err(e) = logging::initialize() {
         gearbot_error!("{}", e);
         return Err(e);

@@ -490,6 +490,7 @@ dependencies = [
  "tokio-postgres",
  "toml",
  "twilight",
+ "url",
 ]
 
 [[package]]

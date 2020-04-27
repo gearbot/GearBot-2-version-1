@@ -9,16 +9,20 @@ use crate::parser::Parser;
 
 pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
     // TODO: This needs sanatized with the clean function.
-    let thing_todo = match parser.parts.into_iter().nth(1) {
-        Some(thing) => thing,
-        None => {
-            ctx.http
-                .create_message(msg.channel_id)
-                .content("You didn't give me anything to flip on!")
-                .await?;
+    let thing_todo: String = parser.parts.into_iter()
+        .skip(1)
+        .collect::<Vec<String>>()
+        .join(" ");
 
-            return Ok(());
-        }
+    let thing_todo = if !thing_todo.is_empty() {
+       thing_todo
+    } else {
+        ctx.http
+            .create_message(msg.channel_id)
+            .content("You didn't give me anything to flip on!")
+            .await?;
+
+        return Ok(());
     };
 
     let message_text = if rand::random() {

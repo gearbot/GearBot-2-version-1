@@ -5,7 +5,7 @@ use twilight::gateway::cluster::Event;
 use twilight::model::gateway::payload::UpdateStatus;
 use twilight::model::gateway::presence::{Activity, ActivityType, Status};
 
-use crate::core::{logging, Context};
+use crate::core::Context;
 use crate::gearbot_info;
 use crate::utils::Error;
 
@@ -18,7 +18,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
             gearbot_info!("Shard {} is attempting to reconnect", shard_id)
         }
         Event::ShardResuming(_) => gearbot_info!("Shard {} is resuming", shard_id),
-        Event::Ready(ready) => {
+        Event::Ready(_) => {
             gearbot_info!("Shard {} ready to go!", shard_id);
             ctx.cluster
                 .command(

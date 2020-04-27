@@ -1,12 +1,8 @@
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::path::Display;
 use std::str::FromStr;
 
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-
-use lazy_static::lazy_static;
 
 use crate::define_emoji;
 use crate::utils::errors::Error;

@@ -15,14 +15,10 @@ pub fn get_root() -> &'static CommandNode {
                 .set(subcommands!(
                     "ROOT",
                     None,
-                    subcommands!(
-                        "basic",
-                        None,
-                        command!("coinflip", basic::coinflip),
-                        command!("ping", basic::ping),
-                        command!("echo", basic::echo),
-                        command!("about", basic::about)
-                    )
+                    command!("coinflip", basic::coinflip),
+                    command!("ping", basic::ping),
+                    command!("echo", basic::echo),
+                    command!("about", basic::about)
                 ))
                 .ok()
                 .unwrap();
