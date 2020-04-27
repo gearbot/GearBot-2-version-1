@@ -20,7 +20,6 @@ define_emoji!(
 
 pub static EMOJI_OVERRIDES: OnceCell<HashMap<String, String>> = OnceCell::new();
 
-
 #[macro_use]
 mod macros {
     #[macro_export]

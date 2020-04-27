@@ -17,7 +17,10 @@ pub struct Parser {
 impl Parser {
     fn new(content: &String) -> Self {
         Parser {
-            parts: content.split_whitespace().map(std::borrow::ToOwned::to_owned).collect::<Vec<String>>(),
+            parts: content
+                .split_whitespace()
+                .map(std::borrow::ToOwned::to_owned)
+                .collect::<Vec<String>>(),
             index: 0,
         }
     }
@@ -42,13 +45,16 @@ impl Parser {
                     done = true;
                 }
             }
-        };
+        }
 
         nodes
         // None
     }
 
-    pub async fn figure_it_out(message: Box<MessageCreate>, ctx: Arc<Context>) -> Result<(), Error> {
+    pub async fn figure_it_out(
+        message: Box<MessageCreate>,
+        ctx: Arc<Context>,
+    ) -> Result<(), Error> {
         //TODO: verify permissions
         let mut parser = Parser::new(&message.0.content);
         debug!("Parser processing message: {:?}", &message.content);
@@ -57,12 +63,10 @@ impl Parser {
         let mut p = parser.clone();
         let command_nodes = p.get_command();
 
-
-        match command_nodes.last()
-        {
+        match command_nodes.last() {
             Some(node) => {
                 let mut name = String::from("");
-                for i in 0..command_nodes.len(){
+                for i in 0..command_nodes.len() {
                     if i > 0 {
                         name += "__"
                     }
@@ -72,8 +76,8 @@ impl Parser {
 
                 node.execute(ctx, message.0, parser).await?;
                 Ok(())
-            },
-            None => Ok(())
+            }
+            None => Ok(()),
         }
     }
 }

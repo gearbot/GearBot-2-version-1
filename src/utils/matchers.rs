@@ -42,19 +42,19 @@ pub fn contains_invite_link(msg: &str) -> bool {
 pub struct EmojiInfo {
     pub animated: bool,
     pub name: String,
-    pub id: u64
+    pub id: u64,
 }
 
 pub fn get_emoji_parts(msg: &str) -> Vec<EmojiInfo> {
     if !contains_emote(msg) {
-        return vec![]
+        return vec![];
     }
     let mut results: Vec<EmojiInfo> = vec![];
     for m in EMOJI_MATCHER.captures_iter(msg) {
         results.push(EmojiInfo {
             animated: m[0] == String::from("a"),
             name: m[1].to_owned(),
-            id: m[3].parse::<u64>().unwrap()
+            id: m[3].parse::<u64>().unwrap(),
         });
     }
     results
@@ -73,9 +73,7 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref MENTION_MATCHER: Regex = {
-        Regex::new(r"<@!?\d+>").unwrap()
-    };
+    static ref MENTION_MATCHER: Regex = { Regex::new(r"<@!?\d+>").unwrap() };
 }
 
 lazy_static! {

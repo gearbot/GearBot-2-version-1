@@ -20,7 +20,17 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
         Event::ShardResuming(_) => gearbot_info!("Shard {} is resuming", shard_id),
         Event::Ready(ready) => {
             gearbot_info!("Shard {} ready to go!", shard_id);
-            ctx.cluster.command(shard_id, &UpdateStatus::new(false, gen_activity(String::from("the gears turn")), None, Status::Online)).await?;
+            ctx.cluster
+                .command(
+                    shard_id,
+                    &UpdateStatus::new(
+                        false,
+                        gen_activity(String::from("the gears turn")),
+                        None,
+                        Status::Online,
+                    ),
+                )
+                .await?;
         }
         Event::GatewayInvalidateSession(recon) => {
             if *recon {
@@ -32,8 +42,18 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
         Event::GatewayReconnect => info!("We reconnected to the gateway!"),
         Event::GatewayHello(u) => {
             debug!("Registered with gateway {} on shard {}", u, shard_id);
-            ctx.cluster.command(shard_id, &UpdateStatus::new(true, gen_activity(String::from("things coming online")), None, Status::Idle)).await?;
-        },
+            ctx.cluster
+                .command(
+                    shard_id,
+                    &UpdateStatus::new(
+                        true,
+                        gen_activity(String::from("things coming online")),
+                        None,
+                        Status::Idle,
+                    ),
+                )
+                .await?;
+        }
         _ => (),
     }
     Ok(())
@@ -55,6 +75,6 @@ fn gen_activity(name: String) -> Activity {
         secrets: None,
         state: None,
         timestamps: None,
-        url: None
+        url: None,
     }
 }

@@ -31,7 +31,6 @@ pub struct Database {
     pub postgres: String,
 }
 
-
 impl BotConfig {
     pub fn new(filename: &str) -> Result<Self, Error> {
         let config_file = fs::read_to_string(filename).map_err(|_| Error::NoConfig)?;
@@ -45,10 +44,9 @@ impl BotConfig {
                     let id: u64 = matchers::get_emoji_parts(value)[0].id;
                     id_map.insert(name.clone(), id);
                 }
-                 emoji::EMOJI_OVERRIDES.set(override_map);
+                emoji::EMOJI_OVERRIDES.set(override_map);
                 Ok(c)
             }
         }
     }
 }
-

@@ -38,10 +38,11 @@ async fn main() -> Result<(), Error> {
     let http = HttpClient::new(&config.tokens.discord);
     //validate token and figure out who we are
     let user = http.current_user().await?;
-    info!("Token validated, connecting to discord as {}#{}", user.name, user.discriminator);
+    info!(
+        "Token validated, connecting to discord as {}#{}",
+        user.name, user.discriminator
+    );
     logging::initialize_discord_webhooks(http.clone(), &config, user);
-
-
 
     gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", VERSION);
     gearbot_error!("test error");

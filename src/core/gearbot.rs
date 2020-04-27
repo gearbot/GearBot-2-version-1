@@ -39,7 +39,7 @@ impl GearBot {
                 | GatewayIntents::GUILD_MESSAGES
                 | GatewayIntents::GUILD_MESSAGE_REACTIONS
                 | GatewayIntents::DIRECT_MESSAGES
-                | GatewayIntents::DIRECT_MESSAGE_REACTIONS
+                | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
         );
 
         let cluster_config = ClusterConfig::builder(&config.tokens.discord)

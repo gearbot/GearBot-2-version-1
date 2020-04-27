@@ -33,13 +33,16 @@ const LOGGING_INFO_EMOTE: &str = "https://cdn.discordapp.com/emojis/459697272326
 const LOGGING_DEBUG_EMOTE: &str = "https://cdn.discordapp.com/emojis/528335315593723914.png?v=1";
 
 pub fn initialize() -> Result<(), Error> {
-
     // TODO: validate webhook by doing a get to it
     // If invalid, `return Err(Error::InvalidLoggingWebhook(url))
 
-    let gearbot_important = Box::new(WebhookLogger {cell: &IMPORTANT_WEBHOOK});
+    let gearbot_important = Box::new(WebhookLogger {
+        cell: &IMPORTANT_WEBHOOK,
+    });
 
-    let gearbot_info = Box::new(WebhookLogger {cell: &INFO_WEBHOOK});
+    let gearbot_info = Box::new(WebhookLogger {
+        cell: &INFO_WEBHOOK,
+    });
 
     let log_init_status = LOGGER_HANDLE.set(
         Logger::with_env_or_str("info")
@@ -68,19 +71,27 @@ pub fn initialize() -> Result<(), Error> {
 
 pub fn initialize_discord_webhooks(http: HttpClient, config: &BotConfig, user: CurrentUser) {
     HTTP_CLIENT.set(http).unwrap();
-    IMPORTANT_WEBHOOK.set(config.logging.important_logs.to_owned()).unwrap();
-    INFO_WEBHOOK.set(config.logging.info_logs.to_owned()).unwrap();
+    IMPORTANT_WEBHOOK
+        .set(config.logging.important_logs.to_owned())
+        .unwrap();
+    INFO_WEBHOOK
+        .set(config.logging.info_logs.to_owned())
+        .unwrap();
     BOT_USER.set(user).unwrap();
 }
 
 struct WebhookLogger<'a> {
-    cell: &'a OnceCell<String>
+    cell: &'a OnceCell<String>,
 }
 
 impl LogWriter for WebhookLogger<'_> {
     fn write(&self, now: &mut DeferredNow, record: &Record) -> Result<(), io::Error> {
         let mut message = String::from("``[");
-        message += &now.now().naive_utc().format("%Y-%m-%d %H:%M:%S").to_string();
+        message += &now
+            .now()
+            .naive_utc()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
         message += "]`` ";
         message += get_emoji(record.level()).for_chat();
         message += " ";
@@ -104,17 +115,20 @@ impl LogWriter for WebhookLogger<'_> {
 
 async fn send_webhook(http: HttpClient, url: &str, message: String) -> Result<(), Error> {
     let user = BOT_USER.get().unwrap();
-    let mut executor = http.execute_webhook_from_url(url)?
+    let mut executor = http
+        .execute_webhook_from_url(url)?
         .content(message)
         .username(&user.name);
 
     match &user.avatar {
-        Some(avatar) => executor.avatar_url(format!("{}{}/{}.png", DISCORD_AVATAR_URL, &user.id, avatar)),
-        None => executor
+        Some(avatar) => {
+            executor.avatar_url(format!("{}{}/{}.png", DISCORD_AVATAR_URL, &user.id, avatar))
+        }
+        None => executor,
     }
-        .await
-        .map_err(Error::TwilightHttp)
-        .map(|_| ())
+    .await
+    .map_err(Error::TwilightHttp)
+    .map(|_| ())
 }
 
 fn get_emoji(level: Level) -> Emoji {
