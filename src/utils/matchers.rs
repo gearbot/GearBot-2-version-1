@@ -1,5 +1,5 @@
 use regex::{Match, Regex, RegexBuilder};
-use url::{Url, Host};
+use url::{Host, Url};
 
 use lazy_static::lazy_static;
 
@@ -33,8 +33,7 @@ pub fn contains_url(msg: &str) -> bool {
 }
 
 pub fn get_urls<'a>(msg: &'a str) -> Vec<Match<'a>> {
-    URL_MATCHER.find_iter(msg)
-    .collect()
+    URL_MATCHER.find_iter(msg).collect()
 }
 
 pub fn contains_emote(msg: &str) -> bool {
@@ -42,8 +41,7 @@ pub fn contains_emote(msg: &str) -> bool {
 }
 
 pub fn get_emotes<'a>(msg: &'a str) -> Vec<Match<'a>> {
-    EMOJI_MATCHER.find_iter(msg)
-    .collect()
+    EMOJI_MATCHER.find_iter(msg).collect()
 }
 
 pub fn contains_jump_link(msg: &str) -> bool {
@@ -64,34 +62,33 @@ pub fn contains_invite_link(msg: &str) -> bool {
                     // If it doesn't have a domain type host, then its not an invite link
                     _ => return false,
                 };
-                
+
                 if KNOWN_INVITE_DOMAINS.contains(&host) {
-                    // discordapp.com and discord.com 
+                    // discordapp.com and discord.com
                     if host == KNOWN_INVITE_DOMAINS[0] || host == KNOWN_INVITE_DOMAINS[1] {
                         let segments = match parsed.path_segments() {
                             Some(segs) => segs,
-                            None => return false
+                            None => return false,
                         };
 
                         println!("The segments were: {:?}", segments);
 
                         for seg in segments {
                             if seg.contains("invite") {
-                                return true
+                                return true;
                             }
                         }
                     } else {
                         // The other links are used solely for inviting people to a server
                         // in one form or another
-                        return true
+                        return true;
                     }
-
                 } else {
-                    return false
+                    return false;
                 }
-            },
-            None => return false
-        } 
+            }
+            None => return false,
+        }
     }
 
     false
@@ -265,7 +262,6 @@ mod tests {
         assert_eq!(contains_invite_link(msg3), true);
         assert_eq!(contains_invite_link(msg4), true);
         assert_eq!(contains_invite_link(msg5), true);
-
 
         assert_eq!(contains_invite_link(control), false);
     }

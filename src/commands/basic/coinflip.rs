@@ -9,13 +9,15 @@ use crate::parser::Parser;
 
 pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
     // TODO: This needs sanatized with the clean function.
-    let thing_todo: String = parser.parts.into_iter()
+    let thing_todo: String = parser
+        .parts
+        .into_iter()
         .skip(1)
         .collect::<Vec<String>>()
         .join(" ");
 
     let thing_todo = if !thing_todo.is_empty() {
-       thing_todo
+        thing_todo
     } else {
         ctx.http
             .create_message(msg.channel_id)

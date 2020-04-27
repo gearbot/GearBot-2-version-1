@@ -4,8 +4,8 @@ use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
-use crate::utils;
 use crate::parser::Parser;
+use crate::utils;
 
 pub async fn echo(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
     // TODO: Sanitize this

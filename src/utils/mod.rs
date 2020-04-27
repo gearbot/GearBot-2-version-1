@@ -18,17 +18,17 @@ fn replace_markdown(msg: &mut String) {
 
 fn replace_urls(before: String, msg: &mut String) {
     let urls = matchers::get_urls(&before);
-    println!("{:?}", urls);
-    for url in urls {
+    for url in urls.iter().rev() {
         msg.insert_str(url.start(), "<");
         msg.insert_str(url.end() + 1, ">");
     }
 }
 
 fn replace_emotes(before: String, msg: &mut String) {
-    for em in matchers::get_emotes(&before) {
-        msg.insert_str(em.start(), "<");
-        msg.insert_str(em.end() + 1, ">");
+    for em in matchers::get_emotes(&before).iter().rev() {
+        println!("{:?}", em);
+        msg.insert_str(em.start(), "\\");
+        msg.insert_str(em.end() + 1, "\\");
     }
 }
 
@@ -38,25 +38,23 @@ fn replace_lookalikes(msg: &mut String) -> String {
 
 pub fn clean(msg: &str, markdown: bool, links: bool, emotes: bool, lookalikes: bool) -> String {
     let mut msg = msg.to_owned();
-    
+
+    if lookalikes {
+        msg = replace_lookalikes(&mut msg);
+    }
+
     if markdown {
-        replace_lookalikes(&mut msg);
+        msg = replace_lookalikes(&mut msg);
         replace_markdown(&mut msg);
     }
-    
+
     if links {
         replace_markdown(&mut msg);
         replace_urls(msg.clone(), &mut msg);
     }
 
-    println!("{:?}", msg);
-
     if emotes {
         replace_emotes(msg.clone(), &mut msg);
-    }
-
-    if lookalikes {
-        replace_lookalikes(&mut msg);
     }
 
     println!("{:?}", msg);
