@@ -52,13 +52,37 @@ impl GearBot {
                 CacheEventType::MESSAGE_CREATE
                     | CacheEventType::MESSAGE_DELETE
                     | CacheEventType::MESSAGE_DELETE_BULK
-                    | CacheEventType::MESSAGE_UPDATE,
+                    | CacheEventType::MESSAGE_UPDATE
+                    | CacheEventType::CHANNEL_CREATE
+                    | CacheEventType::CHANNEL_DELETE
+                    | CacheEventType::CHANNEL_UPDATE
+                    | CacheEventType::GUILD_CREATE
+                    | CacheEventType::GUILD_DELETE
+                    | CacheEventType::GUILD_EMOJIS_UPDATE
+                    | CacheEventType::GUILD_UPDATE
+                    | CacheEventType::MEMBER_ADD
+                    | CacheEventType::MEMBER_CHUNK
+                    | CacheEventType::MEMBER_REMOVE
+                    | CacheEventType::MEMBER_UPDATE
+                    | CacheEventType::MESSAGE_CREATE
+                    | CacheEventType::MESSAGE_DELETE
+                    | CacheEventType::MESSAGE_DELETE_BULK
+                    | CacheEventType::MESSAGE_UPDATE
+                    | CacheEventType::REACTION_ADD
+                    | CacheEventType::REACTION_REMOVE
+                    | CacheEventType::REACTION_REMOVE_ALL
+                    | CacheEventType::ROLE_CREATE
+                    | CacheEventType::ROLE_DELETE
+                    | CacheEventType::ROLE_UPDATE
+                    | CacheEventType::UNAVAILABLE_GUILD
+                    | CacheEventType::UPDATE_VOICE_STATE
+                    | CacheEventType::VOICE_SERVER_UPDATE
+                    | CacheEventType::VOICE_STATE_UPDATE
+                    | CacheEventType::WEBHOOKS_UPDATE,
             )
             .build();
 
         let cache = InMemoryCache::from(cache_config);
-
-        gearbot_info!("The cluster is going online!");
         let cluster = Cluster::new(cluster_config);
         // cluster.up().await?;
 
@@ -69,14 +93,13 @@ impl GearBot {
         let mut bot_events = context.cluster.events().await?;
 
         // context.cluster.command()
-        gearbot_info!("Ready to process events!");
+        gearbot_info!("The cluster is going online!");
         while let Some(event) = bot_events.next().await {
-            context.cache.update(&event.1).await?;
-
             if let Err(e) = tokio::spawn(handle_event(event, context.clone())).await {
                 gearbot_error!("{}", e);
                 context.stats.had_error().await
             }
+            context.cache.update(&event.1).await?;
         }
 
         Ok(())
@@ -85,7 +108,6 @@ impl GearBot {
 
 async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Error> {
     // Process anything that uses the event ID that we care about, aka shard events
-    // TODO: Why doesn't this print?
     debug!(
         "Got a {:?} event on shard {}",
         event.1.event_type(),
