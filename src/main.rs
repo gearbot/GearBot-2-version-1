@@ -12,9 +12,7 @@ use crate::core::logging;
 use crate::core::BotConfig;
 use crate::core::GearBot;
 use crate::database::migrations::embedded;
-use twilight::http::request::channel::message::allowed_mentions::{
-    AllowedMentions, AllowedMentionsBuilder,
-};
+use twilight::http::request::channel::message::allowed_mentions::AllowedMentionsBuilder;
 
 mod commands;
 mod core;
@@ -43,9 +41,11 @@ async fn main() -> Result<(), Error> {
     debug!("Loaded config file");
     let mut builder = HttpClient::builder();
     builder.token(&config.tokens.discord);
-    // builder.default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
+
+    builder.default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
+
     let http = builder.build()?;
-    //validate token and figure out who we are
+    // Validate token and figure out who we are
     let user = http.current_user().await?;
     info!(
         "Token validated, connecting to discord as {}#{}",

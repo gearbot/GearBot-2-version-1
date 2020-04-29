@@ -6,7 +6,6 @@ use twilight::gateway::cluster::Event;
 use crate::core::Context;
 use crate::parser::Parser;
 use crate::utils::Error;
-use std::borrow::Borrow;
 
 pub async fn handle_event<'a>(event: Event, ctx: Arc<Context>) -> Result<(), Error> {
     match event {

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use log::{debug, info, warn};
+use log::debug;
 use twilight::gateway::cluster::Event;
 use twilight::model::gateway::payload::UpdateStatus;
 use twilight::model::gateway::presence::{Activity, ActivityType, Status};

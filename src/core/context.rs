@@ -12,13 +12,11 @@ use crate::gearbot_error;
 use crate::utils::Error;
 use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
-use deadpool_postgres::{Pool, PoolError};
+use deadpool_postgres::Pool;
 use git_version::git_version;
 use log::debug;
 use postgres_types::Type;
 use serde_json;
-use std::borrow::Borrow;
-use std::sync::Arc;
 use twilight::model::user::CurrentUser;
 
 const GIT_VERSION: &str = git_version!();
@@ -138,12 +136,12 @@ impl Context {
                     .prepare_typed("SELECT config from guildconfig where id=$1", &[Type::INT8])
                     .await?;
                 let rows = client.query(&statement, &[&guild_id]).await?;
-                let config;
-                if rows.len() == 0 {
+                // let config;
+                let config: GuildConfig = if rows.len() == 0 {
                     debug!("none found in db");
-                    config = GuildConfig::new();
+                    let config = GuildConfig::default();
                     tokio::spawn(async move {
-                        debug!("inserting blank one into database");
+                        debug!("Inserting blank config into database");
                         let statement = client
                             .prepare_typed(
                                 "INSERT INTO guildconfig (id, config) VALUES ($1, $2)",
@@ -156,19 +154,22 @@ impl Context {
                                 &statement,
                                 &[
                                     &guild_id,
-                                    &serde_json::to_value(&GuildConfig::new()).unwrap(),
+                                    &serde_json::to_value(&GuildConfig::default()).unwrap(),
                                 ],
                             )
                             .await
                         {
                             gearbot_error!("{}", e);
                         };
-                        debug!("inserted");
+                        debug!("Inserted new configuration");
                     });
+
+                    config
                 } else {
                     debug!("found one in the db");
-                    config = serde_json::from_str(rows[0].get(0))?;
-                }
+                    serde_json::from_str(rows[0].get(0))?
+                };
+
                 self.configs.insert(guild_id, config);
                 Ok(self.configs.get(&guild_id).unwrap())
             }
