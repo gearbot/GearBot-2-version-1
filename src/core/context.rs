@@ -6,18 +6,17 @@ use twilight::cache::InMemoryCache;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
 use twilight::model::channel::Message;
+use twilight::model::{id::GuildId, user::CurrentUser};
 
 use crate::core::GuildConfig;
-use crate::gearbot_error;
 use crate::utils::Error;
 use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
 use deadpool_postgres::Pool;
 use git_version::git_version;
-use log::{debug, info};
+use log::info;
 use postgres_types::Type;
 use serde_json;
-use twilight::model::user::CurrentUser;
 
 const GIT_VERSION: &str = git_version!();
 
@@ -100,7 +99,7 @@ pub struct Context {
     pub status_type: RwLock<u16>,
     pub status_text: RwLock<String>,
     pub bot_user: CurrentUser,
-    configs: DashMap<i64, GuildConfig>,
+    configs: DashMap<GuildId, GuildConfig>,
     pool: Pool,
 }
 
@@ -125,7 +124,7 @@ impl Context {
         }
     }
 
-    pub async fn get_config(&self, guild_id: i64) -> Result<Ref<'_, i64, GuildConfig>, Error> {
+    pub async fn get_config(&self, guild_id: GuildId) -> Result<Ref<'_, GuildId, GuildConfig>, Error> {
         match self.configs.get(&guild_id) {
             Some(config) => Ok(config),
             None => {
@@ -133,9 +132,10 @@ impl Context {
                 let statement = client
                     .prepare_typed("SELECT config from guildconfig where id=$1", &[Type::INT8])
                     .await?;
-                let rows = client.query(&statement, &[&guild_id]).await?;
-                // let config;
-                let config: GuildConfig = if rows.len() == 0 {
+                
+                let rows = client.query(&statement, &[&(guild_id.0 as i64)]).await?;
+
+                let config: GuildConfig = if rows.is_empty() {
                     let config = GuildConfig::default();
                     info!("No config found for {}, inserting blank one", guild_id);
                     let statement = client
@@ -148,7 +148,7 @@ impl Context {
                         .execute(
                             &statement,
                             &[
-                                &guild_id,
+                                &(guild_id.0 as i64),
                                 &serde_json::to_value(&GuildConfig::default()).unwrap(),
                             ],
                         )

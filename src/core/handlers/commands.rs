@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use log::{debug, info};
+use log::info;
 use twilight::gateway::cluster::Event;
 
 use crate::core::Context;
@@ -10,37 +10,39 @@ use crate::utils::Error;
 pub async fn handle_event<'a>(event: Event, ctx: Arc<Context>) -> Result<(), Error> {
     match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
-            if msg.author.bot {
-                return Ok(());
-            }
             info!(
                 "Received a message from {}, saying {}",
                 msg.author.name, msg.content
             );
+
             let p = match msg.guild_id {
-                Some(guildid) => {
-                    let config = ctx.get_config(msg.guild_id.unwrap().0 as i64).await?;
+                Some(guild_id) => {
+                    let config = ctx.get_config(guild_id).await?;
                     config.value().prefix.clone()
                 }
                 None => String::from("!"),
             };
 
-            let prefix;
-            if msg.content.starts_with(&p) {
-                prefix = Some(p);
-            } else if msg.content.starts_with(&format!("<@{}>", ctx.bot_user.id)) {
-                prefix = Some(format!("<@{}>", ctx.bot_user.id))
-            } else if msg.content.starts_with(&format!("<@!{}>", ctx.bot_user.id)) {
-                prefix = Some(format!("<@!{}>", ctx.bot_user.id))
+            let prefix = if msg.content.starts_with(&p) {
+                Some(p)
             } else {
-                prefix = None;
-            }
+                let mention_1 = format!("<@{}>", ctx.bot_user.id);
+                let mention_2 = format!("<@!{}>", ctx.bot_user.id);
+                if msg.content.starts_with(&mention_1) {
+                    Some(mention_1)
+                } else if msg.content.starts_with(&mention_2) {
+                    Some(mention_2)
+                } else {
+                    None
+                }
+            };
 
-            if prefix.is_some() {
-                Parser::figure_it_out(&prefix.unwrap(), msg, ctx).await?;
+            if let Some(prefix) = prefix {
+                Parser::figure_it_out(&prefix, msg, ctx).await?;
             }
         }
         _ => (),
     }
+    
     Ok(())
 }

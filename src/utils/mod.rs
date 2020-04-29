@@ -1,6 +1,8 @@
 pub use emoji::*;
 pub use errors::*;
 
+// TODO: Remove this when they are all used.
+#[allow(dead_code)]
 pub mod matchers;
 
 pub mod emoji;
