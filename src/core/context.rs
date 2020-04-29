@@ -14,7 +14,7 @@ use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
 use deadpool_postgres::Pool;
 use git_version::git_version;
-use log::debug;
+use log::{debug, info};
 use postgres_types::Type;
 use serde_json;
 use twilight::model::user::CurrentUser;
@@ -126,11 +126,9 @@ impl Context {
     }
 
     pub async fn get_config(&self, guild_id: i64) -> Result<Ref<'_, i64, GuildConfig>, Error> {
-        debug!("getting config for {}", guild_id);
         match self.configs.get(&guild_id) {
             Some(config) => Ok(config),
             None => {
-                debug!("fetching from db");
                 let client = self.pool.get().await?;
                 let statement = client
                     .prepare_typed("SELECT config from guildconfig where id=$1", &[Type::INT8])
@@ -138,36 +136,27 @@ impl Context {
                 let rows = client.query(&statement, &[&guild_id]).await?;
                 // let config;
                 let config: GuildConfig = if rows.len() == 0 {
-                    debug!("none found in db");
                     let config = GuildConfig::default();
-                    tokio::spawn(async move {
-                        debug!("Inserting blank config into database");
-                        let statement = client
-                            .prepare_typed(
-                                "INSERT INTO guildconfig (id, config) VALUES ($1, $2)",
-                                &[Type::INT8, Type::JSON],
-                            )
-                            .await
-                            .unwrap();
-                        if let Err(e) = client
-                            .execute(
-                                &statement,
-                                &[
-                                    &guild_id,
-                                    &serde_json::to_value(&GuildConfig::default()).unwrap(),
-                                ],
-                            )
-                            .await
-                        {
-                            gearbot_error!("{}", e);
-                        };
-                        debug!("Inserted new configuration");
-                    });
+                    info!("No config found for {}, inserting blank one", guild_id);
+                    let statement = client
+                        .prepare_typed(
+                            "INSERT INTO guildconfig (id, config) VALUES ($1, $2)",
+                            &[Type::INT8, Type::JSON],
+                        )
+                        .await?;
+                    client
+                        .execute(
+                            &statement,
+                            &[
+                                &guild_id,
+                                &serde_json::to_value(&GuildConfig::default()).unwrap(),
+                            ],
+                        )
+                        .await?;
 
                     config
                 } else {
-                    debug!("found one in the db");
-                    serde_json::from_str(rows[0].get(0))?
+                    serde_json::from_value(rows[0].get(0))?
                 };
 
                 self.configs.insert(guild_id, config);
