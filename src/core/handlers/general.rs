@@ -6,14 +6,11 @@ use twilight::model::gateway::payload::UpdateStatus;
 use twilight::model::gateway::presence::{Activity, ActivityType, Status};
 
 use crate::core::Context;
-use crate::gearbot_info;
 use crate::utils::Error;
+use crate::{gearbot_info, gearbot_warn};
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Result<(), Error> {
     match &event {
-        Event::ShardConnecting(_) => info!("Shard {} is connecting", shard_id),
-        Event::ShardConnected(_) => gearbot_info!("Shard {} has connected", shard_id),
-        Event::ShardDisconnected(_) => gearbot_info!("Shard {} has disconnected", shard_id),
         Event::ShardReconnecting(_) => {
             gearbot_info!("Shard {} is attempting to reconnect", shard_id)
         }
@@ -34,12 +31,14 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
         }
         Event::GatewayInvalidateSession(recon) => {
             if *recon {
-                warn!("The gateway has invalidated our session, but it is reconnectable!");
+                gearbot_warn!("The gateway has invalidated our session, but it is reconnectable!");
             } else {
                 return Err(Error::InvalidSession);
             }
         }
-        Event::GatewayReconnect => info!("We reconnected to the gateway!"),
+        Event::GatewayReconnect => {
+            gearbot_info!("Gateway requested shard {} to reconnect!", shard_id)
+        }
         Event::GatewayHello(u) => {
             debug!("Registered with gateway {} on shard {}", u, shard_id);
             ctx.cluster
@@ -54,6 +53,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
                 )
                 .await?;
         }
+        Event::Resumed => gearbot_info!("Shard {} successfully resumed", shard_id),
         _ => (),
     }
     Ok(())

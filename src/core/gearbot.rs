@@ -14,10 +14,12 @@ use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
 
-use crate::core::handlers::{cache, commands, general};
+use crate::core::handlers::{commands, general, modlog};
 use crate::core::{BotConfig, Context};
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_info};
+use deadpool_postgres::Pool;
+use twilight::model::user::CurrentUser;
 
 pub struct GearBot;
 
@@ -25,6 +27,8 @@ impl GearBot {
     pub async fn run(
         config: &BotConfig,
         http: HttpClient,
+        user: CurrentUser,
+        pool: Pool,
     ) -> Result<(), Box<dyn error::Error + Send + Sync>> {
         // gearbot_info!("GearBot startup initiated!");
         let sharding_scheme = ShardScheme::try_from((0..2, 2)).unwrap();
@@ -84,21 +88,22 @@ impl GearBot {
 
         let cache = InMemoryCache::from(cache_config);
         let cluster = Cluster::new(cluster_config);
-        // cluster.up().await?;
 
-        let context = Arc::new(Context::new(cache, cluster, http));
+        let context = Arc::new(Context::new(cache, cluster, http, user, pool));
 
         // TODO: Look into splitting this into two streams:
         // One for user messages, and the other for internal bot things
-        let mut bot_events = context.cluster.events().await?;
-
         // context.cluster.command()
         gearbot_info!("The cluster is going online!");
+        let mut bot_events = context.cluster.events().await?;
         while let Some(event) = bot_events.next().await {
-            if let Err(e) = tokio::spawn(handle_event(event, context.clone())).await {
-                gearbot_error!("{}", e);
-                context.stats.had_error().await
-            }
+            let c = context.clone();
+            tokio::spawn(async move {
+                if let Err(e) = handle_event(event, c.clone()).await {
+                    gearbot_error!("{}", e);
+                    c.stats.had_error().await
+                }
+            });
         }
 
         Ok(())
@@ -112,7 +117,7 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Erro
         event.1.event_type(),
         event.0
     );
-    cache::handle_event(event.0, &event.1, ctx.clone()).await?;
+    modlog::handle_event(event.0, &event.1, ctx.clone()).await?;
     general::handle_event(event.0, &event.1, ctx.clone()).await?;
 
     // Bot stat handling "hooks"

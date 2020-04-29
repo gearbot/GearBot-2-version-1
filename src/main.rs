@@ -12,6 +12,9 @@ use crate::core::logging;
 use crate::core::BotConfig;
 use crate::core::GearBot;
 use crate::database::migrations::embedded;
+use twilight::http::request::channel::message::allowed_mentions::{
+    AllowedMentions, AllowedMentionsBuilder,
+};
 
 mod commands;
 mod core;
@@ -38,14 +41,17 @@ async fn main() -> Result<(), Error> {
     // Read config file
     let config = BotConfig::new("config.toml")?;
     debug!("Loaded config file");
-    let http = HttpClient::new(&config.tokens.discord);
+    let mut builder = HttpClient::builder();
+    builder.token(&config.tokens.discord);
+    // builder.default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
+    let http = builder.build()?;
     //validate token and figure out who we are
     let user = http.current_user().await?;
     info!(
         "Token validated, connecting to discord as {}#{}",
         user.name, user.discriminator
     );
-    logging::initialize_discord_webhooks(http.clone(), &config, user);
+    logging::initialize_discord_webhooks(http.clone(), &config, user.clone());
 
     gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", VERSION);
 
@@ -70,7 +76,7 @@ async fn main() -> Result<(), Error> {
 
     //generate command list
 
-    if let Err(e) = GearBot::run(&config, http).await {
+    if let Err(e) = GearBot::run(&config, http, user, pool).await {
         gearbot_error!("Failed to start the bot: {}", e)
     }
 

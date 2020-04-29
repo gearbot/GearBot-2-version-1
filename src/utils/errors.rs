@@ -24,6 +24,7 @@ pub enum Error {
     PoolError(PoolError),
     DatabaseMigrationError(String),
     UnknownEmoji(String),
+    SerdeError(serde_json::error::Error),
 }
 
 #[derive(Debug)]
@@ -84,6 +85,7 @@ impl fmt::Display for Error {
             Error::PoolError(e) => write!(f, "An error occurred in the database pool: {}", e),
             Error::DatabaseMigrationError(e) => write!(f, "Failed to migrate the database: {}", e),
             Error::UnknownEmoji(e) => write!(f, "Unknown emoji: {}", e),
+            Error::SerdeError(e) => write!(f, "Serde error: {}", e),
         }
     }
 }
@@ -127,5 +129,11 @@ impl From<tokio_postgres::error::Error> for Error {
 impl From<PoolError> for Error {
     fn from(e: PoolError) -> Self {
         Error::PoolError(e)
+    }
+}
+
+impl From<serde_json::error::Error> for Error {
+    fn from(e: serde_json::error::Error) -> Self {
+        Error::SerdeError(e)
     }
 }

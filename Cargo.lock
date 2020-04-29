@@ -7,6 +7,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d2e7343e7fc9de883d1b0341e0b13970f764c14101234857d2ddafa1cb1cac2"
 
 [[package]]
+name = "ahash"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35b909d1c126f78ace756fc337133356c499eebeefcce930fa5fb018823f2b2d"
+dependencies = [
+ "const-random",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "0.7.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -160,6 +169,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "const-random"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f1af9ac737b2dd2d577701e59fd09ba34822f6f2ebdb30a7647405d9e55e16a"
+dependencies = [
+ "const-random-macro",
+ "proc-macro-hack",
+]
+
+[[package]]
+name = "const-random-macro"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25e4c606eb459dd29f7c57b2e0879f2b6f14ee130918c2b78ccb58a9624e6c7a"
+dependencies = [
+ "getrandom",
+ "proc-macro-hack",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -213,6 +242,17 @@ checksum = "4434400df11d95d556bac068ddfedd482915eb18fe8bea89bc80b6e4b1c179e5"
 dependencies = [
  "generic-array",
  "subtle",
+]
+
+[[package]]
+name = "dashmap"
+version = "3.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f87a04c37da1d3d27db1fb7f372802b72fb8c3ff3e9c0914530995127f4a6a1"
+dependencies = [
+ "ahash",
+ "cfg-if",
+ "num_cpus",
 ]
 
 [[package]]
@@ -476,16 +516,20 @@ name = "gearbot"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dashmap",
  "deadpool-postgres",
  "flexi_logger",
  "git-version",
  "lazy_static",
  "log",
  "once_cell",
+ "postgres",
+ "postgres-types",
  "rand",
  "refinery",
  "regex",
  "serde",
+ "serde_json",
  "tokio",
  "tokio-postgres",
  "toml",
@@ -562,9 +606,9 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a0d737e0f947a1864e93d33fdef4af8445a00d1ed8dc0c8ddb73139ea6abf15"
+checksum = "61565ff7aaace3525556587bd2dc31d4a07071957be715e63ce7b1eccf51a8f4"
 dependencies = [
  "libc",
 ]
@@ -1140,6 +1184,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05da548ad6865900e60eaba7f589cc0783590a92e940c26953ff81ddbab2d677"
 
 [[package]]
+name = "postgres"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18741b59a558e4dfdb9c968e8126dccbefd6a16bf54e3bc5668d420b4c4ed71b"
+dependencies = [
+ "bytes",
+ "fallible-iterator",
+ "futures",
+ "log",
+ "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
 name = "postgres-protocol"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1166,6 +1224,8 @@ dependencies = [
  "bytes",
  "fallible-iterator",
  "postgres-protocol",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1496,9 +1556,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.51"
+version = "1.0.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da07b57ee2623368351e9a0488bb0b261322a15a6e0ae53e243cbdc0f4208da9"
+checksum = "a7894c8ed05b7a3a279aeb79025fdec1d3158080b75b98a08faf2806bb799edd"
 dependencies = [
  "itoa",
  "ryu",
@@ -1652,18 +1712,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.15"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54b3d3d2ff68104100ab257bb6bb0cb26c901abe4bd4ba15961f3bf867924012"
+checksum = "d12a1dae4add0f0d568eebc7bf142f145ba1aa2544cafb195c76f0f409091b60"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.15"
+version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca972988113b7715266f91250ddb98070d033c62a011fa0fcc57434a649310dd"
+checksum = "3f34e0c1caaa462fd840ec6b768946ea1e7842620d94fe29d5b847138f521269"
 dependencies = [
  "proc-macro2 1.0.10",
  "quote 1.0.3",
@@ -1829,7 +1889,7 @@ dependencies = [
 [[package]]
 name = "twilight"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "twilight-builders",
  "twilight-cache",
@@ -1842,7 +1902,7 @@ dependencies = [
 [[package]]
 name = "twilight-builders"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "twilight-model",
 ]
@@ -1850,7 +1910,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "twilight-cache-inmemory",
  "twilight-cache-trait",
@@ -1859,7 +1919,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-inmemory"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -1873,7 +1933,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-trait"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "async-trait",
  "twilight-model",
@@ -1882,7 +1942,7 @@ dependencies = [
 [[package]]
 name = "twilight-command-parser"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "unicase",
 ]
@@ -1890,7 +1950,7 @@ dependencies = [
 [[package]]
 name = "twilight-gateway"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -1910,7 +1970,7 @@ dependencies = [
 [[package]]
 name = "twilight-http"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "futures",
  "log",
@@ -1926,7 +1986,7 @@ dependencies = [
 [[package]]
 name = "twilight-model"
 version = "0.1.0"
-source = "git+https://github.com/Erk-/dawn?branch=fix/lost-events#4770d62eaaff10c481da63bb1e180d34cf19905a"
+source = "git+https://github.com/AEnterprise/twilight/?branch=gearbot#7e67d94cc1782e6c71840782e22dd9130ad9e4f5"
 dependencies = [
  "bitflags",
  "serde",

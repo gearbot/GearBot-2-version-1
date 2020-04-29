@@ -52,11 +52,12 @@ impl Parser {
     }
 
     pub async fn figure_it_out(
+        prefix: &str,
         message: Box<MessageCreate>,
         ctx: Arc<Context>,
     ) -> Result<(), Error> {
         //TODO: verify permissions
-        let parser = Parser::new(&message.0.content);
+        let parser = Parser::new(&message.0.content[prefix.len()..]);
         debug!("Parser processing message: {:?}", &message.content);
 
         //TODO: walk the stack to validate permissions
