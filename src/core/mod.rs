@@ -1,5 +1,6 @@
 pub use bot_config::BotConfig;
 pub use context::Context;
+pub use context::*;
 pub use gearbot::GearBot;
 pub use guild_config::GuildConfig;
 

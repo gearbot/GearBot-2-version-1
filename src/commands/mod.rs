@@ -4,6 +4,7 @@ use crate::commands::meta::nodes::CommandNode;
 use crate::{command, subcommands};
 pub mod basic;
 pub mod meta;
+pub mod moderation;
 
 static ROOT_NODE: OnceCell<CommandNode> = OnceCell::new();
 
@@ -18,7 +19,8 @@ pub fn get_root() -> &'static CommandNode {
                     command!("coinflip", basic::coinflip),
                     command!("ping", basic::ping),
                     command!("echo", basic::echo),
-                    command!("about", basic::about)
+                    command!("about", basic::about),
+                    command!("userinfo", moderation::userinfo)
                 ))
                 .ok()
                 .unwrap();

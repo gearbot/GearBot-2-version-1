@@ -8,6 +8,7 @@ use twilight::model::gateway::presence::{Activity, ActivityType, Status};
 use crate::core::Context;
 use crate::utils::Error;
 use crate::{gearbot_info, gearbot_warn};
+use futures::SinkExt;
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Result<(), Error> {
     match &event {
@@ -54,6 +55,21 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
                 .await?;
         }
         Event::Resumed => gearbot_info!("Shard {} successfully resumed", shard_id),
+        Event::MemberChunk(chunk) => {
+            debug!("got a chunk with nonce {:?}", &chunk.nonce);
+            match &chunk.nonce {
+                Some(nonce) => {
+                    debug!("waiter found: {}", ctx.chunk_requests.contains_key(nonce));
+                    match ctx.chunk_requests.remove(nonce) {
+                        Some(mut waiter) => {
+                            waiter.1.send(chunk.clone());
+                        }
+                        None => {}
+                    }
+                }
+                None => {}
+            };
+        }
         _ => (),
     }
     Ok(())

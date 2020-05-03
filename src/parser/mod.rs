@@ -6,22 +6,32 @@ use twilight::model::gateway::payload::MessageCreate;
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
 use crate::core::Context;
-use crate::utils::Error;
+use crate::utils::{matchers, CommandError, Error, ParseError};
+use twilight::model::gateway::presence::Presence;
+use twilight::model::guild::Member;
+use twilight::model::id::{GuildId, UserId};
+use twilight::model::user::User;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Parser {
     pub parts: Vec<String>,
-    index: usize,
+    pub index: usize,
+    ctx: Arc<Context>,
+    shard_id: u64,
+    guild_id: Option<GuildId>,
 }
 
 impl Parser {
-    fn new(content: &str) -> Self {
+    fn new(content: &str, ctx: Arc<Context>, shard_id: u64, guild_id: Option<GuildId>) -> Self {
         Parser {
             parts: content
                 .split_whitespace()
                 .map(String::from)
                 .collect::<Vec<String>>(),
             index: 0,
+            ctx,
+            shard_id,
+            guild_id,
         }
     }
 
@@ -38,6 +48,7 @@ impl Parser {
                     to_search = node;
                     debug!("Found a command node: {}", node.get_name());
                     self.index += 1;
+                    debug!("{}", self.index);
                     nodes.push(node);
                 }
                 None => {
@@ -55,15 +66,20 @@ impl Parser {
         prefix: &str,
         message: Box<MessageCreate>,
         ctx: Arc<Context>,
+        shard_id: u64,
     ) -> Result<(), Error> {
         //TODO: verify permissions
-        let parser = Parser::new(&message.0.content[prefix.len()..]);
+        let mut parser = Parser::new(
+            &message.0.content[prefix.len()..],
+            ctx.clone(),
+            shard_id,
+            message.guild_id,
+        );
         debug!("Parser processing message: {:?}", &message.content);
 
-        //TODO: walk the stack to validate permissions
         let mut p = parser.clone();
-        let command_nodes = p.get_command();
 
+        let command_nodes = parser.get_command();
         match command_nodes.last() {
             Some(node) => {
                 let mut name = String::new();
@@ -75,11 +91,46 @@ impl Parser {
                 }
                 debug!("Executing command: {}", name);
 
-                node.execute(ctx.clone(), message.0, parser).await?;
+                p.index += command_nodes.len();
+                node.execute(ctx.clone(), message.0, p).await?;
                 ctx.stats.command_used(false).await;
+
                 Ok(())
             }
             None => Ok(()),
+        }
+    }
+
+    pub fn get_next(&mut self) -> Result<&str, Error> {
+        if self.index == self.parts.len() {
+            Err(Error::ParseError(ParseError::MissingArgument))
+        } else {
+            let result = &self.parts[self.index];
+            self.index += 1;
+            debug!("{}", self.index);
+            Ok(result)
+        }
+    }
+
+    /// parses what comes next as discord user
+    pub async fn get_user(&mut self) -> Result<Arc<User>, Error> {
+        let input = self.get_next()?;
+        let mention = matchers::get_mention(input);
+        match mention {
+            // we got a mention
+            Some(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
+            None => {
+                // is it a userid?
+                match input.parse::<u64>() {
+                    Ok(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
+                    Err(_) => {
+                        //nope, must be a partial name
+                        Err(Error::ParseError(ParseError::MemberNotFoundByName(
+                            "not implemented yet".to_string(),
+                        )))
+                    }
+                }
+            }
         }
     }
 }
