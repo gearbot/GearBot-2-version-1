@@ -19,12 +19,13 @@ pub enum Error {
     TwilightCluster(cluster::Error),
     // This error will never occur according to the Cache docs, as it exists solely to
     // fullfill a trait API.
-    CacheError(twilight_cache_inmemory::InMemoryCacheError),
-    DatabaseError(tokio_postgres::error::Error),
-    PoolError(PoolError),
-    DatabaseMigrationError(String),
+    Cache(twilight_cache_inmemory::InMemoryCacheError),
+    Database(tokio_postgres::error::Error),
+    DatabaseAction(FetchError),
+    Pool(PoolError),
+    DatabaseMigration(String),
     UnknownEmoji(String),
-    SerdeError(serde_json::error::Error),
+    Serde(serde_json::error::Error),
 }
 
 #[derive(Debug)]
@@ -56,6 +57,21 @@ impl fmt::Display for CommandError {
     }
 }
 
+#[derive(Debug)]
+pub enum FetchError {
+    ShouldExist,
+}
+
+impl error::Error for FetchError {}
+
+impl fmt::Display for FetchError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FetchError::ShouldExist => write!(f, "The provided ID doesn't exist!"),
+        }
+    }
+}
+
 impl error::Error for Error {}
 
 impl fmt::Display for Error {
@@ -76,16 +92,17 @@ impl fmt::Display for Error {
                 write!(f, "An error occurred making a Discord request: {}", e)
             }
             Error::TwilightCluster(e) => write!(f, "An error occurred on a cluster request: {}", e),
-            Error::CacheError(e) => write!(
+            Error::Cache(e) => write!(
                 f,
                 "An error occured attempting to fetch an object from the cache: {}",
                 e
             ),
-            Error::DatabaseError(e) => write!(f, "A database error occurred: {}", e),
-            Error::PoolError(e) => write!(f, "An error occurred in the database pool: {}", e),
-            Error::DatabaseMigrationError(e) => write!(f, "Failed to migrate the database: {}", e),
+            Error::Database(e) => write!(f, "A database error occurred: {}", e),
+            Error::DatabaseAction(e) => write!(f, "{}", e),
+            Error::DatabaseMigration(e) => write!(f, "Failed to migrate the database: {}", e),
+            Error::Pool(e) => write!(f, "An error occurred in the database pool: {}", e),
             Error::UnknownEmoji(e) => write!(f, "Unknown emoji: {}", e),
-            Error::SerdeError(e) => write!(f, "Serde error: {}", e),
+            Error::Serde(e) => write!(f, "Serde error: {}", e),
         }
     }
 }
@@ -93,6 +110,12 @@ impl fmt::Display for Error {
 impl From<CommandError> for Error {
     fn from(e: CommandError) -> Self {
         Error::CmdError(e)
+    }
+}
+
+impl From<FetchError> for Error {
+    fn from(e: FetchError) -> Self {
+        Error::DatabaseAction(e)
     }
 }
 
@@ -116,24 +139,24 @@ impl From<cluster::Error> for Error {
 
 impl From<twilight_cache_inmemory::InMemoryCacheError> for Error {
     fn from(e: twilight_cache_inmemory::InMemoryCacheError) -> Self {
-        Error::CacheError(e)
+        Error::Cache(e)
     }
 }
 
 impl From<tokio_postgres::error::Error> for Error {
     fn from(e: tokio_postgres::error::Error) -> Self {
-        Error::DatabaseError(e)
+        Error::Database(e)
     }
 }
 
 impl From<PoolError> for Error {
     fn from(e: PoolError) -> Self {
-        Error::PoolError(e)
+        Error::Pool(e)
     }
 }
 
 impl From<serde_json::error::Error> for Error {
     fn from(e: serde_json::error::Error) -> Self {
-        Error::SerdeError(e)
+        Error::Serde(e)
     }
 }

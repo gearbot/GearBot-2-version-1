@@ -1,7 +1,7 @@
 create table message
 (
     id         bigint        not null primary key,
-    content    varchar(2000) not null,
+    content    bytea         not null,
     author_id  bigint        not null,
     channel_id bigint        not null,
     guild_id   bigint        not null,
@@ -84,5 +84,6 @@ create table guildConfig
 (
     id bigint primary key not null,
     config json not null,
+    encryption_key bytea not null,
     prefix varchar generated always as ( config->'general'->>'prefix' ) STORED
 );

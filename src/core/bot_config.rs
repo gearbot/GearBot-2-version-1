@@ -7,10 +7,11 @@ use crate::utils::{emoji, matchers, Error};
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {
+    #[serde(alias = "DANGEROUS_MASTER_KEY")]
+    pub __master_key: Option<Vec<u8>>,
     pub tokens: Tokens,
     pub logging: Logging,
     pub database: Database,
-
     pub emoji: HashMap<String, String>,
 }
 

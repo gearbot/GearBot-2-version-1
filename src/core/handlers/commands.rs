@@ -43,6 +43,6 @@ pub async fn handle_event<'a>(event: Event, ctx: Arc<Context>) -> Result<(), Err
         }
         _ => (),
     }
-    
+
     Ok(())
 }

@@ -61,8 +61,8 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
 
 fn gen_activity(name: String) -> Activity {
     Activity {
-        application_id: None,
         assets: None,
+        application_id: None,
         created_at: None,
         details: None,
         flags: None,
