@@ -7,6 +7,7 @@ use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
 use crate::core::Context;
 use crate::utils::{matchers, CommandError, Error, ParseError};
+use twilight::cache::twilight_cache_inmemory::model::CachedMember;
 use twilight::model::gateway::presence::Presence;
 use twilight::model::guild::Member;
 use twilight::model::id::{GuildId, UserId};
@@ -127,6 +128,33 @@ impl Parser {
                 // is it a userid?
                 match input.parse::<u64>() {
                     Ok(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
+                    Err(_) => {
+                        //nope, must be a partial name
+                        Err(Error::ParseError(ParseError::MemberNotFoundByName(
+                            "not implemented yet".to_string(),
+                        )))
+                    }
+                }
+            }
+        }
+    }
+
+    pub async fn get_member(&mut self, gid: GuildId) -> Result<Arc<CachedMember>, Error> {
+        let input = self.get_next()?;
+        let mention = matchers::get_mention(input);
+        match mention {
+            // we got a mention
+            Some(uid) => match self.ctx.cache.member(gid, UserId(uid)).await? {
+                Some(member) => Ok(member),
+                None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
+            },
+            None => {
+                // is it a userid?
+                match input.parse::<u64>() {
+                    Ok(uid) => match self.ctx.cache.member(gid, UserId(uid)).await? {
+                        Some(member) => Ok(member),
+                        None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
+                    },
                     Err(_) => {
                         //nope, must be a partial name
                         Err(Error::ParseError(ParseError::MemberNotFoundByName(
