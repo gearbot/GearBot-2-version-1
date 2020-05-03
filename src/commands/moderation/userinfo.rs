@@ -19,7 +19,7 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
         return Err(Error::CmdError(CommandError::NoDM));
     }
 
-    let user = parser.get_user().await?;
+    let user = parser.get_user_or(msg.author).await?;
 
     //set some things that are the same regardless
     let mut content = "".to_string();

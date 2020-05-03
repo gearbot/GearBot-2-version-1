@@ -112,6 +112,10 @@ impl Parser {
         }
     }
 
+    pub fn has_next(&self) -> bool {
+        self.index < self.parts.len()
+    }
+
     /// parses what comes next as discord user
     pub async fn get_user(&mut self) -> Result<Arc<User>, Error> {
         let input = self.get_next()?;
@@ -131,6 +135,14 @@ impl Parser {
                     }
                 }
             }
+        }
+    }
+
+    pub async fn get_user_or(&mut self, alternative: User) -> Result<Arc<User>, Error> {
+        if self.has_next() {
+            Ok(self.get_user().await?)
+        } else {
+            Ok(Arc::new(alternative))
         }
     }
 }
