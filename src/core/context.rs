@@ -5,31 +5,26 @@ use aes_gcm::{
     aead::{Aead, NewAead},
     Aes256Gcm,
 };
-
 use chrono::{DateTime, Utc};
+use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
+use deadpool_postgres::Pool;
+use log::info;
+use postgres_types::Type;
 use rand::{thread_rng, RngCore};
+use serde_json;
 use tokio::sync::RwLock;
 use twilight::cache::InMemoryCache;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
-use twilight::model::channel::Message;
 use twilight::model::{
-    channel::message::MessageType,
+    channel::message::{Message, MessageType},
     id::{ChannelId, GuildId, MessageId, UserId},
     user::CurrentUser,
 };
 
 use crate::utils::{Error, FetchError};
-use crate::{core::GuildConfig, EncryptionKey};
-use dashmap::mapref::one::Ref;
-use dashmap::DashMap;
-use deadpool_postgres::Pool;
-use git_version::git_version;
-use log::info;
-use postgres_types::Type;
-use serde_json;
-
-const GIT_VERSION: &str = git_version!();
+use crate::{core::GuildConfig, EncryptionKey, GIT_VERSION};
 
 #[derive(Debug)]
 pub struct BotStats {
@@ -100,8 +95,7 @@ pub struct LoadingState {
     to_load: u32,
     loaded: u32,
 }
-// In the future, any database handles or anything that holds real state will need
-// put behind a `RwLock`.
+
 pub struct Context {
     pub cache: InMemoryCache,
     pub cluster: Cluster,

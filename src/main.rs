@@ -1,29 +1,26 @@
 use std::str::FromStr;
 
+use aes_gcm::aead::generic_array::{typenum::U32, GenericArray};
 use deadpool_postgres::{Manager, Pool};
+use git_version::git_version;
 use log::{debug, info};
 use tokio_postgres::{Config, NoTls};
-use twilight::http::Client as HttpClient;
+use twilight::http::{
+    request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient,
+};
 
-use git_version::git_version;
-use utils::Error;
-
-use aes_gcm::aead::generic_array::{typenum::U32, GenericArray};
-
-use crate::core::logging;
-use crate::core::BotConfig;
-use crate::core::GearBot;
+use crate::core::{logging, BotConfig, GearBot};
 use crate::database::migrations::embedded;
-use twilight::http::request::channel::message::allowed_mentions::AllowedMentionsBuilder;
 
 mod commands;
 mod core;
 mod database;
 mod parser;
 mod utils;
+use utils::Error;
 
-pub static VERSION: &str = env!("CARGO_PKG_VERSION");
-pub static GIT_VERSION: &str = git_version!();
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const GIT_VERSION: &str = git_version!();
 
 pub type CommandResult = Result<(), Error>;
 

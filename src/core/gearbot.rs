@@ -98,9 +98,6 @@ impl GearBot {
             config.__master_key,
         ));
 
-        // TODO: Look into splitting this into two streams:
-        // One for user messages, and the other for internal bot things
-        // context.cluster.command()
         gearbot_info!("The cluster is going online!");
         let mut bot_events = context.cluster.events().await?;
         while let Some(event) = bot_events.next().await {

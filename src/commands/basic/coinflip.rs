@@ -6,9 +6,9 @@ use twilight::model::channel::Message;
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
 use crate::parser::Parser;
+use crate::utils;
 
 pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
-    // TODO: This needs sanatized with the clean function.
     let thing_todo: String = parser
         .parts
         .into_iter()
@@ -17,7 +17,7 @@ pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> Comman
         .join(" ");
 
     let thing_todo = if !thing_todo.is_empty() {
-        thing_todo
+        utils::clean(&thing_todo, true, true, true, true)
     } else {
         ctx.http
             .create_message(msg.channel_id)

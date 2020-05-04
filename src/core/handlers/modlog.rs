@@ -32,7 +32,6 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
             // According to the docs, cache commands can never error, but just to be safe and
             // not spam unwraps everywhere, wrap it.
             let old_member = ctx.cache.member(update.guild_id, update.user.id).await?;
-            // TODO: Figure out why this is always `None`.
 
             let old_member = match old_member {
                 Some(om) => om,
