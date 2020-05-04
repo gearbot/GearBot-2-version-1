@@ -6,8 +6,8 @@
 discord = ""
 
 [logging]
-important_logs = "https://canary.discordapp.com/api/webhooks/id/token"
-info_logs = "https://canary.discordapp.com/api/webhooks/id/token"
+important_logs = "https://canary.discord.com/api/webhooks/id/token"
+info_logs = "https://canary.discord.com/api/webhooks/id/token"
 
 [database]
 postgres="postgres://database?user=user&password=password&host=localhost"
