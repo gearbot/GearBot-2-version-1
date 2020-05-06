@@ -11,7 +11,19 @@ define_emoji!(
     Yes => "✅",
     No => "🚫",
     Info => "ℹ️",
-    Warn => "⚠️"
+    Warn => "⚠️",
+    Robot => "🤖",
+
+    StaffBadge => "",
+    PartnerBadge => "",
+    HypesquadEvents => "",
+    BraveryBadge => "",
+    BrillianceBadge => "",
+    BalanceBadge => "",
+    BugHunterBadge => "",
+    EarlySupporterBadge => "",
+    BugHunterLvl2Badge => "",
+    VerifiedBotDevBadge => ""
 );
 
 pub static EMOJI_OVERRIDES: OnceCell<HashMap<String, String>> = OnceCell::new();

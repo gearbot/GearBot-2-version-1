@@ -1,4 +1,9 @@
 // Remove this when they are all used.
+use chrono::{DateTime, NaiveDateTime, Utc};
+pub use emoji::*;
+pub use errors::*;
+
+// TODO: Remove this when they are all used.
 #[allow(dead_code)]
 pub mod matchers;
 
@@ -62,4 +67,84 @@ pub fn clean(msg: &str, markdown: bool, links: bool, emotes: bool, lookalikes: b
     println!("{:?}", msg);
 
     msg
+}
+
+static DISCORD_EPOCH: i64 = 1420070400000;
+
+pub fn snowflake_timestamp(snowflake: u64) -> DateTime<Utc> {
+    DateTime::from_utc(
+        NaiveDateTime::from_timestamp(((snowflake as i64 >> 22) + DISCORD_EPOCH) / 1000, 0),
+        Utc,
+    )
+}
+
+pub fn age(old: DateTime<Utc>, new: DateTime<Utc>, max_parts: i8) -> String {
+    let mut seconds = new.signed_duration_since(old).num_seconds();
+    let mut parts = 0;
+    let mut output = "".to_string();
+
+    let years = (seconds as f64 / (60.0 * 60.0 * 24.0 * 365.25)) as i64;
+    if years > 0 {
+        seconds -= (years as f64 * 60.0 * 60.0 * 24.0 * 365.25) as i64;
+        output += &format!("{} years ", years);
+        parts += 1;
+
+        if parts == max_parts {
+            return output;
+        }
+    }
+
+    let months = seconds / (60 * 60 * 24 * 30);
+    if months > 0 {
+        seconds -= months * 60 * 60 * 24 * 30;
+        output += &format!("{} months ", months);
+        parts += 1;
+
+        if parts == max_parts {
+            return output;
+        }
+    }
+
+    let weeks = seconds / (60 * 60 * 24 * 7);
+    if weeks > 0 {
+        seconds -= weeks * 60 * 60 * 24 * 7;
+        output += &format!("{} weeks ", weeks);
+        parts += 1;
+        if parts == max_parts {
+            return output;
+        }
+    }
+
+    let days = seconds / (60 * 60 * 24);
+    if days > 0 {
+        seconds -= days * 60 * 60 * 24;
+        output += &format!("{} days ", days);
+        parts += 1;
+        if parts == max_parts {
+            return output;
+        }
+    }
+
+    let hours = seconds / (60 * 60);
+    if hours > 0 {
+        seconds -= hours * 60 * 60;
+        output += &format!("{} hours ", hours);
+        parts += 1;
+        if parts == max_parts {
+            return output;
+        }
+    }
+
+    let minutes = seconds / 60;
+    if minutes > 0 {
+        seconds -= minutes * 60;
+        output += &format!("{} minutes ", minutes);
+        parts += 1;
+        if parts == max_parts {
+            return output;
+        }
+    }
+
+    output += &format!("{} seconds", seconds);
+    output
 }

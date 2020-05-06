@@ -88,7 +88,6 @@ impl GearBot {
 
         let cache = InMemoryCache::from(cache_config);
         let cluster = Cluster::new(cluster_config);
-
         let context = Arc::new(Context::new(
             cache,
             cluster,
@@ -131,7 +130,7 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Erro
         _ => {}
     }
 
-    commands::handle_event(event.1, ctx.clone()).await?;
+    commands::handle_event(event.0, event.1, ctx.clone()).await?;
 
     Ok(())
 }

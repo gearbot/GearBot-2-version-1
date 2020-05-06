@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
-use log::info;
+use log::{debug, info};
 use twilight::gateway::cluster::Event;
 
 use crate::core::Context;
 use crate::parser::Parser;
 use crate::utils::Error;
 
-pub async fn handle_event<'a>(event: Event, ctx: Arc<Context>) -> Result<(), Error> {
+pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<Context>) -> Result<(), Error> {
     match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
-            info!(
+            debug!(
                 "Received a message from {}, saying {}",
                 msg.author.name, msg.content
             );
@@ -38,7 +38,7 @@ pub async fn handle_event<'a>(event: Event, ctx: Arc<Context>) -> Result<(), Err
             };
 
             if let Some(prefix) = prefix {
-                Parser::figure_it_out(&prefix, msg, ctx).await?;
+                Parser::figure_it_out(&prefix, msg, ctx, shard_id).await?;
             }
         }
         _ => (),

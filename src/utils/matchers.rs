@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use log::debug;
 use regex::{Match, Regex, RegexBuilder};
 use url::{Host, Url};
 
@@ -25,6 +26,22 @@ pub fn contains_channel_id(msg: &str) -> bool {
 
 pub fn contains_mention(msg: &str) -> bool {
     MENTION_MATCHER.is_match(msg)
+}
+
+pub fn get_mention(msg: &str) -> Option<u64> {
+    debug!("{}", msg);
+    let captures = MENTION_MATCHER_SOLO.captures(msg);
+    debug!("{:?}", captures);
+    match captures {
+        Some(c) => Some(
+            c.get(1)
+                .map_or(Some(""), |m| Some(m.as_str()))
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
+        ),
+        None => None,
+    }
 }
 
 pub fn contains_url(msg: &str) -> bool {
@@ -128,6 +145,10 @@ lazy_static! {
 
 lazy_static! {
     static ref MENTION_MATCHER: Regex = { Regex::new(r"<@!?\d+>").unwrap() };
+}
+
+lazy_static! {
+    static ref MENTION_MATCHER_SOLO: Regex = { Regex::new(r"^<@!?(\d+)>$").unwrap() };
 }
 
 lazy_static! {

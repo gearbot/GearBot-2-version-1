@@ -6,6 +6,7 @@ use twilight::model::{gateway::payload::RequestGuildMembers, id::RoleId};
 
 use crate::core::Context;
 use crate::utils::Error;
+use log::debug;
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Result<(), Error> {
     match &event {
@@ -18,7 +19,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
 
             if let Ok(handle) = res {
                 match handle {
-                    Ok(_) => return Ok(()),
+                    Ok(_) => {}
                     Err(e) => return Err(Error::TwilightCluster(e)),
                 }
             }
@@ -107,7 +108,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
 
         Event::MessageCreate(msg) if !msg.author.bot => {
             if let Some(guild_id) = msg.guild_id {
-                ctx.insert_user_message(&msg.0, guild_id).await?
+                ctx.insert_message(&msg.0, guild_id).await?
             }
 
             // if msg.0.content.contains("giveme") {
