@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use log::debug;
 use twilight::gateway::cluster::Event;
-use twilight::model::gateway::payload::UpdateStatus;
-use twilight::model::gateway::presence::{Activity, ActivityType, Status};
+use twilight::model::gateway::{
+    payload::UpdateStatus,
+    presence::{Activity, ActivityType, Status},
+};
 
 use crate::core::Context;
 use crate::utils::Error;
@@ -77,8 +79,8 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
 
 fn gen_activity(name: String) -> Activity {
     Activity {
-        application_id: None,
         assets: None,
+        application_id: None,
         created_at: None,
         details: None,
         flags: None,

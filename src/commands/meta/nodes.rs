@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::fmt::{Display, Formatter};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -103,8 +102,8 @@ impl CommandNode {
     }
 }
 
-impl Display for CommandNode {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Display for CommandNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CommandNode::CommandNodeInner { command } => write!(f, "{}", command.name),
             CommandNode::GroupNode {

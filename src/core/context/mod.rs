@@ -1,5 +1,7 @@
 use crate::core::context::stats::BotStats;
 use crate::core::GuildConfig;
+use crate::EncryptionKey;
+use aes_gcm::aead::generic_array::GenericArray;
 use dashmap::DashMap;
 use deadpool_postgres::Pool;
 use futures::channel::oneshot::Sender;
@@ -25,6 +27,7 @@ pub struct Context {
     pub bot_user: CurrentUser,
     configs: DashMap<GuildId, GuildConfig>,
     pool: Pool,
+    __static_master_key: Option<Vec<u8>>,
     pub chunk_requests: DashMap<String, Sender<MemberChunk>>,
 }
 
@@ -35,6 +38,7 @@ impl Context {
         http: HttpClient,
         bot_user: CurrentUser,
         pool: Pool,
+        key: Option<Vec<u8>>,
     ) -> Self {
         Context {
             cache,
@@ -46,6 +50,7 @@ impl Context {
             bot_user,
             configs: DashMap::new(),
             pool,
+            __static_master_key: key,
             chunk_requests: DashMap::new(),
         }
     }
@@ -56,6 +61,15 @@ impl Context {
     /// rarely, if ever should this happen.
     pub fn is_own(&self, other: &Message) -> bool {
         self.bot_user.id == other.author.id
+    }
+
+    fn __get_master_key(&self) -> Option<&EncryptionKey> {
+        if let Some(mk_bytes) = &self.__static_master_key {
+            let key = GenericArray::from_slice(mk_bytes);
+            Some(key)
+        } else {
+            None
+        }
     }
 }
 

@@ -25,7 +25,7 @@ pub struct GearBot;
 
 impl GearBot {
     pub async fn run(
-        config: &BotConfig,
+        config: BotConfig,
         http: HttpClient,
         user: CurrentUser,
         pool: Pool,
@@ -88,12 +88,15 @@ impl GearBot {
 
         let cache = InMemoryCache::from(cache_config);
         let cluster = Cluster::new(cluster_config);
+        let context = Arc::new(Context::new(
+            cache,
+            cluster,
+            http,
+            user,
+            pool,
+            config.__master_key,
+        ));
 
-        let context = Arc::new(Context::new(cache, cluster, http, user, pool));
-
-        // TODO: Look into splitting this into two streams:
-        // One for user messages, and the other for internal bot things
-        // context.cluster.command()
         gearbot_info!("The cluster is going online!");
         let mut bot_events = context.cluster.events().await?;
         while let Some(event) = bot_events.next().await {

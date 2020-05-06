@@ -33,7 +33,6 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
             // According to the docs, cache commands can never error, but just to be safe and
             // not spam unwraps everywhere, wrap it.
             let old_member = ctx.cache.member(update.guild_id, update.user.id).await?;
-            // TODO: Figure out why this is always `None`.
 
             let old_member = match old_member {
                 Some(om) => om,
@@ -105,6 +104,19 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
                     new_member.name, roles_gained_display
                 );
             }
+        }
+
+        Event::MessageCreate(msg) if !msg.author.bot => {
+            if let Some(guild_id) = msg.guild_id {
+                ctx.insert_message(&msg.0, guild_id).await?
+            }
+
+            // if msg.0.content.contains("giveme") {
+            //     let fetched = ctx.fetch_user_message(ID_HERE_FOR_TESTING.into()).await?;
+            //     ctx.http.create_message(msg.channel_id)
+            //         .content(fetched.content)
+            //         .await?;
+            // }
         }
 
         _ => (),

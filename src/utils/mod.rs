@@ -1,3 +1,4 @@
+// Remove this when they are all used.
 use chrono::{DateTime, NaiveDateTime, Utc};
 pub use emoji::*;
 pub use errors::*;
@@ -8,6 +9,9 @@ pub mod matchers;
 
 pub mod emoji;
 mod errors;
+
+pub use emoji::*;
+pub use errors::*;
 
 const MARKDOWN_REPALCEMENTS: &[&str; 7] = &["\\", "*", "_", "~", "|", "{", ">"];
 

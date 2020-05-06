@@ -8,7 +8,6 @@ use crate::parser::Parser;
 use crate::utils;
 
 pub async fn echo(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
-    // TODO: Sanitize this
     let ec: Vec<String> = parser.parts.into_iter().skip(1).collect();
     let echo_contents = utils::clean(&ec.join(" "), true, true, true, true);
     ctx.http
