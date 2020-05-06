@@ -14,7 +14,7 @@ impl Context {
         match self.configs.get(&guild_id) {
             Some(config) => Ok(config),
             None => {
-                let config = get_guild_config(&self.pool, guild_id.0).await?;
+                let config = get_guild_config(&self, guild_id.0).await?;
                 self.configs.insert(guild_id, config);
                 Ok(self.configs.get(&guild_id).unwrap())
             }

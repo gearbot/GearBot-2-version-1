@@ -10,6 +10,7 @@ use aes_gcm::{
 use futures::channel::oneshot;
 use log::{debug, info};
 use postgres_types::Type;
+use rand::{thread_rng, RngCore};
 use std::sync::Arc;
 use twilight::http::error::Error::Response;
 use twilight::http::error::ResponseError::{Client, Server};
@@ -142,7 +143,6 @@ impl Context {
     pub async fn insert_message(&self, msg: &Message, guild_id: GuildId) -> Result<(), Error> {
         // All guilds need to have a config before anything can happen thanks to encryption.
         let _ = self.get_config(guild_id).await?;
-        let client = self.pool.get().await?;
 
         let msg_id = msg.id.0 as i64;
 
@@ -163,6 +163,11 @@ impl Context {
         );
 
         database::cache::insert_message(&self.pool, ciphertext, &msg).await?;
+        info!("inserted");
+        for attachment in &msg.attachments {
+            info!("processing attachment");
+            database::cache::insert_attachment(&self.pool, msg.id.0, attachment).await?;
+        }
 
         Ok(())
     }
@@ -195,6 +200,18 @@ impl Context {
         } else {
             Err(FetchError::ShouldExist.into())
         }
+    }
+
+    pub fn generate_guild_key(&self, guild_id: u64) -> Vec<u8> {
+        //TODO: check how crypto safe this is
+        let mut csprng = thread_rng();
+        // Each guild has its own encryption key. This allows us, in the event of a compromise of the master key,
+        // to simply re-encrypt the guild keys instead of millions of messages.
+        let mut guild_encryption_key = [0u8; 32];
+        csprng.fill_bytes(&mut guild_encryption_key);
+
+        let master_key = self.__get_master_key().unwrap();
+        encrypt_bytes(&guild_encryption_key, master_key, guild_id)
     }
 }
 

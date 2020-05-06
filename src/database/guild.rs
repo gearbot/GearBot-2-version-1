@@ -1,11 +1,12 @@
-use crate::core::GuildConfig;
+use crate::core::{Context, GuildConfig};
 use crate::utils::Error;
 use deadpool_postgres::Pool;
 use log::info;
 use postgres_types::Type;
+use rand::{thread_rng, RngCore};
 
-pub async fn get_guild_config(pool: &Pool, guild_id: u64) -> Result<GuildConfig, Error> {
-    let client = pool.get().await?;
+pub async fn get_guild_config(ctx: &Context, guild_id: u64) -> Result<GuildConfig, Error> {
+    let client = ctx.pool.get().await?;
     let statement = client
         .prepare_typed("SELECT config from guildconfig where id=$1", &[Type::INT8])
         .await?;
@@ -17,8 +18,8 @@ pub async fn get_guild_config(pool: &Pool, guild_id: u64) -> Result<GuildConfig,
         info!("No config found for {}, inserting blank one", guild_id);
         let statement = client
             .prepare_typed(
-                "INSERT INTO guildconfig (id, config) VALUES ($1, $2)",
-                &[Type::INT8, Type::JSON],
+                "INSERT INTO guildconfig (id, config, encryption_key) VALUES ($1, $2, $3)",
+                &[Type::INT8, Type::JSON, Type::BYTEA],
             )
             .await?;
         client
@@ -27,6 +28,7 @@ pub async fn get_guild_config(pool: &Pool, guild_id: u64) -> Result<GuildConfig,
                 &[
                     &(guild_id as i64),
                     &serde_json::to_value(&GuildConfig::default()).unwrap(),
+                    &ctx.generate_guild_key(guild_id),
                 ],
             )
             .await?;

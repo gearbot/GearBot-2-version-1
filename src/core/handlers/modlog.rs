@@ -106,17 +106,16 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
             }
         }
 
-        Event::MessageCreate(msg) if !msg.author.bot => {
+        Event::MessageCreate(msg) => {
             if let Some(guild_id) = msg.guild_id {
-                ctx.insert_message(&msg.0, guild_id).await?
+                let config = &ctx.get_config(guild_id).await?.message_logs;
+                if config.enabled
+                    && !config.ignored_users.contains(&msg.author.id.0)
+                    && !(config.ignore_bots && msg.author.bot)
+                {
+                    ctx.insert_message(&msg.0, guild_id).await?;
+                }
             }
-
-            // if msg.0.content.contains("giveme") {
-            //     let fetched = ctx.fetch_user_message(ID_HERE_FOR_TESTING.into()).await?;
-            //     ctx.http.create_message(msg.channel_id)
-            //         .content(fetched.content)
-            //         .await?;
-            // }
         }
 
         _ => (),
