@@ -113,6 +113,10 @@ impl Parser {
         }
     }
 
+    pub fn get_remaining(&mut self) -> String {
+        self.parts[self.index..self.parts.len()].join(" ")
+    }
+
     pub fn has_next(&self) -> bool {
         self.index < self.parts.len()
     }

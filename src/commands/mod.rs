@@ -2,9 +2,10 @@ use once_cell::sync::OnceCell;
 
 use crate::commands::meta::nodes::CommandNode;
 use crate::{command, subcommands};
-pub mod basic;
+mod basic;
+mod debug;
 pub mod meta;
-pub mod moderation;
+mod moderation;
 
 static ROOT_NODE: OnceCell<CommandNode> = OnceCell::new();
 
@@ -20,7 +21,9 @@ pub fn get_root() -> &'static CommandNode {
                     command!("ping", basic::ping),
                     command!("echo", basic::echo),
                     command!("about", basic::about),
-                    command!("userinfo", moderation::userinfo)
+                    command!("userinfo", moderation::userinfo),
+                    command!("get_config", debug::get_config),
+                    command!("set_config", debug::set_config)
                 ))
                 .ok()
                 .unwrap();

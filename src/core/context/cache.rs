@@ -8,7 +8,7 @@ use aes_gcm::{
     Aes256Gcm,
 };
 use futures::channel::oneshot;
-use log::{debug, info};
+use log::{debug, info, trace};
 use postgres_types::Type;
 use rand::{thread_rng, RngCore};
 use std::sync::Arc;
@@ -118,7 +118,7 @@ impl Context {
 
             let finish = std::time::Instant::now();
 
-            info!(
+            trace!(
                 "It took {}ms to decrypt the message!",
                 (finish - start).as_millis()
             );
@@ -163,9 +163,7 @@ impl Context {
         );
 
         database::cache::insert_message(&self.pool, ciphertext, &msg).await?;
-        info!("inserted");
         for attachment in &msg.attachments {
-            info!("processing attachment");
             database::cache::insert_attachment(&self.pool, msg.id.0, attachment).await?;
         }
 

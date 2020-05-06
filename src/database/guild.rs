@@ -4,6 +4,7 @@ use deadpool_postgres::Pool;
 use log::info;
 use postgres_types::Type;
 use rand::{thread_rng, RngCore};
+use serde_json::Value;
 
 pub async fn get_guild_config(ctx: &Context, guild_id: u64) -> Result<GuildConfig, Error> {
     let client = ctx.pool.get().await?;
@@ -37,4 +38,18 @@ pub async fn get_guild_config(ctx: &Context, guild_id: u64) -> Result<GuildConfi
     } else {
         Ok(serde_json::from_value(rows[0].get(0))?)
     }
+}
+
+pub async fn set_guild_config(ctx: &Context, guild_id: u64, config: Value) -> Result<(), Error> {
+    let client = ctx.pool.get().await?;
+    let statement = client
+        .prepare_typed(
+            "UPDATE guildconfig set config=$1 WHERE id=$2",
+            &[Type::JSON, Type::INT8],
+        )
+        .await?;
+    client
+        .execute(&statement, &[&config, &(guild_id as i64)])
+        .await?;
+    Ok(())
 }
