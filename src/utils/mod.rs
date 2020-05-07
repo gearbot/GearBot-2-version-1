@@ -39,7 +39,7 @@ fn replace_emotes(before: String, msg: &mut String) {
     }
 }
 
-fn replace_lookalikes(msg: &mut String) -> String {
+pub fn replace_lookalikes(msg: &mut String) -> String {
     msg.replace('`', "ˋ")
 }
 

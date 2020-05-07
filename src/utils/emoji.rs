@@ -13,6 +13,7 @@ define_emoji!(
     Info => "ℹ️",
     Warn => "⚠️",
     Robot => "🤖",
+    Bug => "🐛",
 
     StaffBadge => "",
     PartnerBadge => "",

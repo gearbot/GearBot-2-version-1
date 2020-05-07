@@ -1,5 +1,7 @@
 use std::{error, fmt, io};
 
+use crate::parser::Parser;
+use crate::utils::Emoji;
 use deadpool_postgres::PoolError;
 use serde::export::Formatter;
 use twilight::cache::twilight_cache_inmemory;
@@ -50,21 +52,6 @@ impl error::Error for CommandError {}
 impl fmt::Display for CommandError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            // CommandError::WrongArgCount { expected, provided } => {
-            //     if expected > provided {
-            //         write!(
-            //             f,
-            //             "Too many arguments were provided! Expected {}, but found {}",
-            //             expected, provided
-            //         )
-            //     } else {
-            //         write!(
-            //             f,
-            //             "Not enough arguments were provided! Expected {}, but found {}",
-            //             expected, provided
-            //         )
-            //     }
-            // }
             CommandError::NoDM => write!(f, "You can not use this command in DMs"),
         }
     }
@@ -76,7 +63,9 @@ impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ParseError::MemberNotFoundById(id) =>write!(f, "no member with userid ``{}`` found on this server", id),
-            ParseError::MissingArgument => write!(f, "You are missing a requried argument"),
+            ParseError::MissingArgument => { write!(f, "You are missing one or more required arguments")
+
+            },
             ParseError::MemberNotFoundByName(name) => write!(f, "There is nobody named ``{}`` on this server", name),
             ParseError::MultipleMembersByName(name) => write!(f, "Multiple members who's name starts with ``{}`` found, please use their full name and discriminator", name),
             ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid discord userid", id)

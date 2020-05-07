@@ -6,6 +6,7 @@ use twilight::model::gateway::payload::MessageCreate;
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
 use crate::core::Context;
+use crate::utils::Emoji;
 use crate::utils::{matchers, CommandError, Error, ParseError};
 use twilight::cache::twilight_cache_inmemory::model::CachedMember;
 use twilight::model::gateway::presence::Presence;
@@ -93,7 +94,37 @@ impl Parser {
                 debug!("Executing command: {}", name);
 
                 p.index += command_nodes.len();
-                node.execute(ctx.clone(), message.0, p).await?;
+                let channel_id = message.channel_id;
+                let result = node.execute(ctx.clone(), message.0, p).await;
+                match result {
+                    Ok(_) => Ok(()),
+                    Err(error) => match error {
+                        Error::ParseError(e) => {
+                            ctx.http
+                                .create_message(channel_id)
+                                .content(format!(
+                                    "{} Something went wrong trying to parse that: {}",
+                                    Emoji::No.for_chat(),
+                                    e
+                                ))
+                                .await?;
+                            Ok(())
+                        }
+                        Error::CmdError(e) => {
+                            ctx.http
+                                .create_message(channel_id)
+                                .content(format!("{} {}", Emoji::No.for_chat(), e))
+                                .await?;
+                            Ok(())
+                        }
+                        e => {
+                            ctx.http.create_message(channel_id)
+                                    .content(format!("{} Something went very wrong trying to execute that command, please try again later or report this on the support server {}" , Emoji::Bug.for_chat(), Emoji::Bug.for_chat()))
+                                    .await?;
+                            Err(e)
+                        }
+                    },
+                }?;
                 ctx.stats.command_used(false).await;
 
                 Ok(())
