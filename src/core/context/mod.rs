@@ -18,8 +18,6 @@ use twilight::model::gateway::payload::MemberChunk;
 use twilight::model::id::GuildId;
 use twilight::model::user::CurrentUser;
 
-const GIT_VERSION: &str = git_version!();
-
 pub struct Context {
     pub cache: InMemoryCache,
     pub cluster: Cluster,

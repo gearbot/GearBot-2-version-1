@@ -4,15 +4,10 @@ use crate::utils::Emoji;
 use crate::utils::{CommandError, Error};
 use crate::{utils, CommandResult};
 use chrono::{DateTime, Utc};
-use log::debug;
-use serde::export::TryFrom;
-use std::borrow::Borrow;
 use std::sync::Arc;
-use std::time::Duration;
 use twilight::builders::embed::EmbedBuilder;
 use twilight::model::channel::Message;
 use twilight::model::guild::Permissions;
-use twilight::model::id::ChannelId;
 use twilight::model::user::UserFlags;
 
 pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> CommandResult {

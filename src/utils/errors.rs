@@ -30,6 +30,7 @@ pub enum Error {
     UnknownEmoji(String),
     Serde(serde_json::error::Error),
     ParseError(ParseError),
+    LogError(u64),
 }
 
 #[derive(Debug)]
@@ -120,6 +121,11 @@ impl fmt::Display for Error {
             Error::UnknownEmoji(e) => write!(f, "Unknown emoji: {}", e),
             Error::Serde(e) => write!(f, "Serde error: {}", e),
             Error::ParseError(e) => write!(f, "{}", e),
+            Error::LogError(guild_id) => write!(
+                f,
+                "Something went horribly wrong when trying to push to the logpump for guild {}",
+                guild_id
+            ),
         }
     }
 }

@@ -62,8 +62,8 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
                 Some(nonce) => {
                     debug!("waiter found: {}", ctx.chunk_requests.contains_key(nonce));
                     match ctx.chunk_requests.remove(nonce) {
-                        Some(mut waiter) => {
-                            waiter.1.send(chunk.clone());
+                        Some(waiter) => {
+                            waiter.1.send(chunk.clone()).expect("Something went wrong when trying to forward a member chunk to it's receiver");
                         }
                         None => {}
                     }
