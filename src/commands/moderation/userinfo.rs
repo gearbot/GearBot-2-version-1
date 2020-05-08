@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use twilight::builders::embed::EmbedBuilder;
 use twilight::model::channel::Message;
+use twilight::model::guild::Permissions;
 use twilight::model::id::ChannelId;
 use twilight::model::user::UserFlags;
 
@@ -180,6 +181,19 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
         }
         None => {
             builder = builder.color(0x00cea2);
+        }
+    }
+
+    let guild_id = msg.guild_id.unwrap();
+    if ctx
+        .bot_has_guild_permissions(guild_id, Permissions::BAN_MEMBERS)
+        .await
+    {
+        if ctx.http.ban(guild_id, user.id).await?.is_some() {
+            content += &*format!(
+                "{} **This user is currently banned from this server**",
+                Emoji::Bad.for_chat()
+            )
         }
     }
 

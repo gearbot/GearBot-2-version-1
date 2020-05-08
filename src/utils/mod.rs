@@ -13,6 +13,9 @@ mod errors;
 pub use emoji::*;
 pub use errors::*;
 
+mod log_types;
+pub use log_types::*;
+
 const MARKDOWN_REPALCEMENTS: &[&str; 7] = &["\\", "*", "_", "~", "|", "{", ">"];
 
 fn replace_markdown(msg: &mut String) {

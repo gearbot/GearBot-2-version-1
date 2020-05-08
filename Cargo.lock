@@ -584,7 +584,6 @@ dependencies = [
  "dashmap",
  "deadpool-postgres",
  "flexi_logger",
- "futures",
  "git-version",
  "lazy_static",
  "log",

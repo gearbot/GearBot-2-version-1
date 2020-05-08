@@ -7,11 +7,11 @@ use aes_gcm::{
     aead::{Aead, NewAead},
     Aes256Gcm,
 };
-use futures::channel::oneshot;
 use log::{debug, info, trace};
 use postgres_types::Type;
 use rand::{thread_rng, RngCore};
 use std::sync::Arc;
+use tokio::sync::oneshot;
 use twilight::http::error::Error::Response;
 use twilight::http::error::ResponseError::{Client, Server};
 use twilight::http::error::{Error as HttpError, ResponseError};

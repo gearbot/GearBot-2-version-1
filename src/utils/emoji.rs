@@ -14,6 +14,7 @@ define_emoji!(
     Warn => "⚠️",
     Robot => "🤖",
     Bug => "🐛",
+    Bad => "😶",
 
     StaffBadge => "",
     PartnerBadge => "",

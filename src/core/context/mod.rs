@@ -1,12 +1,15 @@
 use crate::core::context::stats::BotStats;
 use crate::core::GuildConfig;
+use crate::utils::LogType;
 use crate::EncryptionKey;
 use aes_gcm::aead::generic_array::GenericArray;
+use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use deadpool_postgres::Pool;
-use futures::channel::oneshot::Sender;
 use git_version::git_version;
 use std::sync::RwLock;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::oneshot::Sender;
 use twilight::cache::InMemoryCache;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
@@ -29,6 +32,7 @@ pub struct Context {
     pub pool: Pool,
     __static_master_key: Option<Vec<u8>>,
     pub chunk_requests: DashMap<String, Sender<MemberChunk>>,
+    log_pumps: DashMap<u64, UnboundedSender<(DateTime<Utc>, LogType)>>,
 }
 
 impl Context {
@@ -52,13 +56,11 @@ impl Context {
             pool,
             __static_master_key: key,
             chunk_requests: DashMap::new(),
+            log_pumps: DashMap::new(),
         }
     }
 
     /// Returns if a message was sent by us.
-    ///
-    /// Returns None if we couldn't currently get a lock on the cache, but
-    /// rarely, if ever should this happen.
     pub fn is_own(&self, other: &Message) -> bool {
         self.bot_user.id == other.author.id
     }
@@ -75,4 +77,6 @@ impl Context {
 
 mod cache;
 mod database;
+mod logpump;
+mod permissions;
 mod stats;

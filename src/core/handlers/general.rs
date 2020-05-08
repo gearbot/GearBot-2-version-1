@@ -10,7 +10,6 @@ use twilight::model::gateway::{
 use crate::core::Context;
 use crate::utils::Error;
 use crate::{gearbot_info, gearbot_warn};
-use futures::SinkExt;
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Result<(), Error> {
     match &event {

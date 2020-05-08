@@ -13,7 +13,6 @@ chrono = "0.4"
 deadpool-postgres={version = "0.5", features=["config"]}
 dashmap = "3.11"
 flexi_logger = { version = "0.15", default_features = false, features = ["colors", "specfile", "ziplogs"] }
-futures = "0.3"
 git-version = "0.3"
 lazy_static = "1.4"
 log = "0.4"
