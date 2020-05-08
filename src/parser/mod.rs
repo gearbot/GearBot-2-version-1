@@ -7,10 +7,8 @@ use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
 use crate::core::Context;
 use crate::utils::Emoji;
-use crate::utils::{matchers, CommandError, Error, ParseError};
+use crate::utils::{matchers, Error, ParseError};
 use twilight::cache::twilight_cache_inmemory::model::CachedMember;
-use twilight::model::gateway::presence::Presence;
-use twilight::model::guild::Member;
 use twilight::model::id::{GuildId, UserId};
 use twilight::model::user::User;
 

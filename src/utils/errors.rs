@@ -1,7 +1,5 @@
 use std::{error, fmt, io};
 
-use crate::parser::Parser;
-use crate::utils::Emoji;
 use deadpool_postgres::PoolError;
 use serde::export::Formatter;
 use twilight::cache::twilight_cache_inmemory;

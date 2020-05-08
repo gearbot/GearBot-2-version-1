@@ -6,7 +6,6 @@ use twilight::model::{gateway::payload::RequestGuildMembers, id::RoleId};
 
 use crate::core::Context;
 use crate::utils::Error;
-use log::debug;
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Result<(), Error> {
     match &event {

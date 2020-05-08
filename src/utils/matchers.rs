@@ -132,23 +132,23 @@ pub fn get_emoji_parts(msg: &str) -> Vec<EmojiInfo> {
 }
 
 lazy_static! {
-    static ref ID_MATCHER: Regex = { Regex::new(r"<@!?([0-9]+)>").unwrap() };
+    static ref ID_MATCHER: Regex = Regex::new(r"<@!?([0-9]+)>").unwrap();
 }
 
 lazy_static! {
-    static ref ROLE_ID_MATCHER: Regex = { Regex::new(r"<@&([0-9]+)>").unwrap() };
+    static ref ROLE_ID_MATCHER: Regex = Regex::new(r"<@&([0-9]+)>").unwrap();
 }
 
 lazy_static! {
-    static ref CHANNEL_ID_MATCHER: Regex = { Regex::new(r"<#([0-9]+)>").unwrap() };
+    static ref CHANNEL_ID_MATCHER: Regex = Regex::new(r"<#([0-9]+)>").unwrap();
 }
 
 lazy_static! {
-    static ref MENTION_MATCHER: Regex = { Regex::new(r"<@!?\d+>").unwrap() };
+    static ref MENTION_MATCHER: Regex = Regex::new(r"<@!?\d+>").unwrap();
 }
 
 lazy_static! {
-    static ref MENTION_MATCHER_SOLO: Regex = { Regex::new(r"^<@!?(\d+)>$").unwrap() };
+    static ref MENTION_MATCHER_SOLO: Regex = Regex::new(r"^<@!?(\d+)>$").unwrap();
 }
 
 lazy_static! {
@@ -161,7 +161,7 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref EMOJI_MATCHER: Regex = { Regex::new(r"<(a?):([^:\n]+):([0-9]+)>").unwrap() };
+    static ref EMOJI_MATCHER: Regex = Regex::new(r"<(a?):([^:\n]+):([0-9]+)>").unwrap();
 }
 
 lazy_static! {
@@ -171,7 +171,7 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref START_WITH_NUMBER_MATCHER: Regex = { Regex::new(r"^(\d+)").unwrap() };
+    static ref START_WITH_NUMBER_MATCHER: Regex = Regex::new(r"^(\d+)").unwrap();
 }
 
 #[cfg(test)]

@@ -1,5 +1,4 @@
 use crate::core::Context;
-use crate::utils::ParseError::MemberNotFoundById;
 use crate::utils::{Error, FetchError, ParseError};
 use crate::{database, EncryptionKey};
 use aes_gcm::aead::generic_array::GenericArray;
@@ -7,22 +6,14 @@ use aes_gcm::{
     aead::{Aead, NewAead},
     Aes256Gcm,
 };
-use log::{debug, info, trace};
+use log::{debug, trace};
 use postgres_types::Type;
 use rand::{thread_rng, RngCore};
 use std::sync::Arc;
-use tokio::sync::oneshot;
-use twilight::http::error::Error::Response;
-use twilight::http::error::ResponseError::{Client, Server};
-use twilight::http::error::{Error as HttpError, ResponseError};
 use twilight::model::channel::message::MessageType;
 use twilight::model::channel::Message;
-use twilight::model::gateway::payload::{MemberChunk, RequestGuildMembers};
-use twilight::model::gateway::presence::Presence;
-use twilight::model::guild::Member;
 use twilight::model::id::{ChannelId, GuildId, MessageId, UserId};
 use twilight::model::user::User;
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct UserMessage {

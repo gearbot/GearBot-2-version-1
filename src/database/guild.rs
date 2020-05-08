@@ -1,9 +1,7 @@
 use crate::core::{Context, GuildConfig};
 use crate::utils::Error;
-use deadpool_postgres::Pool;
 use log::info;
 use postgres_types::Type;
-use rand::{thread_rng, RngCore};
 use serde_json::Value;
 
 pub async fn get_guild_config(ctx: &Context, guild_id: u64) -> Result<GuildConfig, Error> {

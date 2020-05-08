@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use log::{debug, info};
+use log::debug;
 use twilight::gateway::cluster::Event;
 
 use crate::core::Context;

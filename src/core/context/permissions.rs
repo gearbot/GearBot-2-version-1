@@ -1,6 +1,4 @@
 use crate::core::Context;
-use log::debug;
-use std::sync::Arc;
 use twilight::model::channel::permission_overwrite::PermissionOverwriteType;
 use twilight::model::channel::GuildChannel;
 use twilight::model::guild::Permissions;

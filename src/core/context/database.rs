@@ -2,8 +2,6 @@ use crate::core::{Context, GuildConfig};
 use crate::database::guild::{get_guild_config, set_guild_config};
 use crate::utils::Error;
 use dashmap::mapref::one::Ref;
-use log::{debug, info};
-use postgres_types::Type;
 use serde_json::to_value;
 use twilight::model::id::GuildId;
 
