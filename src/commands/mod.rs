@@ -23,7 +23,8 @@ pub fn get_root() -> &'static CommandNode {
                     command!("about", basic::about),
                     command!("userinfo", moderation::userinfo),
                     command!("get_config", debug::get_config),
-                    command!("set_config", debug::set_config)
+                    command!("set_config", debug::set_config),
+                    command!("quote", basic::quote)
                 ))
                 .ok()
                 .unwrap();

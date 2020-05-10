@@ -38,12 +38,18 @@ impl Context {
 
     pub async fn get_channel_permissions_for(
         &self,
-        guild_id: GuildId,
         user_id: UserId,
         channel_id: ChannelId,
     ) -> Permissions {
-        let mut permissions = self.get_guild_permissions_for(guild_id, user_id).await;
+        let mut permissions = Permissions::empty();
         if let Some(channel) = self.cache.guild_channel(channel_id).await.unwrap() {
+            let guild_id = match &*channel.clone() {
+                GuildChannel::Voice(channel) => channel.guild_id.unwrap(),
+                GuildChannel::Text(channel) => channel.guild_id.unwrap(),
+                GuildChannel::Category(category) => category.guild_id.unwrap(),
+            };
+
+            permissions = self.get_guild_permissions_for(guild_id, user_id).await;
             if let Some(member) = self.cache.member(guild_id, user_id).await.unwrap() {
                 let overrides = match &*channel {
                     GuildChannel::Category(category) => &category.permission_overwrites,
@@ -79,5 +85,31 @@ impl Context {
             };
         };
         permissions
+    }
+
+    pub async fn get_bot_channel_permissions(&self, channel_id: ChannelId) -> Permissions {
+        self.get_channel_permissions_for(self.bot_user.id, channel_id)
+            .await
+    }
+
+    pub async fn has_channel_permissions(
+        &self,
+        user_id: UserId,
+        channel_id: ChannelId,
+        permissions: Permissions,
+    ) -> bool {
+        self.get_channel_permissions_for(user_id, channel_id)
+            .await
+            .contains(permissions)
+    }
+
+    pub async fn bot_has_channel_permissions(
+        &self,
+        channel_id: ChannelId,
+        permissions: Permissions,
+    ) -> bool {
+        self.get_bot_channel_permissions(channel_id)
+            .await
+            .contains(permissions)
     }
 }

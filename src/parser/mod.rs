@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
-use log::debug;
+use log::{debug, info};
 use twilight::model::gateway::payload::MessageCreate;
 
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
 use crate::core::Context;
-use crate::utils::Emoji;
 use crate::utils::{matchers, Error, ParseError};
+use crate::utils::{CommandError, Emoji};
 use twilight::cache::twilight_cache_inmemory::model::CachedMember;
-use twilight::model::id::{GuildId, UserId};
+use twilight::model::channel::GuildChannel;
+use twilight::model::channel::Message;
+use twilight::model::guild::Permissions;
+use twilight::model::id::{ChannelId, GuildId, MessageId, UserId};
 use twilight::model::user::User;
 
 #[derive(Clone)]
@@ -117,8 +120,8 @@ impl Parser {
                         }
                         e => {
                             ctx.http.create_message(channel_id)
-                                    .content(format!("{} Something went very wrong trying to execute that command, please try again later or report this on the support server {}" , Emoji::Bug.for_chat(), Emoji::Bug.for_chat()))
-                                    .await?;
+                                .content(format!("{} Something went very wrong trying to execute that command, please try again later or report this on the support server {}", Emoji::Bug.for_chat(), Emoji::Bug.for_chat()))
+                                .await?;
                             Err(e)
                         }
                     },
@@ -204,6 +207,83 @@ impl Parser {
             Ok(self.get_user().await?)
         } else {
             Ok(Arc::new(alternative))
+        }
+    }
+
+    pub async fn get_message(&mut self, requester: UserId) -> Result<Message, Error> {
+        let input = self.get_next()?;
+        if let Ok(message_id) = input.parse::<u64>() {
+            // we got an id, get the info from the database
+            if let Some(channel_id) = self.ctx.get_channel_for_message(message_id).await? {
+                //we got the channel id, check if we know about the channel:
+                if let Some(channel) = self
+                    .ctx
+                    .cache
+                    .guild_channel(ChannelId(channel_id))
+                    .await
+                    .unwrap()
+                {
+                    info!("{:?}", channel);
+                    match &*channel {
+                        //TODO: Figure out the twilight mess of guild channel types
+                        GuildChannel::Category(channel) => {
+                            //verify if the bot has access
+                            if self
+                                .ctx
+                                .bot_has_channel_permissions(
+                                    channel.id,
+                                    Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
+                                )
+                                .await
+                            {
+                                //verify if the user has access
+                                if self
+                                    .ctx
+                                    .has_channel_permissions(
+                                        requester,
+                                        channel.id,
+                                        Permissions::VIEW_CHANNEL
+                                            & Permissions::READ_MESSAGE_HISTORY,
+                                    )
+                                    .await
+                                {
+                                    //all good, fetch the message from the api instead of cache to make sure it's not only up to date but still actually exists
+                                    let result = self
+                                        .ctx
+                                        .http
+                                        .message(channel.id, MessageId(message_id))
+                                        .await;
+                                    match result {
+                                        Err(error) => {
+                                            if format!("{:?}", error).contains("status: 404") {
+                                                Err(Error::ParseError(ParseError::UnknownMessage))
+                                            } else {
+                                                Err(Error::TwilightHttp(error))
+                                            }
+                                        }
+                                        Ok(message) => Ok(message.unwrap()),
+                                    }
+                                } else {
+                                    Err(Error::ParseError(ParseError::NoChannelAccessUser(
+                                        channel.name.clone(),
+                                    )))
+                                }
+                            } else {
+                                Err(Error::ParseError(ParseError::NoChannelAccessBot(
+                                    channel.name.clone(),
+                                )))
+                            }
+                        }
+                        _ => Err(Error::LiterallyImpossible), // literally impossible
+                    }
+                } else {
+                    Err(Error::ParseError(ParseError::UnknownChannel(channel_id)))
+                }
+            } else {
+                Err(Error::ParseError(ParseError::UnknownMessage))
+            }
+        } else {
+            Err(Error::CmdError(CommandError::NoDM))
         }
     }
 }

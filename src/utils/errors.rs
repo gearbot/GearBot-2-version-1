@@ -29,6 +29,7 @@ pub enum Error {
     Serde(serde_json::error::Error),
     ParseError(ParseError),
     LogError(u64),
+    LiterallyImpossible, // for for when we need to have a match arm to satisfy the compiler but it's impossible to get there
 }
 
 #[derive(Debug)]
@@ -44,6 +45,11 @@ pub enum ParseError {
     MemberNotFoundByName(String),
     MultipleMembersByName(String),
     InvalidUserID(u64),
+    UnknownChannel(u64),
+    NoChannelAccessBot(String),
+    NoChannelAccessUser(String),
+    UnknownMessage,
+    NSFW,
 }
 
 impl error::Error for CommandError {}
@@ -67,7 +73,12 @@ impl fmt::Display for ParseError {
             },
             ParseError::MemberNotFoundByName(name) => write!(f, "There is nobody named ``{}`` on this server", name),
             ParseError::MultipleMembersByName(name) => write!(f, "Multiple members who's name starts with ``{}`` found, please use their full name and discriminator", name),
-            ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid discord userid", id)
+            ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid discord userid", id),
+            ParseError::UnknownChannel(id) => {write!(f, "Unable to find any channel with id ``{}``", id)}
+            ParseError::NoChannelAccessBot(_) => {write!(f, "I do not have access to that channel!")}
+            ParseError::NoChannelAccessUser(_) => {write!(f, "You do not have access to that channel!")}
+            ParseError::UnknownMessage => {write!(f, "Unable to find that message")}
+            ParseError::NSFW => {write!(f, "That message originates in a nsfw channel while this is not a nsfw channel, unable to comply")}
         }
     }
 }
@@ -124,6 +135,7 @@ impl fmt::Display for Error {
                 "Something went horribly wrong when trying to push to the logpump for guild {}",
                 guild_id
             ),
+            Error::LiterallyImpossible => write!(f, "Impossible is not my vocabulary you dummy!"),
         }
     }
 }
