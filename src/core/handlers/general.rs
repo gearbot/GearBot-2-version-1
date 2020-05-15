@@ -57,19 +57,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
         }
         Event::Resumed => gearbot_info!("Shard {} successfully resumed", shard_id),
         Event::MemberChunk(chunk) => {
-            debug!("got a chunk with nonce {:?}", &chunk.nonce);
-            match &chunk.nonce {
-                Some(nonce) => {
-                    debug!("waiter found: {}", ctx.chunk_requests.contains_key(nonce));
-                    match ctx.chunk_requests.remove(nonce) {
-                        Some(waiter) => {
-                            waiter.1.send(chunk.clone()).expect("Something went wrong when trying to forward a member chunk to it's receiver");
-                        }
-                        None => {}
-                    }
-                }
-                None => {}
-            };
+            // debug!("got a chunk with nonce {:?}", &chunk.nonce);
         }
         _ => (),
     }

@@ -25,10 +25,9 @@ pub struct Context {
     pub status_type: RwLock<u16>,
     pub status_text: RwLock<String>,
     pub bot_user: CurrentUser,
-    configs: DashMap<GuildId, GuildConfig>,
+    configs: DashMap<u64, GuildConfig>,
     pub pool: Pool,
     __static_master_key: Option<Vec<u8>>,
-    pub chunk_requests: DashMap<String, Sender<MemberChunk>>,
     log_pumps: DashMap<u64, UnboundedSender<(DateTime<Utc>, LogType)>>,
 }
 

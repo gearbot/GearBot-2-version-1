@@ -8,7 +8,7 @@ use aes_gcm::{
     aead::{Aead, NewAead},
     Aes256Gcm,
 };
-use dashmap::mapref::one::Ref;
+use dashmap::ElementGuard;
 use log::debug;
 use postgres_types::Type;
 use rand::{thread_rng, RngCore};
@@ -31,13 +31,13 @@ impl Context {
     pub async fn get_config(
         &self,
         guild_id: GuildId,
-    ) -> Result<Ref<'_, GuildId, GuildConfig>, Error> {
-        match self.configs.get(&guild_id) {
+    ) -> Result<ElementGuard<u64, GuildConfig>, Error> {
+        match self.configs.get(&guild_id.0) {
             Some(config) => Ok(config),
             None => {
                 let config = get_guild_config(&self, guild_id.0).await?;
-                self.configs.insert(guild_id, config);
-                Ok(self.configs.get(&guild_id).unwrap())
+                self.configs.insert(guild_id.0, config);
+                Ok(self.configs.get(&guild_id.0).unwrap())
             }
         }
     }
@@ -45,7 +45,7 @@ impl Context {
     pub async fn set_config(&self, guild_id: GuildId, config: GuildConfig) -> Result<(), Error> {
         //TODO: validate values? or do we leave that to whoever edited it?
         set_guild_config(&self, guild_id.0, to_value(&config)?).await?;
-        self.configs.insert(guild_id, config);
+        self.configs.insert(guild_id.0, config);
         Ok(())
     }
 
