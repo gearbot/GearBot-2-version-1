@@ -8,13 +8,10 @@ use dashmap::DashMap;
 use deadpool_postgres::Pool;
 use std::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::oneshot::Sender;
 use twilight::cache::InMemoryCache;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
 use twilight::model::channel::Message;
-use twilight::model::gateway::payload::MemberChunk;
-use twilight::model::id::GuildId;
 use twilight::model::user::CurrentUser;
 
 pub struct Context {
@@ -51,7 +48,6 @@ impl Context {
             configs: DashMap::new(),
             pool,
             __static_master_key: key,
-            chunk_requests: DashMap::new(),
             log_pumps: DashMap::new(),
         }
     }
