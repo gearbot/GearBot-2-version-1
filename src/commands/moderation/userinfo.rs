@@ -10,6 +10,8 @@ use twilight::model::channel::Message;
 use twilight::model::guild::Permissions;
 use twilight::model::user::UserFlags;
 
+const USER_INFO_COLOR: u32 = 0x00_cea2;
+
 pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> CommandResult {
     if msg.guild_id.is_none() {
         return Err(Error::CmdError(CommandError::NoDM));
@@ -24,20 +26,22 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
     let mut author_builder = builder
         .author()
         .name(format!("{}#{}", user.name, user.discriminator));
-    if user.avatar.is_some() {
-        let avatar = user.avatar.as_ref().unwrap();
+
+    if let Some(avatar) = user.avatar.as_ref() {
         let extension = if avatar.starts_with("a_") {
             "gif"
         } else {
             "png"
         };
+
         author_builder = author_builder.icon_url(format!(
             "https://cdn.discordapp.com/avatars/{}/{}.{}",
             user.id,
             user.avatar.as_ref().unwrap(),
             extension
-        ))
+        ));
     }
+
     builder = author_builder.commit();
 
     //add badges
@@ -123,7 +127,7 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
     {
         Some(member) => {
             if member.roles.first().is_some() {
-                let role = member.roles.first().unwrap().clone();
+                let role = *member.roles.first().unwrap();
                 let cached_role = ctx.cache.role(role).await?.unwrap();
                 builder = builder.color(cached_role.color);
                 let (joined, ago) = match &member.joined_at {
@@ -142,14 +146,14 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
                     None => ("Unknown".to_string(), "Unknown".to_string()),
                 };
 
-                let mut count = 0;
                 let mut roles = "".to_string();
-                for role in &member.roles {
+                for (count, role) in member.roles.iter().enumerate() {
                     if count > 0 {
                         roles += ", ";
                     }
+
                     roles += &format!("<@&{}>", role.0);
-                    count += 1;
+
                     if count == 3 {
                         roles += &format!(" and {} more", member.roles.len() - 3);
                         break;
@@ -160,22 +164,19 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
                     "**Joined on**: {}\n**Been here for**: {}\n**Roles**:{}",
                     joined, ago, roles
                 );
-                match &member.premium_since {
-                    Some(s) => {
-                        let since: DateTime<Utc> = DateTime::from_utc(
-                            DateTime::parse_from_str(&*s, "%FT%T%.f%z")
-                                .unwrap()
-                                .naive_utc(),
-                            Utc,
-                        );
-                        content += &format!("**Boosting this server since**: {}", since);
-                    }
-                    None => {}
+                if let Some(s) = member.premium_since.as_ref() {
+                    let since: DateTime<Utc> = DateTime::from_utc(
+                        DateTime::parse_from_str(s, "%FT%T%.f%z")
+                            .unwrap()
+                            .naive_utc(),
+                        Utc,
+                    );
+                    content += &format!("**Boosting this server since**: {}", since);
                 }
             }
         }
         None => {
-            builder = builder.color(0x00cea2);
+            builder = builder.color(USER_INFO_COLOR);
         }
     }
 
@@ -183,13 +184,12 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
     if ctx
         .bot_has_guild_permissions(guild_id, Permissions::BAN_MEMBERS)
         .await
+        && ctx.http.ban(guild_id, user.id).await?.is_some()
     {
-        if ctx.http.ban(guild_id, user.id).await?.is_some() {
-            content += &*format!(
-                "{} **This user is currently banned from this server**",
-                Emoji::Bad.for_chat()
-            )
-        }
+        content += &*format!(
+            "{} **This user is currently banned from this server**",
+            Emoji::Bad.for_chat()
+        )
     }
 
     builder = builder.description(content);

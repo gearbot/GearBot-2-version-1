@@ -2,9 +2,11 @@ use std::{error, fmt, io};
 
 use deadpool_postgres::PoolError;
 use serde::export::Formatter;
+
 use twilight::cache::twilight_cache_inmemory;
 use twilight::gateway::cluster;
 use twilight::http;
+use twilight::model::id::GuildId;
 
 #[derive(Debug)]
 pub enum Error {
@@ -28,8 +30,7 @@ pub enum Error {
     UnknownEmoji(String),
     Serde(serde_json::error::Error),
     ParseError(ParseError),
-    LogError(u64),
-    LiterallyImpossible, // for for when we need to have a match arm to satisfy the compiler but it's impossible to get there
+    LogError(GuildId),
 }
 
 #[derive(Debug)]
@@ -137,7 +138,6 @@ impl fmt::Display for Error {
                 "Something went horribly wrong when trying to push to the logpump for guild {}",
                 guild_id
             ),
-            Error::LiterallyImpossible => write!(f, "Impossible is not my vocabulary you dummy!"),
         }
     }
 }

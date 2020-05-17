@@ -56,7 +56,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
                 .await?;
         }
         Event::Resumed => gearbot_info!("Shard {} successfully resumed", shard_id),
-        Event::MemberChunk(chunk) => {
+        Event::MemberChunk(_chunk) => {
             // debug!("got a chunk with nonce {:?}", &chunk.nonce);
         }
         _ => (),

@@ -2,17 +2,18 @@ use crate::core::context::stats::BotStats;
 use crate::core::GuildConfig;
 use crate::utils::LogType;
 use crate::EncryptionKey;
+
 use aes_gcm::aead::generic_array::GenericArray;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use deadpool_postgres::Pool;
 use std::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
+
 use twilight::cache::InMemoryCache;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
-use twilight::model::channel::Message;
-use twilight::model::user::CurrentUser;
+use twilight::model::{channel::Message, id::GuildId, user::CurrentUser};
 
 pub struct Context {
     pub cache: InMemoryCache,
@@ -22,10 +23,10 @@ pub struct Context {
     pub status_type: RwLock<u16>,
     pub status_text: RwLock<String>,
     pub bot_user: CurrentUser,
-    configs: DashMap<u64, GuildConfig>,
+    configs: DashMap<GuildId, GuildConfig>,
     pub pool: Pool,
     __static_master_key: Option<Vec<u8>>,
-    log_pumps: DashMap<u64, UnboundedSender<(DateTime<Utc>, LogType)>>,
+    log_pumps: DashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>,
 }
 
 impl Context {

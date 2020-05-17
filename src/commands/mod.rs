@@ -5,8 +5,8 @@ use crate::{command, subcommands};
 
 mod basic;
 mod debug;
-mod moderation;
 pub mod meta;
+mod moderation;
 
 static ROOT_NODE: OnceCell<CommandNode> = OnceCell::new();
 

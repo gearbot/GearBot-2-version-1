@@ -16,6 +16,7 @@ mod log_types;
 pub use log_types::*;
 
 const MARKDOWN_REPALCEMENTS: &[&str; 7] = &["\\", "*", "_", "~", "|", "{", ">"];
+const DISCORD_EPOCH: i64 = 1_420_070_400_000;
 
 fn replace_markdown(msg: &mut String) {
     for c in MARKDOWN_REPALCEMENTS.iter() {
@@ -70,8 +71,6 @@ pub fn clean(msg: &str, markdown: bool, links: bool, emotes: bool, lookalikes: b
 
     msg
 }
-
-static DISCORD_EPOCH: i64 = 1420070400000;
 
 pub fn snowflake_timestamp(snowflake: u64) -> DateTime<Utc> {
     DateTime::from_utc(

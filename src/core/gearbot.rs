@@ -101,11 +101,10 @@ impl GearBot {
         let mut bot_events = context.cluster.events().await?;
         while let Some(event) = bot_events.next().await {
             let c = context.clone();
-            tokio::spawn(async {
-                let result = handle_event(event, c).await;
-                if result.is_err() {
-                    gearbot_error!("{}", result.err().unwrap());
-                    // c.stats.had_error().await
+            tokio::spawn(async move {
+                if let Err(e) = handle_event(event, c.clone()).await {
+                    gearbot_error!("{}", e);
+                    c.stats.had_error().await;
                 }
             });
         }

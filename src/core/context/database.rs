@@ -31,13 +31,13 @@ impl Context {
     pub async fn get_config(
         &self,
         guild_id: GuildId,
-    ) -> Result<ElementGuard<u64, GuildConfig>, Error> {
-        match self.configs.get(&guild_id.0) {
+    ) -> Result<ElementGuard<GuildId, GuildConfig>, Error> {
+        match self.configs.get(&guild_id) {
             Some(config) => Ok(config),
             None => {
                 let config = get_guild_config(&self, guild_id.0).await?;
-                self.configs.insert(guild_id.0, config);
-                Ok(self.configs.get(&guild_id.0).unwrap())
+                self.configs.insert(guild_id, config);
+                Ok(self.configs.get(&guild_id).unwrap())
             }
         }
     }
@@ -45,7 +45,7 @@ impl Context {
     pub async fn set_config(&self, guild_id: GuildId, config: GuildConfig) -> Result<(), Error> {
         //TODO: validate values? or do we leave that to whoever edited it?
         set_guild_config(&self, guild_id.0, to_value(&config)?).await?;
-        self.configs.insert(guild_id.0, config);
+        self.configs.insert(guild_id, config);
         Ok(())
     }
 
@@ -63,7 +63,10 @@ impl Context {
 
             let fin = std::time::Instant::now();
 
-            info!("It took {}us to decrypt a user message!", (fin - start).as_micros());
+            info!(
+                "It took {}us to decrypt a user message!",
+                (fin - start).as_micros()
+            );
 
             Ok(Some(UserMessage {
                 content: String::from_utf8_lossy(&decyrpted).to_string(),

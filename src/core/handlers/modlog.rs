@@ -17,9 +17,8 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
             let res = tokio::spawn(async move { c.command(shard_id, &data).await }).await;
 
             if let Ok(handle) = res {
-                match handle {
-                    Ok(_) => {}
-                    Err(e) => return Err(Error::TwilightCluster(e)),
+                if let Err(e) = handle {
+                    return Err(Error::TwilightCluster(e));
                 }
             }
         }

@@ -274,7 +274,7 @@ impl Parser {
                                 )))
                             }
                         }
-                        _ => Err(Error::LiterallyImpossible), // literally impossible
+                        _ => unreachable!(),
                     }
                 } else {
                     Err(Error::ParseError(ParseError::UnknownChannel(channel_id)))

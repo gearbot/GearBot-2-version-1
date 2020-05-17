@@ -11,9 +11,10 @@ pub async fn uid(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Command
     let user_id = {
         let msg = parser.get_next()?;
         matchers::get_mention(msg).ok_or(ParseError::MissingArgument)?
-    }; 
-    
-    ctx.http.create_message(msg.channel_id)
+    };
+
+    ctx.http
+        .create_message(msg.channel_id)
         .content(user_id.to_string())
         .await?;
 

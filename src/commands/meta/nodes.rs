@@ -60,22 +60,14 @@ impl CommandNode {
     pub fn get_name(&self) -> &str {
         match &self {
             CommandNode::CommandNodeInner { command } => &command.name,
-            CommandNode::GroupNode {
-                name,
-                handler,
-                sub_nodes,
-            } => &name,
+            CommandNode::GroupNode { name, .. } => &name,
         }
     }
 
     pub fn get(&self, target: &str) -> Option<&CommandNode> {
         match &self {
             CommandNode::CommandNodeInner { command } => None,
-            CommandNode::GroupNode {
-                name,
-                handler,
-                sub_nodes,
-            } => sub_nodes.get(target),
+            CommandNode::GroupNode { sub_nodes, .. } => sub_nodes.get(target),
         }
     }
 
