@@ -212,78 +212,78 @@ impl Parser {
 
     pub async fn get_message(&mut self, requester: UserId) -> Result<Message, Error> {
         let input = self.get_next()?;
-        if let Ok(message_id) = input.parse::<u64>() {
-            // we got an id, get the info from the database
-            if let Some(channel_id) = self.ctx.get_channel_for_message(message_id).await? {
-                //we got the channel id, check if we know about the channel:
-                if let Some(channel) = self
+
+        // We got an id, get the info from the database
+        let message_id = input.parse::<u64>()
+            .map_err(|_| CommandError::NoDM)?;
+    
+        let channel_id = self.ctx
+            .get_channel_for_message(message_id).await?
+            .ok_or(ParseError::UnknownMessage)?;
+            
+        let channel = self
+            .ctx
+            .cache
+            .guild_channel(ChannelId(channel_id))
+            .await
+            .unwrap()
+            .ok_or(ParseError::UnknownChannel(channel_id))?;
+
+        info!("{:?}", channel);
+        match &*channel {
+            //TODO: Figure out the twilight mess of guild channel types
+            GuildChannel::Category(channel) => {
+                let bot_has_access = self
                     .ctx
-                    .cache
-                    .guild_channel(ChannelId(channel_id))
-                    .await
-                    .unwrap()
-                {
-                    info!("{:?}", channel);
-                    match &*channel {
-                        //TODO: Figure out the twilight mess of guild channel types
-                        GuildChannel::Category(channel) => {
-                            //verify if the bot has access
-                            if self
-                                .ctx
-                                .bot_has_channel_permissions(
-                                    channel.id,
-                                    Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
-                                )
-                                .await
-                            {
-                                //verify if the user has access
-                                if self
-                                    .ctx
-                                    .has_channel_permissions(
-                                        requester,
-                                        channel.id,
-                                        Permissions::VIEW_CHANNEL
-                                            & Permissions::READ_MESSAGE_HISTORY,
-                                    )
-                                    .await
-                                {
-                                    //all good, fetch the message from the api instead of cache to make sure it's not only up to date but still actually exists
-                                    let result = self
-                                        .ctx
-                                        .http
-                                        .message(channel.id, MessageId(message_id))
-                                        .await;
-                                    match result {
-                                        Err(error) => {
-                                            if format!("{:?}", error).contains("status: 404") {
-                                                Err(Error::ParseError(ParseError::UnknownMessage))
-                                            } else {
-                                                Err(Error::TwilightHttp(error))
-                                            }
-                                        }
-                                        Ok(message) => Ok(message.unwrap()),
-                                    }
+                    .bot_has_channel_permissions(
+                        channel.id,
+                        Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
+                    )
+                    .await;
+
+                // Verify if the bot has access
+                if bot_has_access {
+                    let user_has_access = self
+                        .ctx
+                        .has_channel_permissions(
+                            requester,
+                            channel.id,
+                            Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
+                        )
+                        .await;
+                
+                    // Verify if the user has access
+                    if user_has_access {
+                        // All good, fetch the message from the api instead of cache to make sure it's not only up to date but still actually exists
+                        let result = self
+                            .ctx
+                            .http
+                            .message(channel.id, MessageId(message_id))
+                            .await;
+                        
+                        match result {
+                            Ok(message) => Ok(message.unwrap()),
+                            Err(error) => {
+                                if error.to_string().contains("status: 404") {
+                                    Err(Error::ParseError(ParseError::UnknownMessage))
                                 } else {
-                                    Err(Error::ParseError(ParseError::NoChannelAccessUser(
-                                        channel.name.clone(),
-                                    )))
+                                    Err(Error::TwilightHttp(error))
                                 }
-                            } else {
-                                Err(Error::ParseError(ParseError::NoChannelAccessBot(
-                                    channel.name.clone(),
-                                )))
                             }
                         }
-                        _ => unreachable!(),
+
+                    } else {
+                        Err(Error::ParseError(ParseError::NoChannelAccessUser(
+                            channel.name.clone(),
+                        )))
                     }
                 } else {
-                    Err(Error::ParseError(ParseError::UnknownChannel(channel_id)))
+                    Err(Error::ParseError(ParseError::NoChannelAccessBot(
+                        channel.name.clone(),
+                    )))
                 }
-            } else {
-                Err(Error::ParseError(ParseError::UnknownMessage))
             }
-        } else {
-            Err(Error::CmdError(CommandError::NoDM))
+            _ => unreachable!(),
         }
     }
 }

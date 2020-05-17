@@ -126,10 +126,11 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
         .unwrap()
     {
         Some(member) => {
-            if member.roles.first().is_some() {
-                let role = *member.roles.first().unwrap();
-                let cached_role = ctx.cache.role(role).await?.unwrap();
+            if let Some(role) = member.roles.first() {
+                let cached_role = ctx.cache.role(*role).await?.unwrap();
+
                 builder = builder.color(cached_role.color);
+                
                 let (joined, ago) = match &member.joined_at {
                     Some(joined) => {
                         let joined = DateTime::from_utc(
