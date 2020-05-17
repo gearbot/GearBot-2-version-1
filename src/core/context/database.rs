@@ -9,7 +9,7 @@ use aes_gcm::{
     Aes256Gcm,
 };
 use dashmap::ElementGuard;
-use log::debug;
+use log::info;
 use postgres_types::Type;
 use rand::{thread_rng, RngCore};
 use serde_json::to_value;
@@ -54,11 +54,16 @@ impl Context {
             get_full_message(&self.pool, id.0).await?
         {
             let guild_id = GuildId(guild_id);
+            let start = std::time::Instant::now();
             let decyrpted = {
                 let guild_key = self.get_guild_encryption_key(guild_id).await?;
 
                 decrypt_bytes(encrypted.as_slice(), &guild_key, id.0)
             };
+
+            let fin = std::time::Instant::now();
+
+            info!("It took {}us to decrypt a user message!", (fin - start).as_micros());
 
             Ok(Some(UserMessage {
                 content: String::from_utf8_lossy(&decyrpted).to_string(),
@@ -90,9 +95,9 @@ impl Context {
 
         let finish_crypto = std::time::Instant::now();
 
-        debug!(
-            "It took {}ms to encrypt the user message!",
-            (finish_crypto - start).as_millis()
+        info!(
+            "It took {}us to encrypt the user message!",
+            (finish_crypto - start).as_micros()
         );
 
         database::cache::insert_message(&self.pool, ciphertext, &msg).await?;

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use log::info;
+use log::debug;
 use twilight::gateway::cluster::Event;
 use twilight::model::{gateway::payload::RequestGuildMembers, id::RoleId};
 
@@ -13,7 +13,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
             ctx.stats.new_guild().await;
             let c = ctx.cluster.clone();
             let data = RequestGuildMembers::new_all(guild.id, None);
-            info!("Requesting members for guild {}", guild.id);
+            debug!("Requesting members for guild {}", guild.id);
             let res = tokio::spawn(async move { c.command(shard_id, &data).await }).await;
 
             if let Ok(handle) = res {
@@ -25,8 +25,8 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
         }
         Event::MemberChunk(_chunk) => {}
         Event::UserUpdate(update) => {
-            println!("User update event triggered");
-            println!("{:?}", update);
+            debug!("User update event triggered");
+            debug!("{:?}", update);
         }
         Event::MemberUpdate(update) => {
             // According to the docs, cache commands can never error, but just to be safe and
@@ -75,22 +75,22 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
                 _ => None,
             };
 
-            info!("A member update occured: ");
+            debug!("A member update occured: ");
 
             if let Some((old_alias, new_alias)) = nickname_change {
-                info!(
+                debug!(
                     "User {} changed their nickname from '{}' to '{}'",
                     new_member.name, old_alias, new_alias
                 );
             }
 
             if let Some((new_name, past_name)) = username_change {
-                info!("User '{}' changed their name to '{}'", past_name, new_name);
+                debug!("User '{}' changed their name to '{}'", past_name, new_name);
             }
 
             if !roles_lost.is_empty() {
                 let roles_lost_display = generate_role_display(&roles_lost, &ctx).await?;
-                info!(
+                debug!(
                     "User '{}' lost the following roles: {}",
                     new_member.name, roles_lost_display
                 );
@@ -98,7 +98,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
 
             if !roles_gained.is_empty() {
                 let roles_gained_display = generate_role_display(&roles_lost, &ctx).await?;
-                info!(
+                debug!(
                     "User '{}' gained the following roles: {}",
                     new_member.name, roles_gained_display
                 );

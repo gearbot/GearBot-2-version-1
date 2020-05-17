@@ -44,6 +44,7 @@ pub enum ParseError {
     MemberNotFoundById(u64),
     MemberNotFoundByName(String),
     MultipleMembersByName(String),
+    WrongArgumentType(String),
     InvalidUserID(u64),
     UnknownChannel(u64),
     NoChannelAccessBot(String),
@@ -73,6 +74,7 @@ impl fmt::Display for ParseError {
             },
             ParseError::MemberNotFoundByName(name) => write!(f, "There is nobody named ``{}`` on this server", name),
             ParseError::MultipleMembersByName(name) => write!(f, "Multiple members who's name starts with ``{}`` found, please use their full name and discriminator", name),
+            ParseError::WrongArgumentType(expected) => write!(f, "The wrong type was provided! Expected a {}, but got something else!", expected),
             ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid discord userid", id),
             ParseError::UnknownChannel(id) => {write!(f, "Unable to find any channel with id ``{}``", id)}
             ParseError::NoChannelAccessBot(_) => {write!(f, "I do not have access to that channel!")}
@@ -137,6 +139,13 @@ impl fmt::Display for Error {
             ),
             Error::LiterallyImpossible => write!(f, "Impossible is not my vocabulary you dummy!"),
         }
+    }
+}
+
+// TODO: Some enum of all the possible user input data types that has `AsStr` or similar on it to return here
+impl From<ParseError> for Error {
+    fn from(e: ParseError) -> Self {
+        Error::ParseError(e)
     }
 }
 

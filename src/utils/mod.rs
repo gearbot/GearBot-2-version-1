@@ -1,4 +1,3 @@
-// Remove this when they are all used.
 use chrono::{DateTime, NaiveDateTime, Utc};
 pub use emoji::*;
 pub use errors::*;

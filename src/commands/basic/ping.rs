@@ -14,8 +14,7 @@ pub async fn ping(ctx: Arc<Context>, msg: Message, _: Parser) -> CommandResult {
         .http
         .create_message(msg.channel_id)
         .content(":ping_pong:")
-        .await
-        .unwrap();
+        .await?;
 
     let finished = Utc::now().time();
 
