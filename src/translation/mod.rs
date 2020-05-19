@@ -162,35 +162,44 @@ pub fn load_translations() -> Translations {
 
     let mut translations = HashMap::new();
 
-    for t_file in translation_files {
-        let t_file = t_file.expect("Failed to read a translation file in!");
+    for lang_dir in translation_files {
+        let lang_dir = lang_dir.unwrap();
 
-        let file_path = t_file.path();
-
-        if t_file.file_type().unwrap().is_dir() {
-            panic!("Directories can't be in the translations directory!")
+        if !lang_dir.file_type().unwrap().is_dir() {
+            panic!("Each language must be contained in its own directory!")
         }
 
-        let t_file = fs::File::open(&file_path).unwrap();
+        let lang_dir_path = lang_dir.path();
 
-        let translation_data: HashMap<String, String> = serde_json::from_reader(&t_file).unwrap();
-        let file_name = file_path.file_stem().unwrap();
+        let lang_dir_name = lang_dir_path.file_stem().unwrap().to_str().unwrap();
 
-        let langid: LanguageIdentifier = file_name.to_str().unwrap().parse().expect(&format!(
+        let langid: LanguageIdentifier = lang_dir_name.parse().expect(&format!(
             "{} was not a valid language identifier!",
-            file_name.to_string_lossy()
+            lang_dir_name
         ));
 
         // Make the bundle of the specific language
         let mut bundle = FluentBundle::new(&[langid.clone()]);
 
-        // Then we add all the actual translations for said language
-        for (translation_key, translation_string) in translation_data {
-            let tl_string = format!("{} = {}", translation_key, translation_string);
+        for t_file in fs::read_dir(lang_dir.path()).unwrap() {
+            let t_file = {
+                let tmp = t_file.unwrap();
+                fs::File::open(tmp.path()).expect("Failed to read a translation file in!")
+            };
 
-            let res = FluentResource::try_new(tl_string).unwrap();
+            let translation_data: HashMap<String, String> =
+                serde_json::from_reader(&t_file).unwrap();
 
-            bundle.add_resource(res).unwrap();
+            // Then we add all the actual translations for said language
+            for (translation_key, translation_string) in translation_data {
+                let tl_string = format!("{} = {}", translation_key, translation_string);
+
+                println!("Adding a resource string of: {}", tl_string);
+
+                let res = FluentResource::try_new(tl_string).unwrap();
+
+                bundle.add_resource(res).unwrap();
+            }
         }
 
         translations.insert(langid, bundle);

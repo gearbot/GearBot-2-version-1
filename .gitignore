@@ -18,5 +18,5 @@ logs
 .vscode
 
 # Ignore any of the translations except the default English strings
-/lang/**.**
-!/lang/en_US.json
+!/lang/en_US/commands.json
+/lang/**
