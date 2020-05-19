@@ -6,7 +6,7 @@ use twilight::model::channel::Message;
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::Context;
 use crate::parser::Parser;
-use crate::translation::GearBotStrings;
+use crate::translation::BasicStrings;
 
 pub async fn ping(ctx: Arc<Context>, msg: Message, _: Parser) -> CommandResult {
     let start = Instant::now();
@@ -37,7 +37,7 @@ pub async fn ping(ctx: Arc<Context>, msg: Message, _: Parser) -> CommandResult {
 
     let edited_msg =
         ctx.translations
-            .get_text_with_args(&config.language, GearBotStrings::PingPong, &args);
+            .get_text_with_args(&config.language, BasicStrings::PingPong.into(), &args);
 
     ctx.http
         .update_message(sent_msg.channel_id, sent_msg.id)

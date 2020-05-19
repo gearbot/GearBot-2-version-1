@@ -2,13 +2,16 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs;
 
-use fluent_bundle::{concurrent::FluentBundle, FluentArgs, FluentResource, FluentValue};
+use fluent_bundle::{
+    concurrent::FluentBundle, FluentArgs, FluentError, FluentResource, FluentValue,
+};
 use serde_json;
 use unic_langid::{langid, LanguageIdentifier};
 
 use crate::gearbot_warn;
 
 const TRANSLATION_DIR: &str = "./lang";
+const FAILED_TRANSLATE_FALLBACK_MSG: &str = "A translation error occured and no fallback could be found! Something may be wrong with the guild configuration!";
 
 /// The default language to fall back to if a string can't be translated in the requested language.
 /// This is also the language that new guild configs will default to.
@@ -57,11 +60,7 @@ impl Translations {
 
             let value = lang_bundle.format_pattern(pattern, None, &mut errors);
 
-            for _error in errors {
-                gearbot_warn!(
-                    "A translation error occured: TODO: Library doesn't give error descriptions!"
-                );
-            }
+            handle_translation_error(&errors, string_key, false);
 
             value
         } else {
@@ -75,14 +74,13 @@ impl Translations {
 
                 let value = lang_bundle.format_pattern(pattern, None, &mut errors);
 
-                for _error in errors {
-                    gearbot_warn!("A translation error occured: TODO: Library doesn't give error descriptions!");
-                }
+                handle_translation_error(&errors, string_key, true);
 
                 value
             } else {
-                // Something really went wrong, error in chat
-                Cow::Borrowed("A translation error occured and no fallback could be found!")
+                // Something really went wrong, error in chat and the logs
+                gearbot_warn!("{}", FAILED_TRANSLATE_FALLBACK_MSG);
+                Cow::Borrowed(FAILED_TRANSLATE_FALLBACK_MSG)
             }
         }
     }
@@ -106,11 +104,7 @@ impl Translations {
 
             let value = lang_bundle.format_pattern(pattern, Some(args), &mut errors);
 
-            for _error in errors {
-                gearbot_warn!(
-                    "A translation error occured: TODO: Library doesn't give error descriptions!"
-                );
-            }
+            handle_translation_error(&errors, string_key, false);
 
             value
         } else {
@@ -124,15 +118,29 @@ impl Translations {
 
                 let value = lang_bundle.format_pattern(pattern, Some(args), &mut errors);
 
-                for _error in errors {
-                    gearbot_warn!("A translation error occured: TODO: Library doesn't give error descriptions!");
-                }
+                handle_translation_error(&errors, string_key, true);
 
                 value
             } else {
-                // Something went really wrong, error in chat
-                Cow::Borrowed("A translation error occured and no fallback could be found! Something may be wrong with the guild configuration!")
+                // Something really went wrong, error in chat and the logs
+                gearbot_warn!("{}", FAILED_TRANSLATE_FALLBACK_MSG);
+                Cow::Borrowed(FAILED_TRANSLATE_FALLBACK_MSG)
             }
+        }
+    }
+}
+
+fn handle_translation_error(errors: &[FluentError], key: GearBotStrings, is_fallback: bool) {
+    for _error in errors {
+        if is_fallback {
+            gearbot_warn!(
+                "A translation error occured and had to fallback to '{}' while trying to translate the key: '{}'", key.as_str(), DEFAULT_LANG,
+            );
+        } else {
+            gearbot_warn!(
+                "A translation error occured while trying to translate the key: '{}'",
+                key.as_str()
+            );
         }
     }
 }
@@ -141,13 +149,32 @@ impl Translations {
 // ergonomic way instead of checking a bunch of options.
 /// This is where *all* of the different things Gearbot can say should go.
 pub enum GearBotStrings {
+    Basic(BasicStrings),
+}
+
+/// The strings that basic commands use.
+pub enum BasicStrings {
     PingPong,
+}
+
+impl BasicStrings {
+    fn as_str(&self) -> &str {
+        match self {
+            BasicStrings::PingPong => "basic__ping_pong",
+        }
+    }
+}
+
+impl From<BasicStrings> for GearBotStrings {
+    fn from(basic: BasicStrings) -> Self {
+        GearBotStrings::Basic(basic)
+    }
 }
 
 impl GearBotStrings {
     fn as_str(&self) -> &str {
         match self {
-            GearBotStrings::PingPong => "basic__ping_pong",
+            GearBotStrings::Basic(basic) => basic.as_str(),
         }
     }
 
@@ -173,10 +200,9 @@ pub fn load_translations() -> Translations {
 
         let lang_dir_name = lang_dir_path.file_stem().unwrap().to_str().unwrap();
 
-        let langid: LanguageIdentifier = lang_dir_name.parse().expect(&format!(
-            "{} was not a valid language identifier!",
-            lang_dir_name
-        ));
+        let langid: LanguageIdentifier = lang_dir_name
+            .parse()
+            .unwrap_or_else(|_| panic!("{} was not a valid language identifier!", lang_dir_name));
 
         // Make the bundle of the specific language
         let mut bundle = FluentBundle::new(&[langid.clone()]);
