@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs;
+use std::sync::Arc;
 
 use fluent_bundle::{
     concurrent::FluentBundle, FluentArgs, FluentError, FluentResource, FluentValue,
@@ -17,8 +18,14 @@ const FAILED_TRANSLATE_FALLBACK_MSG: &str = "A translation error occured and no 
 /// This is also the language that new guild configs will default to.
 pub const DEFAULT_LANG: LanguageIdentifier = langid!("en_US");
 
-pub struct Translations {
-    translations: HashMap<LanguageIdentifier, FluentBundle<FluentResource>>,
+/// The transations for all languages that the bot can handle.
+pub struct Translations(HashMap<LanguageIdentifier, Arc<FluentBundle<FluentResource>>>);
+
+/// A translator that handles all language translation for a specific guild depending on what
+/// their language is set to.
+pub struct GuildTranslator {
+    pub language: LanguageIdentifier,
+    pub translator: Arc<FluentBundle<FluentResource>>,
 }
 
 impl Translations {
@@ -51,7 +58,7 @@ impl Translations {
         string_key: GearBotStrings,
     ) -> Cow<'a, str> {
         // TODO: See how well this will work out in practice with unwrapping
-        let lang_bundle = self.translations.get(lang_key).unwrap();
+        let lang_bundle = self.0.get(lang_key).unwrap();
 
         if let Some(expected_msg) = lang_bundle.get_message(string_key.as_str()) {
             let mut errors = Vec::new();
@@ -65,7 +72,7 @@ impl Translations {
             value
         } else {
             // If we can't find the key in the expected language, fallback to English
-            let fallback_bundle = self.translations.get(&DEFAULT_LANG).unwrap();
+            let fallback_bundle = self.0.get(&DEFAULT_LANG).unwrap();
 
             if let Some(fallback_msg) = fallback_bundle.get_message(string_key.as_str()) {
                 let mut errors = Vec::new();
@@ -95,7 +102,7 @@ impl Translations {
         string_key: GearBotStrings,
         args: &'a FluentArgs<'a>,
     ) -> Cow<'a, str> {
-        let lang_bundle = self.translations.get(lang_key).unwrap();
+        let lang_bundle = self.0.get(lang_key).unwrap();
 
         if let Some(expected_msg) = lang_bundle.get_message(string_key.as_str()) {
             let mut errors = Vec::new();
@@ -109,7 +116,7 @@ impl Translations {
             value
         } else {
             // If we can't find the key in the expected language, fallback to English
-            let fallback_bundle = self.translations.get(&DEFAULT_LANG).unwrap();
+            let fallback_bundle = self.0.get(&DEFAULT_LANG).unwrap();
 
             if let Some(fallback_msg) = fallback_bundle.get_message(string_key.as_str()) {
                 let mut errors = Vec::new();
@@ -127,6 +134,14 @@ impl Translations {
                 Cow::Borrowed(FAILED_TRANSLATE_FALLBACK_MSG)
             }
         }
+    }
+
+    pub fn get_translator(&self, lang: &LanguageIdentifier) -> Arc<GuildTranslator> {
+        Arc::new(GuildTranslator {
+            language: lang.clone(),
+            // If the guild has a language set, it exists in the HashMap.
+            translator: Arc::clone(self.0.get(lang).unwrap()),
+        })
     }
 }
 
@@ -228,8 +243,8 @@ pub fn load_translations() -> Translations {
             }
         }
 
-        translations.insert(langid, bundle);
+        translations.insert(langid, Arc::new(bundle));
     }
 
-    Translations { translations }
+    Translations(translations)
 }

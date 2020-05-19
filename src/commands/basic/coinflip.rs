@@ -1,14 +1,12 @@
-use std::sync::Arc;
-
 use rand;
 use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
-use crate::core::Context;
+use crate::core::GuildContext;
 use crate::parser::Parser;
 use crate::utils;
 
-pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
+pub async fn coinflip(ctx: GuildContext, msg: Message, parser: Parser) -> CommandResult {
     let thing_todo: String = parser
         .parts
         .into_iter()
@@ -19,11 +17,8 @@ pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> Comman
     let thing_todo = if !thing_todo.is_empty() {
         utils::clean(&thing_todo, true, true, true, true)
     } else {
-        ctx.http
-            .create_message(msg.channel_id)
-            .content("You didn't give me anything to flip on!")
+        ctx.send_message("You didn't give me anything to flip on!", msg.channel_id)
             .await?;
-
         return Ok(());
     };
 
@@ -33,10 +28,7 @@ pub async fn coinflip(ctx: Arc<Context>, msg: Message, parser: Parser) -> Comman
         format!("No, you should probably not {}", thing_todo)
     };
 
-    ctx.http
-        .create_message(msg.channel_id)
-        .content(message_text)
-        .await?;
+    ctx.send_message(message_text, msg.channel_id).await?;
 
     Ok(())
 }

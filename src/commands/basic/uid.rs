@@ -1,21 +1,17 @@
-use std::sync::Arc;
-
 use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
-use crate::core::Context;
+use crate::core::GuildContext;
 use crate::parser::Parser;
 use crate::utils::{matchers, ParseError};
 
-pub async fn uid(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> CommandResult {
+pub async fn uid(ctx: GuildContext, msg: Message, mut parser: Parser) -> CommandResult {
     let user_id = {
         let msg = parser.get_next()?;
         matchers::get_mention(msg).ok_or(ParseError::MissingArgument)?
     };
 
-    ctx.http
-        .create_message(msg.channel_id)
-        .content(user_id.to_string())
+    ctx.send_message(user_id.to_string(), msg.channel_id)
         .await?;
 
     Ok(())

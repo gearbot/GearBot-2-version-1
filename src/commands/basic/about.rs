@@ -1,12 +1,12 @@
 use std::fmt;
-use std::sync::{atomic::Ordering, Arc};
+use std::sync::atomic::Ordering;
 
 use chrono::Utc;
 use twilight::builders::embed::EmbedBuilder;
 use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
-use crate::core::Context;
+use crate::core::{BotStats, GuildContext};
 use crate::parser::Parser;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
@@ -44,8 +44,7 @@ struct AboutDescription {
 }
 
 impl AboutDescription {
-    async fn from(ctx: &Context) -> Self {
-        let stats = &ctx.stats;
+    async fn create(stats: &BotStats) -> Self {
         let (users, unique_users) = {
             // This is the list of all the users that we can see, which
             // means that it has no duplicates.
@@ -142,8 +141,8 @@ impl fmt::Display for AboutDescription {
     }
 }
 
-pub async fn about(ctx: Arc<Context>, msg: Message, _: Parser) -> CommandResult {
-    let about_stats = AboutDescription::from(&ctx).await;
+pub async fn about(ctx: GuildContext, msg: Message, _: Parser) -> CommandResult {
+    let about_stats = AboutDescription::create(ctx.get_bot_stats()).await;
 
     let embed = EmbedBuilder::new()
         .color(ABOUT_EMBED_COLOR)
@@ -160,7 +159,7 @@ pub async fn about(ctx: Arc<Context>, msg: Message, _: Parser) -> CommandResult 
         .commit()
         .build();
 
-    ctx.http.create_message(msg.channel_id).embed(embed).await?;
+    ctx.send_embed(embed, msg.channel_id).await?;
 
     Ok(())
 }

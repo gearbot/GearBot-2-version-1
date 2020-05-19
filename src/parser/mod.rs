@@ -5,9 +5,10 @@ use twilight::model::gateway::payload::MessageCreate;
 
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
-use crate::core::Context;
+use crate::core::{Context, GuildContext};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
+
 use twilight::cache::twilight_cache_inmemory::model::CachedMember;
 use twilight::model::channel::GuildChannel;
 use twilight::model::channel::Message;
@@ -94,9 +95,12 @@ impl Parser {
                 }
                 debug!("Executing command: {}", name);
 
+                let guild_context =
+                    generate_guild_context(ctx.clone(), message.guild_id.unwrap()).await?;
+
                 p.index += command_nodes.len();
                 let channel_id = message.channel_id;
-                let result = node.execute(ctx.clone(), message.0, p).await;
+                let result = node.execute(guild_context, message.0, p).await;
                 match result {
                     Ok(_) => Ok(()),
                     Err(error) => match error {
@@ -153,7 +157,7 @@ impl Parser {
         self.index < self.parts.len()
     }
 
-    /// parses what comes next as discord user
+    /// Parses what comes next as discord user
     pub async fn get_user(&mut self) -> Result<Arc<User>, Error> {
         let input = self.get_next()?;
         let mention = matchers::get_mention(input);
@@ -230,12 +234,15 @@ impl Parser {
             .unwrap()
             .ok_or(ParseError::UnknownChannel(channel_id))?;
 
+        // No DMs here
+        let guild_id = self.guild_id.unwrap();
+        let guild_ctx = generate_guild_context(self.ctx.clone(), guild_id).await?;
+
         info!("{:?}", channel);
         match &*channel {
             //TODO: Figure out the twilight mess of guild channel types
             GuildChannel::Category(channel) => {
-                let bot_has_access = self
-                    .ctx
+                let bot_has_access = guild_ctx
                     .bot_has_channel_permissions(
                         channel.id,
                         Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
@@ -244,8 +251,7 @@ impl Parser {
 
                 // Verify if the bot has access
                 if bot_has_access {
-                    let user_has_access = self
-                        .ctx
+                    let user_has_access = guild_ctx
                         .has_channel_permissions(
                             requester,
                             channel.id,
@@ -286,4 +292,16 @@ impl Parser {
             _ => unreachable!(),
         }
     }
+}
+
+async fn generate_guild_context(
+    bot_context: Arc<Context>,
+    guild_id: GuildId,
+) -> Result<GuildContext, Error> {
+    let config = bot_context.get_config(guild_id).await?;
+
+    let lang = &config.language;
+    let translator = bot_context.translations.get_translator(lang);
+
+    Ok(GuildContext::new(guild_id, translator, bot_context, config))
 }

@@ -2,19 +2,18 @@ use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
 
 use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandNode::{CommandNodeInner, GroupNode};
-use crate::core::Context;
+use crate::core::GuildContext;
 use crate::parser::Parser;
 use crate::utils::Error;
 
 pub type CommandResult = Result<(), Error>;
 pub type CommandResultOuter = Pin<Box<dyn Future<Output = CommandResult> + Send>>;
 pub type CommandHandler =
-    Box<dyn Fn(Arc<Context>, Message, Parser) -> CommandResultOuter + Send + Sync>;
+    Box<dyn Fn(GuildContext, Message, Parser) -> CommandResultOuter + Send + Sync>;
 
 pub struct Command {
     name: String,
@@ -71,11 +70,16 @@ impl CommandNode {
         }
     }
 
-    pub async fn execute(&self, ctx: Arc<Context>, msg: Message, parser: Parser) -> CommandResult {
+    pub async fn execute<'a>(
+        &self,
+        ctx: GuildContext,
+        msg: Message,
+        parser: Parser,
+    ) -> CommandResult {
         match &self {
             CommandNode::CommandNodeInner { command } => {
-                let test = &command.handler;
-                test(ctx, msg, parser).await?;
+                let command = &command.handler;
+                command(ctx, msg, parser).await?;
                 Ok(())
             }
             CommandNode::GroupNode {
@@ -84,8 +88,8 @@ impl CommandNode {
                 sub_nodes,
             } => match handler {
                 Some(handler) => {
-                    let test = handler;
-                    test(ctx, msg, parser).await?;
+                    let command = handler;
+                    command(ctx, msg, parser).await?;
                     Ok(())
                 }
                 None => Ok(()),

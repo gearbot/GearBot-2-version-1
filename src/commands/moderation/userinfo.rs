@@ -1,10 +1,11 @@
-use crate::core::Context;
+use crate::core::GuildContext;
 use crate::parser::Parser;
 use crate::utils::Emoji;
 use crate::utils::{CommandError, Error};
 use crate::{utils, CommandResult};
+
 use chrono::{DateTime, Utc};
-use std::sync::Arc;
+
 use twilight::builders::embed::EmbedBuilder;
 use twilight::model::channel::Message;
 use twilight::model::guild::Permissions;
@@ -12,7 +13,7 @@ use twilight::model::user::UserFlags;
 
 const USER_INFO_COLOR: u32 = 0x00_cea2;
 
-pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> CommandResult {
+pub async fn userinfo(ctx: GuildContext, msg: Message, mut parser: Parser) -> CommandResult {
     if msg.guild_id.is_none() {
         return Err(Error::CmdError(CommandError::NoDM));
     }
@@ -49,7 +50,7 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
         Some(flags) => flags,
         None => {
             // we already know for sure the user will exist
-            let user = ctx.http.user(user.id.0).await?.unwrap();
+            let user = ctx.get_user(user.id).await?;
             //TODO insert in cache when possible
             user.public_flags.unwrap()
         }
@@ -119,15 +120,13 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
         utils::age(created_at, Utc::now(), 2)
     );
 
-    match ctx
-        .cache
-        .member(msg.guild_id.unwrap(), user.id)
-        .await
-        .unwrap()
-    {
+    let cached_member = ctx.get_cached_member(user.id).await;
+
+    match cached_member {
         Some(member) => {
             if let Some(role) = member.roles.first() {
-                let cached_role = ctx.cache.role(*role).await?.unwrap();
+                // This role has to exist
+                let cached_role = ctx.get_cached_role(*role).await.unwrap();
 
                 builder = builder.color(cached_role.color);
 
@@ -181,12 +180,12 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
         }
     }
 
-    let guild_id = msg.guild_id.unwrap();
-    if ctx
-        .bot_has_guild_permissions(guild_id, Permissions::BAN_MEMBERS)
+    let bot_has_guild_permissions = ctx
+        .bot_has_guild_permissions(Permissions::BAN_MEMBERS)
         .await
-        && ctx.http.ban(guild_id, user.id).await?.is_some()
-    {
+        && ctx.get_ban(user.id).await?.is_some();
+
+    if bot_has_guild_permissions {
         content += &*format!(
             "{} **This user is currently banned from this server**",
             Emoji::Bad.for_chat()
@@ -195,11 +194,12 @@ pub async fn userinfo(ctx: Arc<Context>, msg: Message, mut parser: Parser) -> Co
 
     builder = builder.description(content);
 
-    ctx.http
-        .create_message(msg.channel_id)
-        .content(format!("User information about <@!{}>", user.id))
-        .embed(builder.build())
-        .await?;
+    ctx.send_message_with_embed(
+        format!("User information about <@!{}>", user.id),
+        builder.build(),
+        msg.channel_id,
+    )
+    .await?;
 
     Ok(())
 }
