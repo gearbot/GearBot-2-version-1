@@ -1,5 +1,6 @@
 use crate::core::context::stats::BotStats;
 use crate::core::GuildConfig;
+use crate::translation::Translations;
 use crate::utils::LogType;
 use crate::EncryptionKey;
 
@@ -25,6 +26,7 @@ pub struct Context {
     pub bot_user: CurrentUser,
     configs: DashMap<GuildId, GuildConfig>,
     pub pool: Pool,
+    pub translations: Translations,
     __static_master_key: Option<Vec<u8>>,
     log_pumps: DashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>,
 }
@@ -36,6 +38,7 @@ impl Context {
         http: HttpClient,
         bot_user: CurrentUser,
         pool: Pool,
+        translations: Translations,
         key: Option<Vec<u8>>,
     ) -> Self {
         Context {
@@ -48,6 +51,7 @@ impl Context {
             bot_user,
             configs: DashMap::new(),
             pool,
+            translations,
             __static_master_key: key,
             log_pumps: DashMap::new(),
         }

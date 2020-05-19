@@ -16,8 +16,12 @@ mod commands;
 mod core;
 mod database;
 mod parser;
+
 mod utils;
 use utils::Error;
+
+mod translation;
+use translation::load_translations;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const GIT_VERSION: &str = git_version!();
@@ -59,6 +63,9 @@ async fn main() -> Result<(), Error> {
 
     gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", VERSION);
 
+    let translations = load_translations();
+    gearbot_info!("Loaded translations!");
+
     //connect to the database
     let manager = Manager::new(Config::from_str(&config.database.postgres)?, NoTls);
     let pool = Pool::new(manager, 10);
@@ -72,15 +79,7 @@ async fn main() -> Result<(), Error> {
         .await
         .map_err(|e| Error::DatabaseMigration(e.to_string()))?;
 
-    // tokio::spawn(async move {
-    //     if let Err(e) = connection.await {
-    //         gearbot_error!("connection error: {}", e);
-    //     }
-    // });
-
-    //generate command list
-
-    if let Err(e) = GearBot::run(config, http, user, pool).await {
+    if let Err(e) = GearBot::run(config, http, user, pool, translations).await {
         gearbot_error!("Failed to start the bot: {}", e)
     }
 

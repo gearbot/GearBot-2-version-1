@@ -214,13 +214,14 @@ impl Parser {
         let input = self.get_next()?;
 
         // We got an id, get the info from the database
-        let message_id = input.parse::<u64>()
-            .map_err(|_| CommandError::NoDM)?;
-    
-        let channel_id = self.ctx
-            .get_channel_for_message(message_id).await?
+        let message_id = input.parse::<u64>().map_err(|_| CommandError::NoDM)?;
+
+        let channel_id = self
+            .ctx
+            .get_channel_for_message(message_id)
+            .await?
             .ok_or(ParseError::UnknownMessage)?;
-            
+
         let channel = self
             .ctx
             .cache
@@ -251,7 +252,7 @@ impl Parser {
                             Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
                         )
                         .await;
-                
+
                     // Verify if the user has access
                     if user_has_access {
                         // All good, fetch the message from the api instead of cache to make sure it's not only up to date but still actually exists
@@ -260,7 +261,7 @@ impl Parser {
                             .http
                             .message(channel.id, MessageId(message_id))
                             .await;
-                        
+
                         match result {
                             Ok(message) => Ok(message.unwrap()),
                             Err(error) => {
@@ -271,7 +272,6 @@ impl Parser {
                                 }
                             }
                         }
-
                     } else {
                         Err(Error::ParseError(ParseError::NoChannelAccessUser(
                             channel.name.clone(),

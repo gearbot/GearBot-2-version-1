@@ -2,24 +2,26 @@ use std::convert::TryFrom;
 use std::error;
 use std::sync::Arc;
 
+use deadpool_postgres::Pool;
 use log::debug;
 use tokio::stream::StreamExt;
 use twilight::cache::twilight_cache_inmemory::config::{
     EventType as CacheEventType, InMemoryConfigBuilder,
 };
+
 use twilight::cache::InMemoryCache;
 use twilight::gateway::cluster::config::ShardScheme;
 use twilight::gateway::cluster::Event;
 use twilight::gateway::{Cluster, ClusterConfig};
 use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
+use twilight::model::user::CurrentUser;
 
 use crate::core::handlers::{commands, general, modlog};
 use crate::core::{BotConfig, Context};
+use crate::translation::Translations;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_info};
-use deadpool_postgres::Pool;
-use twilight::model::user::CurrentUser;
 
 pub struct GearBot;
 
@@ -27,8 +29,9 @@ impl GearBot {
     pub async fn run(
         config: BotConfig,
         http: HttpClient,
-        user: CurrentUser,
+        bot_user: CurrentUser,
         pool: Pool,
+        translations: Translations,
     ) -> Result<(), Box<dyn error::Error + Send + Sync>> {
         // gearbot_info!("GearBot startup initiated!");
         let sharding_scheme = ShardScheme::try_from((0..2, 2)).unwrap();
@@ -92,8 +95,9 @@ impl GearBot {
             cache,
             cluster,
             http,
-            user,
+            bot_user,
             pool,
+            translations,
             config.__master_key,
         ));
 

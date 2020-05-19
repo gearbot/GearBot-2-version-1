@@ -1,0 +1,3 @@
+{
+  "basic__ping_pong": "REST API ping is { $rest } ms | Websocket ping is { $latency } ms"
+}
