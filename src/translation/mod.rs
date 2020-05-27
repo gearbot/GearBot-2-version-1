@@ -234,9 +234,6 @@ pub fn load_translations() -> Translations {
             // Then we add all the actual translations for said language
             for (translation_key, translation_string) in translation_data {
                 let tl_string = format!("{} = {}", translation_key, translation_string);
-
-                println!("Adding a resource string of: {}", tl_string);
-
                 let res = FluentResource::try_new(tl_string).unwrap();
 
                 bundle.add_resource(res).unwrap();

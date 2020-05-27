@@ -9,7 +9,7 @@ use twilight::http::{
     request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient,
 };
 
-use crate::core::{logging, BotConfig, GearBot};
+use crate::core::{gearbot, logging, BotConfig};
 use crate::database::migrations::embedded;
 
 mod commands;
@@ -79,7 +79,7 @@ async fn main() -> Result<(), Error> {
         .await
         .map_err(|e| Error::DatabaseMigration(e.to_string()))?;
 
-    if let Err(e) = GearBot::run(config, http, user, pool, translations).await {
+    if let Err(e) = gearbot::run(config, http, user, pool, translations).await {
         gearbot_error!("Failed to start the bot: {}", e)
     }
 

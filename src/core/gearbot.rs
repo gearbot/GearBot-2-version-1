@@ -1,10 +1,12 @@
 use std::convert::TryFrom;
 use std::error;
+use std::process;
 use std::sync::Arc;
 
+use ctrlc;
 use deadpool_postgres::Pool;
 use log::debug;
-use tokio::stream::StreamExt;
+use tokio::{self, stream::StreamExt};
 use twilight::cache::twilight_cache_inmemory::config::{
     EventType as CacheEventType, InMemoryConfigBuilder,
 };
@@ -23,98 +25,103 @@ use crate::translation::Translations;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_info};
 
-pub struct GearBot;
+pub async fn run(
+    config: BotConfig,
+    http: HttpClient,
+    bot_user: CurrentUser,
+    pool: Pool,
+    translations: Translations,
+) -> Result<(), Box<dyn error::Error + Send + Sync>> {
+    let sharding_scheme = ShardScheme::try_from((0..2, 2)).unwrap();
 
-impl GearBot {
-    pub async fn run(
-        config: BotConfig,
-        http: HttpClient,
-        bot_user: CurrentUser,
-        pool: Pool,
-        translations: Translations,
-    ) -> Result<(), Box<dyn error::Error + Send + Sync>> {
-        // gearbot_info!("GearBot startup initiated!");
-        let sharding_scheme = ShardScheme::try_from((0..2, 2)).unwrap();
+    let intents = Some(
+        GatewayIntents::GUILDS
+            | GatewayIntents::GUILD_MEMBERS
+            | GatewayIntents::GUILD_BANS
+            | GatewayIntents::GUILD_EMOJIS
+            | GatewayIntents::GUILD_INVITES
+            | GatewayIntents::GUILD_VOICE_STATES
+            | GatewayIntents::GUILD_MESSAGES
+            | GatewayIntents::GUILD_MESSAGE_REACTIONS
+            | GatewayIntents::DIRECT_MESSAGES
+            | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
+    );
 
-        let intents = Some(
-            GatewayIntents::GUILDS
-                | GatewayIntents::GUILD_MEMBERS
-                | GatewayIntents::GUILD_BANS
-                | GatewayIntents::GUILD_EMOJIS
-                | GatewayIntents::GUILD_INVITES
-                | GatewayIntents::GUILD_VOICE_STATES
-                | GatewayIntents::GUILD_MESSAGES
-                | GatewayIntents::GUILD_MESSAGE_REACTIONS
-                | GatewayIntents::DIRECT_MESSAGES
-                | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
-        );
+    let cluster_config = ClusterConfig::builder(&config.tokens.discord)
+        .shard_scheme(sharding_scheme)
+        .intents(intents)
+        .build();
 
-        let cluster_config = ClusterConfig::builder(&config.tokens.discord)
-            .shard_scheme(sharding_scheme)
-            .intents(intents)
-            .build();
+    let cache_config = InMemoryConfigBuilder::new()
+        .event_types(
+            CacheEventType::MESSAGE_CREATE
+                | CacheEventType::MESSAGE_DELETE
+                | CacheEventType::MESSAGE_DELETE_BULK
+                | CacheEventType::MESSAGE_UPDATE
+                | CacheEventType::CHANNEL_CREATE
+                | CacheEventType::CHANNEL_DELETE
+                | CacheEventType::CHANNEL_UPDATE
+                | CacheEventType::GUILD_CREATE
+                | CacheEventType::GUILD_DELETE
+                | CacheEventType::GUILD_EMOJIS_UPDATE
+                | CacheEventType::GUILD_UPDATE
+                | CacheEventType::MEMBER_ADD
+                | CacheEventType::MEMBER_CHUNK
+                | CacheEventType::MEMBER_REMOVE
+                | CacheEventType::MEMBER_UPDATE
+                | CacheEventType::MESSAGE_CREATE
+                | CacheEventType::MESSAGE_DELETE
+                | CacheEventType::MESSAGE_DELETE_BULK
+                | CacheEventType::MESSAGE_UPDATE
+                | CacheEventType::REACTION_ADD
+                | CacheEventType::REACTION_REMOVE
+                | CacheEventType::REACTION_REMOVE_ALL
+                | CacheEventType::ROLE_CREATE
+                | CacheEventType::ROLE_DELETE
+                | CacheEventType::ROLE_UPDATE
+                | CacheEventType::UNAVAILABLE_GUILD
+                | CacheEventType::UPDATE_VOICE_STATE
+                | CacheEventType::VOICE_SERVER_UPDATE
+                | CacheEventType::VOICE_STATE_UPDATE
+                | CacheEventType::WEBHOOKS_UPDATE,
+        )
+        .build();
 
-        let cache_config = InMemoryConfigBuilder::new()
-            .event_types(
-                CacheEventType::MESSAGE_CREATE
-                    | CacheEventType::MESSAGE_DELETE
-                    | CacheEventType::MESSAGE_DELETE_BULK
-                    | CacheEventType::MESSAGE_UPDATE
-                    | CacheEventType::CHANNEL_CREATE
-                    | CacheEventType::CHANNEL_DELETE
-                    | CacheEventType::CHANNEL_UPDATE
-                    | CacheEventType::GUILD_CREATE
-                    | CacheEventType::GUILD_DELETE
-                    | CacheEventType::GUILD_EMOJIS_UPDATE
-                    | CacheEventType::GUILD_UPDATE
-                    | CacheEventType::MEMBER_ADD
-                    | CacheEventType::MEMBER_CHUNK
-                    | CacheEventType::MEMBER_REMOVE
-                    | CacheEventType::MEMBER_UPDATE
-                    | CacheEventType::MESSAGE_CREATE
-                    | CacheEventType::MESSAGE_DELETE
-                    | CacheEventType::MESSAGE_DELETE_BULK
-                    | CacheEventType::MESSAGE_UPDATE
-                    | CacheEventType::REACTION_ADD
-                    | CacheEventType::REACTION_REMOVE
-                    | CacheEventType::REACTION_REMOVE_ALL
-                    | CacheEventType::ROLE_CREATE
-                    | CacheEventType::ROLE_DELETE
-                    | CacheEventType::ROLE_UPDATE
-                    | CacheEventType::UNAVAILABLE_GUILD
-                    | CacheEventType::UPDATE_VOICE_STATE
-                    | CacheEventType::VOICE_SERVER_UPDATE
-                    | CacheEventType::VOICE_STATE_UPDATE
-                    | CacheEventType::WEBHOOKS_UPDATE,
-            )
-            .build();
+    let cache = InMemoryCache::from(cache_config);
+    let cluster = Cluster::new(cluster_config);
+    let context = Arc::new(Context::new(
+        cache,
+        cluster,
+        http,
+        bot_user,
+        pool,
+        translations,
+        config.__master_key,
+    ));
 
-        let cache = InMemoryCache::from(cache_config);
-        let cluster = Cluster::new(cluster_config);
-        let context = Arc::new(Context::new(
-            cache,
-            cluster,
-            http,
-            bot_user,
-            pool,
-            translations,
-            config.__master_key,
-        ));
+    let shutdown_ctx = context.clone();
+    ctrlc::set_handler(move || {
+        // We need a seperate runtime, because at this point in the program,
+        // the tokio::main instance isn't running anymore.
+        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(checkpoint_to_redis(shutdown_ctx.clone()));
+        process::exit(0);
+    })
+    .expect("Failed to register shutdown handler!");
 
-        gearbot_info!("The cluster is going online!");
-        let mut bot_events = context.cluster.events().await?;
-        while let Some(event) = bot_events.next().await {
-            let c = context.clone();
-            tokio::spawn(async move {
-                if let Err(e) = handle_event(event, c.clone()).await {
-                    gearbot_error!("{}", e);
-                    c.stats.had_error().await;
-                }
-            });
-        }
-
-        Ok(())
+    gearbot_info!("The cluster is going online!");
+    let mut bot_events = context.cluster.events().await?;
+    while let Some(event) = bot_events.next().await {
+        let c = context.clone();
+        tokio::spawn(async move {
+            if let Err(e) = handle_event(event, c.clone()).await {
+                gearbot_error!("{}", e);
+                c.stats.had_error().await;
+            }
+        });
     }
+
+    Ok(())
 }
 
 async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Error> {
@@ -137,4 +144,22 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Erro
     commands::handle_event(event.0, event.1, ctx.clone()).await?;
 
     Ok(())
+}
+
+async fn checkpoint_to_redis(ctx: Arc<Context>) {
+    println!("Shutting down and dumping stats!");
+
+    // This is a placeholder for actual Redis actions
+    // We will need to set a flag value inside Redis that the
+    // bot checks on startup to see if it needs to load from Redis or
+    // get everything from scratch
+    async {
+        let x = 3;
+        let _ = x + 2;
+    }
+    .await;
+
+    let stats = &ctx.stats;
+
+    println!("We had a total of {:?} guilds when online", stats.guilds);
 }
