@@ -98,45 +98,8 @@ impl GearBot {
         };
         let cluster_config = cb.build();
 
-        let cache_config = InMemoryConfigBuilder::new()
-            .event_types(
-                CacheEventType::MESSAGE_CREATE
-                    | CacheEventType::MESSAGE_DELETE
-                    | CacheEventType::MESSAGE_DELETE_BULK
-                    | CacheEventType::MESSAGE_UPDATE
-                    | CacheEventType::CHANNEL_CREATE
-                    | CacheEventType::CHANNEL_DELETE
-                    | CacheEventType::CHANNEL_UPDATE
-                    | CacheEventType::GUILD_CREATE
-                    | CacheEventType::GUILD_DELETE
-                    | CacheEventType::GUILD_EMOJIS_UPDATE
-                    | CacheEventType::GUILD_UPDATE
-                    | CacheEventType::MEMBER_ADD
-                    | CacheEventType::MEMBER_CHUNK
-                    | CacheEventType::MEMBER_REMOVE
-                    | CacheEventType::MEMBER_UPDATE
-                    | CacheEventType::MESSAGE_CREATE
-                    | CacheEventType::MESSAGE_DELETE
-                    | CacheEventType::MESSAGE_DELETE_BULK
-                    | CacheEventType::MESSAGE_UPDATE
-                    | CacheEventType::REACTION_ADD
-                    | CacheEventType::REACTION_REMOVE
-                    | CacheEventType::REACTION_REMOVE_ALL
-                    | CacheEventType::ROLE_CREATE
-                    | CacheEventType::ROLE_DELETE
-                    | CacheEventType::ROLE_UPDATE
-                    | CacheEventType::UNAVAILABLE_GUILD
-                    | CacheEventType::UPDATE_VOICE_STATE
-                    | CacheEventType::VOICE_SERVER_UPDATE
-                    | CacheEventType::VOICE_STATE_UPDATE
-                    | CacheEventType::WEBHOOKS_UPDATE,
-            )
-            .build();
-
-        let cache = InMemoryCache::from(cache_config);
         let cluster = Cluster::new(cluster_config);
         let context = Arc::new(BotContext::new(
-            cache,
             cluster,
             http,
             user,

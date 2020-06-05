@@ -5,11 +5,10 @@ use twilight::model::gateway::payload::MessageCreate;
 
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
-use crate::core::{BotContext, CommandContext};
+use crate::core::{BotContext, CachedMember, CachedUser, CommandContext};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
 
-use twilight::cache::twilight_cache_inmemory::model::CachedMember;
 use twilight::model::channel::GuildChannel;
 use twilight::model::channel::Message;
 use twilight::model::guild::Permissions;
@@ -160,7 +159,7 @@ impl Parser {
     }
 
     /// Parses what comes next as discord user
-    pub async fn get_user(&mut self) -> Result<Arc<User>, Error> {
+    pub async fn get_user(&mut self) -> Result<Arc<CachedUser>, Error> {
         let input = self.get_next()?;
         let mention = matchers::get_mention(input);
         match mention {
@@ -186,14 +185,14 @@ impl Parser {
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
-            Some(uid) => match self.ctx.cache.member(gid, UserId(uid)).await? {
+            Some(uid) => match self.ctx.cache.get_member(&gid, &UserId(uid)) {
                 Some(member) => Ok(member),
                 None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
             },
             None => {
                 // is it a userid?
                 match input.parse::<u64>() {
-                    Ok(uid) => match self.ctx.cache.member(gid, UserId(uid)).await? {
+                    Ok(uid) => match self.ctx.cache.get_member(&gid, &UserId(uid)) {
                         Some(member) => Ok(member),
                         None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
                     },
@@ -208,13 +207,13 @@ impl Parser {
         }
     }
 
-    pub async fn get_user_or(&mut self, alternative: User) -> Result<Arc<User>, Error> {
-        if self.has_next() {
-            Ok(self.get_user().await?)
-        } else {
-            Ok(Arc::new(alternative))
-        }
-    }
+    // pub async fn get_user_or(&mut self, alternative: &CachedUser) -> Result<&CachedUser, Error> {
+    //     if self.has_next() {
+    //         Ok(self.get_user().await?)
+    //     } else {
+    //         Ok(alternative)
+    //     }
+    // }
 
     pub async fn get_message(&mut self, requester: UserId) -> Result<Message, Error> {
         let input = self.get_next()?;
@@ -228,13 +227,10 @@ impl Parser {
             .await?
             .ok_or(ParseError::UnknownMessage)?;
 
-        let channel = self
-            .ctx
-            .cache
-            .guild_channel(ChannelId(channel_id))
-            .await
-            .unwrap()
-            .ok_or(ParseError::UnknownChannel(channel_id))?;
+        let channel = self.ctx.cache.get_channel(&ChannelId(channel_id));
+        if channel.is_none() {
+            return Err(Error::ParseError(ParseError::UnknownChannel(channel_id)));
+        }
         unreachable!();
 
         // No DMs here

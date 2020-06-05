@@ -19,13 +19,13 @@ impl CommandContext {
     pub async fn get_guild_permissions_for(&self, user_id: UserId) -> Permissions {
         let mut permissions = Permissions::empty();
 
-        if let Some(member) = self.get_cached_member(user_id).await {
-            for role_id in &member.roles {
-                if let Some(role) = self.get_cached_role(*role_id).await {
-                    permissions |= role.permissions;
-                }
-            }
-        };
+        // if let Some(member) = self.get_cached_member(user_id).await {
+        //     for role_id in &member.roles {
+        //         if let Some(role) = self.get_cached_role(*role_id).await {
+        //             permissions |= role.permissions;
+        //         }
+        //     }
+        // };
         permissions
     }
 
@@ -39,11 +39,7 @@ impl CommandContext {
         if let Some(channel) = self.get_cached_guild_channel(channel_id).await {
             permissions = self.get_guild_permissions_for(user_id).await;
             if let Some(member) = self.get_cached_member(user_id).await {
-                let overrides = match &*channel {
-                    GuildChannel::Category(category) => &category.permission_overwrites,
-                    GuildChannel::Text(channel) => &channel.permission_overwrites,
-                    GuildChannel::Voice(channel) => &channel.permission_overwrites,
-                };
+                let overrides = channel.get_permission_overrides();
                 let mut user_allowed = Permissions::empty();
                 let mut user_denied = Permissions::empty();
                 let mut role_allowed = Permissions::empty();

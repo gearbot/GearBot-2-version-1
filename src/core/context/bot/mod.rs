@@ -1,4 +1,4 @@
-use crate::core::GuildConfig;
+use crate::core::{Cache, GuildConfig};
 use crate::translation::Translations;
 use crate::utils::LogType;
 use crate::EncryptionKey;
@@ -16,7 +16,7 @@ use twilight::http::Client as HttpClient;
 use twilight::model::{channel::Message, id::GuildId, user::CurrentUser};
 
 pub struct BotContext {
-    pub cache: InMemoryCache,
+    pub cache: Cache,
     pub cluster: Cluster,
     pub http: HttpClient,
     pub stats: BotStats,
@@ -36,7 +36,6 @@ pub struct BotContext {
 
 impl BotContext {
     pub fn new(
-        cache: InMemoryCache,
         cluster: Cluster,
         http: HttpClient,
         bot_user: CurrentUser,
@@ -49,7 +48,7 @@ impl BotContext {
         total_shards: u64,
     ) -> Self {
         BotContext {
-            cache,
+            cache: Cache::new(),
             cluster,
             http,
             stats: BotStats::default(),

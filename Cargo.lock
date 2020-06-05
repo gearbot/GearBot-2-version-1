@@ -337,11 +337,12 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
-version = "4.0.0-rc3"
+version = "4.0.0-rc5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c14b72a59fa48ede7dce326a0d59b887dc28a9fe3c8dc7e22c655a6fc7e5e6d0"
+checksum = "372baa4d04520c054a54583609a80a271dd68162b0f24247e327d60f6aeab172"
 dependencies = [
  "once_cell",
+ "serde",
 ]
 
 [[package]]
@@ -2202,6 +2203,7 @@ dependencies = [
 name = "twilight-http"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "futures",
  "log",
  "percent-encoding",
