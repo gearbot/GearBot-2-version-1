@@ -13,124 +13,173 @@ use twilight::cache::twilight_cache_inmemory::config::{
 
 use twilight::cache::InMemoryCache;
 use twilight::gateway::cluster::config::ShardScheme;
-use twilight::gateway::cluster::Event;
-use twilight::gateway::{Cluster, ClusterConfig};
+use twilight::gateway::{Cluster, ClusterConfig, Event};
 use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
-use twilight::model::user::CurrentUser;
 
 use crate::core::handlers::{commands, general, modlog};
-use crate::core::{BotConfig, Context};
+use crate::core::{BotConfig, BotContext, ColdRebootData};
 use crate::translation::Translations;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_info};
+use darkredis::ConnectionPool;
+use log::info;
+use std::collections::HashMap;
+use twilight::gateway::shard::ShardResumeData;
+use twilight::model::user::CurrentUser;
 
-pub async fn run(
-    config: BotConfig,
-    http: HttpClient,
-    bot_user: CurrentUser,
-    pool: Pool,
-    translations: Translations,
-) -> Result<(), Box<dyn error::Error + Send + Sync>> {
-    let sharding_scheme = ShardScheme::try_from((0..2, 2)).unwrap();
+pub struct GearBot;
 
-    let intents = Some(
-        GatewayIntents::GUILDS
-            | GatewayIntents::GUILD_MEMBERS
-            | GatewayIntents::GUILD_BANS
-            | GatewayIntents::GUILD_EMOJIS
-            | GatewayIntents::GUILD_INVITES
-            | GatewayIntents::GUILD_VOICE_STATES
-            | GatewayIntents::GUILD_MESSAGES
-            | GatewayIntents::GUILD_MESSAGE_REACTIONS
-            | GatewayIntents::DIRECT_MESSAGES
-            | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
-    );
+impl GearBot {
+    pub async fn run(
+        cluster_id: u64,
+        shards_per_cluster: u64,
+        total_shards: u64,
+        config: BotConfig,
+        http: HttpClient,
+        user: CurrentUser,
+        postgres_pool: Pool,
+        redis_pool: ConnectionPool,
+        translations: Translations,
+    ) -> Result<(), Box<dyn error::Error + Send + Sync>> {
+        let sharding_scheme = ShardScheme::try_from((
+            cluster_id * shards_per_cluster..cluster_id * shards_per_cluster + shards_per_cluster,
+            total_shards,
+        ))
+        .unwrap();
 
-    let cluster_config = ClusterConfig::builder(&config.tokens.discord)
-        .shard_scheme(sharding_scheme)
-        .intents(intents)
-        .build();
+        let intents = Some(
+            GatewayIntents::GUILDS
+                | GatewayIntents::GUILD_MEMBERS
+                | GatewayIntents::GUILD_BANS
+                | GatewayIntents::GUILD_EMOJIS
+                | GatewayIntents::GUILD_INVITES
+                | GatewayIntents::GUILD_VOICE_STATES
+                | GatewayIntents::GUILD_MESSAGES
+                | GatewayIntents::GUILD_MESSAGE_REACTIONS
+                | GatewayIntents::DIRECT_MESSAGES
+                | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
+        );
 
-    let cache_config = InMemoryConfigBuilder::new()
-        .event_types(
-            CacheEventType::MESSAGE_CREATE
-                | CacheEventType::MESSAGE_DELETE
-                | CacheEventType::MESSAGE_DELETE_BULK
-                | CacheEventType::MESSAGE_UPDATE
-                | CacheEventType::CHANNEL_CREATE
-                | CacheEventType::CHANNEL_DELETE
-                | CacheEventType::CHANNEL_UPDATE
-                | CacheEventType::GUILD_CREATE
-                | CacheEventType::GUILD_DELETE
-                | CacheEventType::GUILD_EMOJIS_UPDATE
-                | CacheEventType::GUILD_UPDATE
-                | CacheEventType::MEMBER_ADD
-                | CacheEventType::MEMBER_CHUNK
-                | CacheEventType::MEMBER_REMOVE
-                | CacheEventType::MEMBER_UPDATE
-                | CacheEventType::MESSAGE_CREATE
-                | CacheEventType::MESSAGE_DELETE
-                | CacheEventType::MESSAGE_DELETE_BULK
-                | CacheEventType::MESSAGE_UPDATE
-                | CacheEventType::REACTION_ADD
-                | CacheEventType::REACTION_REMOVE
-                | CacheEventType::REACTION_REMOVE_ALL
-                | CacheEventType::ROLE_CREATE
-                | CacheEventType::ROLE_DELETE
-                | CacheEventType::ROLE_UPDATE
-                | CacheEventType::UNAVAILABLE_GUILD
-                | CacheEventType::UPDATE_VOICE_STATE
-                | CacheEventType::VOICE_SERVER_UPDATE
-                | CacheEventType::VOICE_STATE_UPDATE
-                | CacheEventType::WEBHOOKS_UPDATE,
-        )
-        .build();
+        let mut cb = ClusterConfig::builder(&config.tokens.discord)
+            .shard_scheme(sharding_scheme)
+            .intents(intents);
 
-    let cache = InMemoryCache::from(cache_config);
-    let cluster = Cluster::new(cluster_config);
-    let context = Arc::new(Context::new(
-        cache,
-        cluster,
-        http,
-        bot_user,
-        pool,
-        translations,
-        config.__master_key,
-    ));
+        //check for resume data, pass to builder if present
+        let mut connection = redis_pool.get().await;
 
-    let shutdown_ctx = context.clone();
-    ctrlc::set_handler(move || {
-        // We need a seperate runtime, because at this point in the program,
-        // the tokio::main instance isn't running anymore.
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(checkpoint_to_redis(shutdown_ctx.clone()));
-        process::exit(0);
-    })
-    .expect("Failed to register shutdown handler!");
-
-    gearbot_info!("The cluster is going online!");
-    let mut bot_events = context.cluster.events().await?;
-    while let Some(event) = bot_events.next().await {
-        let c = context.clone();
-        tokio::spawn(async move {
-            if let Err(e) = handle_event(event, c.clone()).await {
-                gearbot_error!("{}", e);
-                c.stats.had_error().await;
+        let data = connection
+            .get(format!("cb_cluster_data_{}", cluster_id))
+            .await
+            .unwrap();
+        info!("cluster data: {:?}", data);
+        match data {
+            Some(d) => {
+                let cold_cache: ColdRebootData =
+                    serde_json::from_str(&*String::from_utf8(d).unwrap())?;
+                if cold_cache.total_shards == total_shards
+                    && cold_cache.shard_count == shards_per_cluster
+                {
+                    let mut map = HashMap::new();
+                    for (id, data) in cold_cache.resume_data {
+                        map.insert(
+                            id,
+                            (ShardResumeData {
+                                session_id: data.0,
+                                sequence: data.1,
+                            }),
+                        );
+                    }
+                    cb = cb.resume_data(map);
+                    //TODO: load cache
+                }
             }
-        });
-    }
+            None => {}
+        };
+        let cluster_config = cb.build();
 
-    Ok(())
+        let cache_config = InMemoryConfigBuilder::new()
+            .event_types(
+                CacheEventType::MESSAGE_CREATE
+                    | CacheEventType::MESSAGE_DELETE
+                    | CacheEventType::MESSAGE_DELETE_BULK
+                    | CacheEventType::MESSAGE_UPDATE
+                    | CacheEventType::CHANNEL_CREATE
+                    | CacheEventType::CHANNEL_DELETE
+                    | CacheEventType::CHANNEL_UPDATE
+                    | CacheEventType::GUILD_CREATE
+                    | CacheEventType::GUILD_DELETE
+                    | CacheEventType::GUILD_EMOJIS_UPDATE
+                    | CacheEventType::GUILD_UPDATE
+                    | CacheEventType::MEMBER_ADD
+                    | CacheEventType::MEMBER_CHUNK
+                    | CacheEventType::MEMBER_REMOVE
+                    | CacheEventType::MEMBER_UPDATE
+                    | CacheEventType::MESSAGE_CREATE
+                    | CacheEventType::MESSAGE_DELETE
+                    | CacheEventType::MESSAGE_DELETE_BULK
+                    | CacheEventType::MESSAGE_UPDATE
+                    | CacheEventType::REACTION_ADD
+                    | CacheEventType::REACTION_REMOVE
+                    | CacheEventType::REACTION_REMOVE_ALL
+                    | CacheEventType::ROLE_CREATE
+                    | CacheEventType::ROLE_DELETE
+                    | CacheEventType::ROLE_UPDATE
+                    | CacheEventType::UNAVAILABLE_GUILD
+                    | CacheEventType::UPDATE_VOICE_STATE
+                    | CacheEventType::VOICE_SERVER_UPDATE
+                    | CacheEventType::VOICE_STATE_UPDATE
+                    | CacheEventType::WEBHOOKS_UPDATE,
+            )
+            .build();
+
+        let cache = InMemoryCache::from(cache_config);
+        let cluster = Cluster::new(cluster_config);
+        let context = Arc::new(BotContext::new(
+            cache,
+            cluster,
+            http,
+            user,
+            postgres_pool,
+            translations,
+            config.__master_key,
+            redis_pool.clone(),
+            cluster_id,
+            shards_per_cluster,
+            total_shards,
+        ));
+
+        let shutdown_ctx = context.clone();
+        ctrlc::set_handler(move || {
+            // We need a seperate runtime, because at this point in the program,
+            // the tokio::main instance isn't running anymore.
+            let mut rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(checkpoint_to_redis(shutdown_ctx.clone()));
+            process::exit(0);
+        })
+        .expect("Failed to register shutdown handler!");
+
+        gearbot_info!("The cluster is going online!");
+        context.cluster.up().await?;
+        let mut bot_events = context.cluster.events().await;
+        while let Some(event) = bot_events.next().await {
+            let c = context.clone();
+            tokio::spawn(async {
+                let result = handle_event(event, c).await;
+                if result.is_err() {
+                    gearbot_error!("{}", result.err().unwrap());
+                    // c.stats.had_error().await
+                }
+            });
+        }
+
+        Ok(())
+    }
 }
 
-async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Error> {
+async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), Error> {
     // Process anything that uses the event ID that we care about, aka shard events
-    debug!(
-        "Got a {:?} event on shard {}",
-        event.1.event_type(),
-        event.0
-    );
+    debug!("Got a {:?} event on shard {}", event.1.kind(), event.0);
     modlog::handle_event(event.0, &event.1, ctx.clone()).await?;
     general::handle_event(event.0, &event.1, ctx.clone()).await?;
 
@@ -146,7 +195,7 @@ async fn handle_event(event: (u64, Event), ctx: Arc<Context>) -> Result<(), Erro
     Ok(())
 }
 
-async fn checkpoint_to_redis(ctx: Arc<Context>) {
+async fn checkpoint_to_redis(ctx: Arc<BotContext>) {
     println!("Shutting down and dumping stats!");
 
     // This is a placeholder for actual Redis actions

@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use log::debug;
-use twilight::gateway::cluster::Event;
+use twilight::gateway::Event;
 use twilight::model::gateway::{
     payload::UpdateStatus,
     presence::{Activity, ActivityType, Status},
 };
 
-use crate::core::Context;
+use crate::core::BotContext;
 use crate::utils::Error;
 use crate::{gearbot_info, gearbot_warn};
 
-pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Result<(), Error> {
+pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
     match &event {
         Event::ShardReconnecting(_) => {
             gearbot_info!("Shard {} is attempting to reconnect", shard_id)
@@ -19,17 +19,13 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
         Event::ShardResuming(_) => gearbot_info!("Shard {} is resuming", shard_id),
         Event::Ready(_) => {
             gearbot_info!("Shard {} ready to go!", shard_id);
-            ctx.cluster
-                .command(
-                    shard_id,
-                    &UpdateStatus::new(
-                        false,
-                        gen_activity(String::from("the gears turn")),
-                        None,
-                        Status::Online,
-                    ),
-                )
-                .await?;
+            ctx.set_shard_activity(
+                shard_id,
+                Status::Online,
+                ActivityType::Watching,
+                String::from("the gears turn"),
+            )
+            .await?
         }
         Event::GatewayInvalidateSession(recon) => {
             if *recon {
@@ -43,19 +39,24 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
         }
         Event::GatewayHello(u) => {
             debug!("Registered with gateway {} on shard {}", u, shard_id);
-            ctx.cluster
-                .command(
-                    shard_id,
-                    &UpdateStatus::new(
-                        true,
-                        gen_activity(String::from("things coming online")),
-                        None,
-                        Status::Idle,
-                    ),
-                )
-                .await?;
+            ctx.set_shard_activity(
+                shard_id,
+                Status::Idle,
+                ActivityType::Listening,
+                String::from("to the modem screeking as i connect to the gateway"),
+            )
+            .await?
         }
-        Event::Resumed => gearbot_info!("Shard {} successfully resumed", shard_id),
+        Event::Resumed => {
+            gearbot_info!("Shard {} successfully resumed", shard_id);
+            ctx.set_shard_activity(
+                shard_id,
+                Status::Online,
+                ActivityType::Watching,
+                String::from("the gears turn"),
+            )
+            .await?
+        }
         Event::MemberChunk(_chunk) => {
             // debug!("got a chunk with nonce {:?}", &chunk.nonce);
         }

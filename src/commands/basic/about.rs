@@ -6,7 +6,7 @@ use twilight::builders::embed::EmbedBuilder;
 use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
-use crate::core::{BotStats, GuildContext};
+use crate::core::{BotStats, CommandContext};
 use crate::parser::Parser;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
@@ -141,7 +141,7 @@ impl fmt::Display for AboutDescription {
     }
 }
 
-pub async fn about(ctx: GuildContext, msg: Message, _: Parser) -> CommandResult {
+pub async fn about(ctx: CommandContext, msg: Message, _: Parser) -> CommandResult {
     let about_stats = AboutDescription::create(ctx.get_bot_stats()).await;
 
     let embed = EmbedBuilder::new()

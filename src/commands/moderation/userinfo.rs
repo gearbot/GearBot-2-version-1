@@ -1,4 +1,4 @@
-use crate::core::GuildContext;
+use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::utils::Emoji;
 use crate::utils::{CommandError, Error};
@@ -13,7 +13,7 @@ use twilight::model::user::UserFlags;
 
 const USER_INFO_COLOR: u32 = 0x00_cea2;
 
-pub async fn userinfo(ctx: GuildContext, msg: Message, mut parser: Parser) -> CommandResult {
+pub async fn userinfo(ctx: CommandContext, msg: Message, mut parser: Parser) -> CommandResult {
     if msg.guild_id.is_none() {
         return Err(Error::CmdError(CommandError::NoDM));
     }

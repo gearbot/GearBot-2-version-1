@@ -6,6 +6,8 @@ use serde::export::Formatter;
 use twilight::cache::twilight_cache_inmemory;
 use twilight::gateway::cluster;
 use twilight::http;
+use twilight::http::request::channel::message::create_message::CreateMessageError;
+use twilight::http::request::channel::message::update_message::UpdateMessageError;
 use twilight::model::id::GuildId;
 
 #[derive(Debug)]
@@ -31,6 +33,8 @@ pub enum Error {
     Serde(serde_json::error::Error),
     ParseError(ParseError),
     LogError(GuildId),
+    CreateMessageError(CreateMessageError),
+    UpdateMessageError(UpdateMessageError),
 }
 
 #[derive(Debug)]
@@ -69,19 +73,19 @@ impl error::Error for ParseError {}
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ParseError::MemberNotFoundById(id) =>write!(f, "no member with userid ``{}`` found on this server", id),
-            ParseError::MissingArgument => { write!(f, "You are missing one or more required arguments")
-
-            },
+            ParseError::MemberNotFoundById(id) => write!(f, "no member with userid ``{}`` found on this server", id),
+            ParseError::MissingArgument => {
+                write!(f, "You are missing one or more required arguments")
+            }
             ParseError::MemberNotFoundByName(name) => write!(f, "There is nobody named ``{}`` on this server", name),
             ParseError::MultipleMembersByName(name) => write!(f, "Multiple members who's name starts with ``{}`` found, please use their full name and discriminator", name),
             ParseError::WrongArgumentType(expected) => write!(f, "The wrong type was provided! Expected a {}, but got something else!", expected),
             ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid discord userid", id),
-            ParseError::UnknownChannel(id) => {write!(f, "Unable to find any channel with id ``{}``", id)}
-            ParseError::NoChannelAccessBot(_) => {write!(f, "I do not have access to that channel!")}
-            ParseError::NoChannelAccessUser(_) => {write!(f, "You do not have access to that channel!")}
-            ParseError::UnknownMessage => {write!(f, "Unable to find that message")}
-            ParseError::NSFW => {write!(f, "That message originates in a nsfw channel while this is not a nsfw channel, unable to comply")}
+            ParseError::UnknownChannel(id) => { write!(f, "Unable to find any channel with id ``{}``", id) }
+            ParseError::NoChannelAccessBot(_) => { write!(f, "I do not have access to that channel!") }
+            ParseError::NoChannelAccessUser(_) => { write!(f, "You do not have access to that channel!") }
+            ParseError::UnknownMessage => { write!(f, "Unable to find that message") }
+            ParseError::NSFW => { write!(f, "That message originates in a nsfw channel while this is not a nsfw channel, unable to comply") }
         }
     }
 }
@@ -138,6 +142,8 @@ impl fmt::Display for Error {
                 "Something went horribly wrong when trying to push to the logpump for guild {}",
                 guild_id
             ),
+            Error::CreateMessageError(e) => write!(f, "Error creating message: {}", e),
+            Error::UpdateMessageError(e) => write!(f, "Error updating message: {}", e),
         }
     }
 }
@@ -200,5 +206,17 @@ impl From<PoolError> for Error {
 impl From<serde_json::error::Error> for Error {
     fn from(e: serde_json::error::Error) -> Self {
         Error::Serde(e)
+    }
+}
+
+impl From<CreateMessageError> for Error {
+    fn from(e: CreateMessageError) -> Self {
+        Error::CreateMessageError(e)
+    }
+}
+
+impl From<UpdateMessageError> for Error {
+    fn from(e: UpdateMessageError) -> Self {
+        Error::UpdateMessageError(e)
     }
 }

@@ -9,7 +9,7 @@ use twilight::http::{
     request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient,
 };
 
-use crate::core::{gearbot, logging, BotConfig};
+use crate::core::{gearbot, logging, BotConfig, ColdRebootData};
 use crate::database::migrations::embedded;
 
 mod commands;
@@ -18,9 +18,13 @@ mod database;
 mod parser;
 
 mod utils;
+use clap::{App, Arg};
+use darkredis::{CommandList, ConnectionPool, Value};
+use futures::TryStreamExt;
 use utils::Error;
 
 mod translation;
+use crate::core::gearbot::GearBot;
 use translation::load_translations;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -32,6 +36,13 @@ pub type EncryptionKey = GenericArray<u8, U32>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    //parse CLI args
+    let args = App::new("GearBot")
+        .arg(Arg::with_name("cluster"))
+        .arg(Arg::with_name("shards_per_cluster"))
+        .arg(Arg::with_name("total_shards"))
+        .get_matches();
+
     if let Err(e) = logging::initialize() {
         gearbot_error!("{}", e);
         return Err(e);
@@ -68,10 +79,17 @@ async fn main() -> Result<(), Error> {
 
     //connect to the database
     let manager = Manager::new(Config::from_str(&config.database.postgres)?, NoTls);
-    let pool = Pool::new(manager, 10);
-    let mut connection = pool.get().await?;
+    let postgres_pool = Pool::new(manager, 10);
+    let mut connection = postgres_pool.get().await?;
 
-    gearbot_info!("Connected to the database!");
+    info!("Connected to postgres!");
+
+    let redis_pool = ConnectionPool::create(config.database.redis.clone(), None, 5)
+        .await
+        .unwrap();
+    info!("Connected to redis!");
+
+    gearbot_info!("Database connections established");
 
     //TODO: wrap this
     embedded::migrations::runner()
@@ -79,12 +97,40 @@ async fn main() -> Result<(), Error> {
         .await
         .map_err(|e| Error::DatabaseMigration(e.to_string()))?;
 
-    if let Err(e) = gearbot::run(config, http, user, pool, translations).await {
-        gearbot_error!("Failed to start the bot: {}", e)
-    }
-
     // end of the critical failure zone, everything from here on out should be properly wrapped
     // and handled
+
+    let cluster = args
+        .value_of("cluster")
+        .unwrap_or("0")
+        .parse::<u64>()
+        .unwrap_or(0);
+    let shards_per_cluster = args
+        .value_of("shards_per_cluster")
+        .unwrap_or("1")
+        .parse::<u64>()
+        .unwrap_or(1);
+    let total_shards = args
+        .value_of("total_shards")
+        .unwrap_or("1")
+        .parse::<u64>()
+        .unwrap_or(1);
+
+    if let Err(e) = GearBot::run(
+        cluster,
+        shards_per_cluster,
+        total_shards,
+        config,
+        http,
+        user,
+        postgres_pool,
+        redis_pool,
+        translations,
+    )
+    .await
+    {
+        gearbot_error!("Failed to start the bot: {}", e)
+    }
 
     Ok(())
 }

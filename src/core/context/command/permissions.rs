@@ -1,4 +1,4 @@
-use super::GuildContext;
+use super::CommandContext;
 
 use twilight::model::{
     channel::{permission_overwrite::PermissionOverwriteType, GuildChannel},
@@ -6,7 +6,7 @@ use twilight::model::{
     id::{ChannelId, UserId},
 };
 
-impl GuildContext {
+impl CommandContext {
     pub async fn bot_has_guild_permissions(&self, permissions: Permissions) -> bool {
         self.get_bot_guild_permissions().await.contains(permissions)
     }

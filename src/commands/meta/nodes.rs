@@ -6,14 +6,14 @@ use std::pin::Pin;
 use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandNode::{CommandNodeInner, GroupNode};
-use crate::core::GuildContext;
+use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::utils::Error;
 
 pub type CommandResult = Result<(), Error>;
 pub type CommandResultOuter = Pin<Box<dyn Future<Output = CommandResult> + Send>>;
 pub type CommandHandler =
-    Box<dyn Fn(GuildContext, Message, Parser) -> CommandResultOuter + Send + Sync>;
+    Box<dyn Fn(CommandContext, Message, Parser) -> CommandResultOuter + Send + Sync>;
 
 pub struct Command {
     name: String,
@@ -72,7 +72,7 @@ impl CommandNode {
 
     pub async fn execute<'a>(
         &self,
-        ctx: GuildContext,
+        ctx: CommandContext,
         msg: Message,
         parser: Parser,
     ) -> CommandResult {

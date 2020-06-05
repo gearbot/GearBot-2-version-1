@@ -1,10 +1,10 @@
-use crate::core::{Context, GuildConfig};
+use crate::core::{BotContext, GuildConfig};
 use crate::utils::Error;
 use log::info;
 use postgres_types::Type;
 use serde_json::Value;
 
-pub async fn get_guild_config(ctx: &Context, guild_id: u64) -> Result<GuildConfig, Error> {
+pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<GuildConfig, Error> {
     let client = ctx.pool.get().await?;
     let statement = client
         .prepare_typed("SELECT config from guildconfig where id=$1", &[Type::INT8])
@@ -38,7 +38,7 @@ pub async fn get_guild_config(ctx: &Context, guild_id: u64) -> Result<GuildConfi
     }
 }
 
-pub async fn set_guild_config(ctx: &Context, guild_id: u64, config: Value) -> Result<(), Error> {
+pub async fn set_guild_config(ctx: &BotContext, guild_id: u64, config: Value) -> Result<(), Error> {
     let client = ctx.pool.get().await?;
     let statement = client
         .prepare_typed(

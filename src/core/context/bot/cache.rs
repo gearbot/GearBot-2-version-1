@@ -1,10 +1,10 @@
-use crate::core::Context;
+use crate::core::BotContext;
 use crate::utils::{Error, ParseError};
 use std::sync::Arc;
 use twilight::model::id::UserId;
 use twilight::model::user::User;
 
-impl Context {
+impl BotContext {
     pub async fn get_user(&self, user_id: UserId) -> Result<Arc<User>, Error> {
         match self.cache.user(user_id).await? {
             Some(user) => Ok(user),

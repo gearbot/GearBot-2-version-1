@@ -1,4 +1,4 @@
-use super::GuildContext;
+use super::CommandContext;
 use crate::Error;
 
 use twilight::model::{
@@ -6,7 +6,7 @@ use twilight::model::{
     id::{ChannelId, MessageId},
 };
 
-impl GuildContext {
+impl CommandContext {
     pub async fn send_message(
         &self,
         message: impl Into<String>,
@@ -16,7 +16,7 @@ impl GuildContext {
             .bot_context
             .http
             .create_message(channel_id)
-            .content(message)
+            .content(message)?
             .await?;
 
         Ok(sent_msg_handle)
@@ -27,7 +27,7 @@ impl GuildContext {
             .bot_context
             .http
             .create_message(channel_id)
-            .embed(embed)
+            .embed(embed)?
             .await?;
 
         Ok(sent_embed_handle)
@@ -43,8 +43,8 @@ impl GuildContext {
             .bot_context
             .http
             .create_message(channel_id)
-            .content(msg)
-            .embed(embed)
+            .content(msg)?
+            .embed(embed)?
             .await?;
 
         Ok(sent_handle)
@@ -60,7 +60,7 @@ impl GuildContext {
             .bot_context
             .http
             .update_message(channel_id, msg_id)
-            .content(updated_content.into())
+            .content(updated_content.into())?
             .await?;
 
         Ok(updated_message_handle)

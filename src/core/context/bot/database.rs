@@ -1,4 +1,4 @@
-use crate::core::{Context, GuildConfig};
+use crate::core::{BotContext, GuildConfig};
 use crate::database::cache::{get_channel_for_message, get_full_message};
 use crate::database::guild::{get_guild_config, set_guild_config};
 use crate::utils::{Error, FetchError};
@@ -27,7 +27,7 @@ pub struct UserMessage {
     pub pinned: bool,
 }
 
-impl Context {
+impl BotContext {
     pub async fn get_config(
         &self,
         guild_id: GuildId,

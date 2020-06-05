@@ -11,6 +11,7 @@ info_logs = "https://canary.discordapp.com/api/webhooks/id/token"
 
 [database]
 postgres="postgres://database?user=user&password=password&host=localhost"
+redis="localhost:6379"
 
 [emoji]
 # emoji overrides go here

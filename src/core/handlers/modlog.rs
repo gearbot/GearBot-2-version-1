@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use log::debug;
-use twilight::gateway::cluster::Event;
+use log::{debug, info};
+use twilight::gateway::Event;
 use twilight::model::{gateway::payload::RequestGuildMembers, id::RoleId};
 
-use crate::core::Context;
+use crate::core::BotContext;
 use crate::utils::Error;
 
-pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Result<(), Error> {
+pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
     match &event {
         Event::GuildCreate(guild) => {
             ctx.stats.new_guild().await;
@@ -123,7 +123,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<Context>) -> Re
     Ok(())
 }
 
-async fn generate_role_display(roles: &[RoleId], ctx: &Context) -> Result<String, Error> {
+async fn generate_role_display(roles: &[RoleId], ctx: &BotContext) -> Result<String, Error> {
     let mut display_string = String::new();
 
     for (pos, role_id) in roles.iter().enumerate() {

@@ -1,10 +1,10 @@
-use crate::core::Context;
+use crate::core::BotContext;
 use crate::utils::{Error, LogType};
 
 use chrono::Utc;
 use twilight::model::id::GuildId;
 
-impl Context {
+impl BotContext {
     pub fn log(&self, guild_id: GuildId, log: LogType) -> Result<(), Error> {
         match self.log_pumps.get(&guild_id) {
             Some(pump) => {

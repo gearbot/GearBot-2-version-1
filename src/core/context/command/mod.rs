@@ -1,4 +1,3 @@
-use super::{BotStats, Context, GuildConfig};
 use crate::translation::{GearBotStrings, GuildTranslator};
 use crate::Error;
 
@@ -7,26 +6,28 @@ use fluent_bundle::{FluentArgs, FluentValue};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use crate::core::context::bot::BotStats;
+use crate::core::{BotContext, GuildConfig};
 use twilight::gateway::shard::Information;
 use twilight::model::{id::GuildId, user::CurrentUser};
 
 /// The guild context that is returned inside commands that is specific to each guild, with things like the config,
 /// language, etc, set and usable behind wrapper methods for simplicity.
-pub struct GuildContext {
+pub struct CommandContext {
     pub id: GuildId,
     pub translator: Arc<GuildTranslator>,
-    bot_context: Arc<Context>,
+    bot_context: Arc<BotContext>,
     pub config: ElementGuard<GuildId, GuildConfig>,
 }
 
-impl GuildContext {
+impl CommandContext {
     pub fn new(
         id: GuildId,
         translator: Arc<GuildTranslator>,
-        ctx: Arc<Context>,
+        ctx: Arc<BotContext>,
         config: ElementGuard<GuildId, GuildConfig>,
     ) -> Self {
-        GuildContext {
+        CommandContext {
             id,
             translator,
             bot_context: ctx,
@@ -78,6 +79,7 @@ impl GuildContext {
     }
 }
 
+mod bouncers;
 mod messaging;
 mod object_fetcher;
 mod permissions;

@@ -29,6 +29,7 @@ pub struct Logging {
 #[derive(Deserialize, Debug)]
 pub struct Database {
     pub postgres: String,
+    pub redis: String,
 }
 
 impl BotConfig {

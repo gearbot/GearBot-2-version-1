@@ -1,13 +1,17 @@
 use std::sync::Arc;
 
 use log::debug;
-use twilight::gateway::cluster::Event;
+use twilight::gateway::Event;
 
-use crate::core::Context;
+use crate::core::BotContext;
 use crate::parser::Parser;
 use crate::utils::Error;
 
-pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<Context>) -> Result<(), Error> {
+pub async fn handle_event<'a>(
+    shard_id: u64,
+    event: Event,
+    ctx: Arc<BotContext>,
+) -> Result<(), Error> {
     match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
             debug!(

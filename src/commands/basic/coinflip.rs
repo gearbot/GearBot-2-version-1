@@ -2,11 +2,11 @@ use rand;
 use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
-use crate::core::GuildContext;
+use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::utils;
 
-pub async fn coinflip(ctx: GuildContext, msg: Message, parser: Parser) -> CommandResult {
+pub async fn coinflip(ctx: CommandContext, msg: Message, parser: Parser) -> CommandResult {
     let thing_todo: String = parser
         .parts
         .into_iter()

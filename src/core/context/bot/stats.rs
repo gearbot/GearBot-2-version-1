@@ -1,4 +1,4 @@
-use crate::core::Context;
+use crate::core::BotContext;
 use chrono::{DateTime, Utc};
 use git_version::git_version;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -18,7 +18,7 @@ pub struct BotStats {
 }
 
 impl BotStats {
-    pub async fn new_message(&self, ctx: &Context, msg: &Message) {
+    pub async fn new_message(&self, ctx: &BotContext, msg: &Message) {
         if msg.author.bot {
             // This will simply skip incrementing it if we couldn't get
             // a lock on the cache. No harm done.

@@ -3,11 +3,11 @@ use std::time::{Duration, Instant};
 use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
-use crate::core::GuildContext;
+use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::translation::BasicStrings;
 
-pub async fn ping(ctx: GuildContext, msg: Message, _: Parser) -> CommandResult {
+pub async fn ping(ctx: CommandContext, msg: Message, _: Parser) -> CommandResult {
     let start = Instant::now();
 
     let sent_msg = ctx.send_message(":ping_pong:", msg.channel_id).await?;

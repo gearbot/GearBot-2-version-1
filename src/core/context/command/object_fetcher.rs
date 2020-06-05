@@ -1,4 +1,4 @@
-use super::GuildContext;
+use super::CommandContext;
 use crate::Error;
 
 use std::sync::Arc;
@@ -11,7 +11,7 @@ use twilight::model::{
     user::User,
 };
 
-impl GuildContext {
+impl CommandContext {
     pub async fn get_user(&self, user_id: UserId) -> Result<Arc<User>, Error> {
         self.bot_context.get_user(user_id).await
     }

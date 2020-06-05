@@ -5,7 +5,7 @@ use twilight::model::gateway::payload::MessageCreate;
 
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
-use crate::core::{Context, GuildContext};
+use crate::core::{BotContext, CommandContext};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
 
@@ -20,13 +20,13 @@ use twilight::model::user::User;
 pub struct Parser {
     pub parts: Vec<String>,
     pub index: usize,
-    ctx: Arc<Context>,
+    ctx: Arc<BotContext>,
     shard_id: u64,
     guild_id: Option<GuildId>,
 }
 
 impl Parser {
-    fn new(content: &str, ctx: Arc<Context>, shard_id: u64, guild_id: Option<GuildId>) -> Self {
+    fn new(content: &str, ctx: Arc<BotContext>, shard_id: u64, guild_id: Option<GuildId>) -> Self {
         Parser {
             parts: content
                 .split_whitespace()
@@ -69,7 +69,7 @@ impl Parser {
     pub async fn figure_it_out(
         prefix: &str,
         message: Box<MessageCreate>,
-        ctx: Arc<Context>,
+        ctx: Arc<BotContext>,
         shard_id: u64,
     ) -> Result<(), Error> {
         //TODO: verify permissions
@@ -112,6 +112,7 @@ impl Parser {
                                     Emoji::No.for_chat(),
                                     e
                                 ))
+                                .unwrap()
                                 .await?;
                             Ok(())
                         }
@@ -119,12 +120,13 @@ impl Parser {
                             ctx.http
                                 .create_message(channel_id)
                                 .content(format!("{} {}", Emoji::No.for_chat(), e))
+                                .unwrap()
                                 .await?;
                             Ok(())
                         }
                         e => {
                             ctx.http.create_message(channel_id)
-                                .content(format!("{} Something went very wrong trying to execute that command, please try again later or report this on the support server {}", Emoji::Bug.for_chat(), Emoji::Bug.for_chat()))
+                                .content(format!("{} Something went very wrong trying to execute that command, please try again later or report this on the support server {}", Emoji::Bug.for_chat(), Emoji::Bug.for_chat())).unwrap()
                                 .await?;
                             Err(e)
                         }
@@ -233,75 +235,82 @@ impl Parser {
             .await
             .unwrap()
             .ok_or(ParseError::UnknownChannel(channel_id))?;
+        unreachable!();
 
         // No DMs here
         let guild_id = self.guild_id.unwrap();
-        let guild_ctx = generate_guild_context(self.ctx.clone(), guild_id).await?;
+        // let guild_ctx = generate_guild_context(self.ctx.clone(), guild_id).await?;
+        //
+        // info!("{:?}", channel);
+        // match &*channel {
+        //TODO: Figure out the twilight mess of guild channel types
 
-        info!("{:?}", channel);
-        match &*channel {
-            //TODO: Figure out the twilight mess of guild channel types
-            GuildChannel::Category(channel) => {
-                let bot_has_access = guild_ctx
-                    .bot_has_channel_permissions(
-                        channel.id,
-                        Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
-                    )
-                    .await;
+        // GuildChannel::Category(channel) => {
+        //     let bot_has_access = guild_ctx
+        //         .bot_has_channel_permissions(
+        //             channel.id,
+        //             Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
+        //         )
+        //         .await;
 
-                // Verify if the bot has access
-                if bot_has_access {
-                    let user_has_access = guild_ctx
-                        .has_channel_permissions(
-                            requester,
-                            channel.id,
-                            Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
-                        )
-                        .await;
+        // Verify if the bot has access
+        // if bot_has_access {
+        //     let user_has_access = guild_ctx
+        //         .has_channel_permissions(
+        //             requester,
+        //             channel.id,
+        //             Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
+        //         )
+        //         .await;
 
-                    // Verify if the user has access
-                    if user_has_access {
-                        // All good, fetch the message from the api instead of cache to make sure it's not only up to date but still actually exists
-                        let result = self
-                            .ctx
-                            .http
-                            .message(channel.id, MessageId(message_id))
-                            .await;
-
-                        match result {
-                            Ok(message) => Ok(message.unwrap()),
-                            Err(error) => {
-                                if error.to_string().contains("status: 404") {
-                                    Err(Error::ParseError(ParseError::UnknownMessage))
-                                } else {
-                                    Err(Error::TwilightHttp(error))
-                                }
-                            }
-                        }
-                    } else {
-                        Err(Error::ParseError(ParseError::NoChannelAccessUser(
-                            channel.name.clone(),
-                        )))
-                    }
-                } else {
-                    Err(Error::ParseError(ParseError::NoChannelAccessBot(
-                        channel.name.clone(),
-                    )))
-                }
-            }
-            _ => unreachable!(),
-        }
+        // Verify if the user has access
+        // if user_has_access {
+        // All good, fetch the message from the api instead of cache to make sure it's not only up to date but still actually exists
+        // let result = self
+        //     .ctx
+        //     .http
+        //     .message(channel.id, MessageId(message_id))
+        //     .await;
+        //
+        // match result {
+        //     Ok(message) => Ok(message.unwrap()),
+        //     Err(error) => {
+        //         if error.to_string().contains("status: 404") {
+        //             Err(Error::ParseError(ParseError::UnknownMessage))
+        //         } else {
+        //             Err(Error::TwilightHttp(error))
+        //         }
+        //     }
+        // }
+        // } else {
+        //     Err(Error::ParseError(ParseError::NoChannelAccessUser(
+        //         channel.name.clone(),
+        //     )))
+        // }
+        // } else {
+        //     Err(Error::ParseError(ParseError::NoChannelAccessBot(
+        //         channel.name.clone(),
+        //     )))
+        // }
+        // }
+        // _ => unreachable!(),
+        // }
     }
 }
 
 async fn generate_guild_context(
-    bot_context: Arc<Context>,
+    bot_context: Arc<BotContext>,
     guild_id: GuildId,
-) -> Result<GuildContext, Error> {
+) -> Result<CommandContext, Error> {
     let config = bot_context.get_config(guild_id).await?;
 
     let lang = &config.language;
     let translator = bot_context.translations.get_translator(lang);
 
-    Ok(GuildContext::new(guild_id, translator, bot_context, config))
+    Ok(CommandContext::new(
+        guild_id,
+        translator,
+        bot_context,
+        config,
+    ))
 }
