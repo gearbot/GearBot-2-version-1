@@ -48,7 +48,7 @@ impl BotContext {
         total_shards: u64,
     ) -> Self {
         BotContext {
-            cache: Cache::new(),
+            cache: Cache::new(cluster_id),
             cluster,
             http,
             stats: BotStats::default(),

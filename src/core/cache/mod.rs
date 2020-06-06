@@ -1,10 +1,14 @@
-use crate::{gearbot_error, gearbot_info};
+use crate::{gearbot_error, gearbot_important, gearbot_info};
 use dashmap::DashMap;
-use log::debug;
+use futures::future;
+use log::{debug, error};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use twilight::model::id::{ChannelId, EmojiId, GuildId, UserId};
 
 pub struct Cache {
+    //cluster info
+    cluster_id: u64,
+
     //cache
     guilds: DashMap<GuildId, Arc<CachedGuild>>,
     guild_channels: DashMap<ChannelId, Arc<CachedChannel>>,
@@ -26,8 +30,9 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub fn new() -> Self {
+    pub fn new(cluster_id: u64) -> Self {
         Cache {
+            cluster_id,
             guilds: DashMap::new(),
             guild_channels: DashMap::new(),
             users: DashMap::new(),
@@ -249,7 +254,10 @@ impl Cache {
                             let old = self.partial_guilds.fetch_sub(1, Ordering::SeqCst);
                             // if we where at 1 we are now at 0
                             if old == 1 && self.filling.fetch_and(true, Ordering::Relaxed) {
-                                gearbot_important!("Initial cache filling completed!"); //TODO: cluster number
+                                gearbot_important!(
+                                    "Initial cache filling completed for cluster {}!",
+                                    self.cluster_id
+                                );
                                 self.filling.fetch_or(false, Ordering::SeqCst);
                             }
                         }
@@ -316,13 +324,57 @@ impl Cache {
             None => None,
         }
     }
+
+    pub async fn prepare_cold_resume(&self, redis_pool: &ConnectionPool, handlers: usize) {
+        //clear global caches so arcs can be cleaned up
+        self.users.clear();
+        self.guild_channels.clear();
+        debug!("we have {:?} guilds to dump to redis", self.guild_count);
+        //let's go to hyperspeed
+        let mut tasks = vec![];
+
+        //but not yet, collect their work first before they start sabotaging each other again >.>
+        let mut work_orders: Vec<Vec<GuildId>> = vec![vec![]; handlers];
+
+        let mut count = 0;
+        for guard in self.guilds.iter() {
+            work_orders[count % handlers].push(guard.key().clone());
+            count += 1;
+        }
+
+        for i in 0..handlers {
+            tasks.push(self._prepare_cold_resume(redis_pool, work_orders[i].clone()))
+        }
+
+        future::join_all(tasks).await;
+    }
+
+    async fn _prepare_cold_resume(&self, redis_pool: &ConnectionPool, todo: Vec<GuildId>) {
+        let mut connection = redis_pool.get().await;
+
+        for key in todo {
+            let guild = self.guilds.remove_take(&key).unwrap();
+            let data = serde_json::to_string(guild.value()).unwrap();
+            if let Err(e) = connection
+                .set_and_expire_seconds(format!("cb_guild_{}", guild.id.0), data, 180)
+                .await
+            {
+                error!(
+                    "Something went wrong dumping guild {} to redis: {}",
+                    guild.id.0, e
+                );
+            }
+        }
+    }
 }
 
 mod structs;
 pub use structs::*;
 
+use crate::utils::Error;
 use chrono::format::Numeric::Ordinal;
-use std::collections::HashMap;
+use darkredis::ConnectionPool;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use twilight::gateway::Event;
 use twilight::model::channel::Channel::Guild;

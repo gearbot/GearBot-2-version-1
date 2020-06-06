@@ -25,7 +25,7 @@ use crate::{gearbot_error, gearbot_info};
 use darkredis::ConnectionPool;
 use log::info;
 use std::collections::HashMap;
-use twilight::gateway::shard::ShardResumeData;
+use twilight::gateway::shard::ResumeSession;
 use twilight::model::user::CurrentUser;
 
 pub struct GearBot;
@@ -84,13 +84,13 @@ impl GearBot {
                     for (id, data) in cold_cache.resume_data {
                         map.insert(
                             id,
-                            (ShardResumeData {
+                            (ResumeSession {
                                 session_id: data.0,
                                 sequence: data.1,
                             }),
                         );
                     }
-                    cb = cb.resume_data(map);
+                    cb = cb.resume_sessions(map);
                     //TODO: load cache
                 }
             }

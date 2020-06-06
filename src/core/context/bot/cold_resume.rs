@@ -3,7 +3,6 @@ use crate::gearbot_important;
 use crate::utils::Error;
 use log::info;
 use std::collections::HashMap;
-use twilight::gateway::shard::ShardResumeData;
 use twilight::model::gateway::presence::{ActivityType, Status};
 
 impl BotContext {
@@ -17,12 +16,23 @@ impl BotContext {
         )
         .await?;
 
+        let start = std::time::Instant::now();
+
         let mut connection = self.redis_pool.get().await;
 
         //kill the shards and get their resume info
         //DANGER: WE WILL NOT BE GETTING EVENTS FROM THIS POINT ONWARDS, REBOOT REQUIRED
-        let resume_data = self.cluster.down_resumable().await;
+
         info!("Resume data acquired");
+
+        let resume_data = self.cluster.down_resumable().await;
+        self.cache.prepare_cold_resume(&self.redis_pool, 4).await;
+
+        let fin = std::time::Instant::now();
+        info!(
+            "It took {}ms to to dump all data!",
+            (fin - start).as_millis()
+        );
 
         // prepare resume data
         let mut map = HashMap::new();
@@ -31,8 +41,6 @@ impl BotContext {
                 map.insert(shard_id, (info.session_id, info.sequence));
             }
         }
-        //TODO: add cache data as well
-
         let data = ColdRebootData {
             resume_data: map,
             total_shards: self.total_shards,
@@ -40,12 +48,14 @@ impl BotContext {
         };
 
         connection
-            .set(
+            .set_and_expire_seconds(
                 format!("cb_cluster_data_{}", self.cluster_id),
                 &serde_json::to_value(data).unwrap().to_string().into_bytes(),
+                180,
             )
             .await
             .unwrap();
+
         Ok(())
     }
 }
