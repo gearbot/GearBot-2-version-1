@@ -72,7 +72,7 @@ async fn real_main() -> Result<(), Error> {
 
     builder.default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
 
-    let http = builder.build()?;
+    let http = builder.clone().build()?;
     // Validate token and figure out who we are
     let user = http.current_user().await?;
     info!(
@@ -80,7 +80,7 @@ async fn real_main() -> Result<(), Error> {
         user.name, user.discriminator
     );
 
-    logging::initialize_discord_webhooks(http.clone(), &config, user.clone());
+    logging::initialize_discord_webhooks(builder.build()?, &config, user.clone());
 
     gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", VERSION);
 

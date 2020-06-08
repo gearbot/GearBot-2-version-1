@@ -36,6 +36,7 @@ pub struct BotContext {
 
 impl BotContext {
     pub fn new(
+        cache: Cache,
         cluster: Cluster,
         http: HttpClient,
         bot_user: CurrentUser,
@@ -48,7 +49,7 @@ impl BotContext {
         total_shards: u64,
     ) -> Self {
         BotContext {
-            cache: Cache::new(cluster_id),
+            cache,
             cluster,
             http,
             stats: BotStats::default(),

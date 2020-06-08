@@ -35,6 +35,8 @@ pub enum Error {
     LogError(GuildId),
     CreateMessageError(CreateMessageError),
     UpdateMessageError(UpdateMessageError),
+    CacheDefrostError(String),
+    DarkRedisError(darkredis::Error),
 }
 
 #[derive(Debug)]
@@ -144,6 +146,10 @@ impl fmt::Display for Error {
             ),
             Error::CreateMessageError(e) => write!(f, "Error creating message: {}", e),
             Error::UpdateMessageError(e) => write!(f, "Error updating message: {}", e),
+            Error::CacheDefrostError(e) => write!(f, "Error defrosting cache: {}", e),
+            Error::DarkRedisError(e) => {
+                write!(f, "Error communicating with the redis cache: {}", e)
+            }
         }
     }
 }
@@ -218,5 +224,10 @@ impl From<CreateMessageError> for Error {
 impl From<UpdateMessageError> for Error {
     fn from(e: UpdateMessageError) -> Self {
         Error::UpdateMessageError(e)
+    }
+}
+impl From<darkredis::Error> for Error {
+    fn from(e: darkredis::Error) -> Self {
+        Error::DarkRedisError(e)
     }
 }

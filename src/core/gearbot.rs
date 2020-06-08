@@ -18,13 +18,14 @@ use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
 
 use crate::core::handlers::{commands, general, modlog};
-use crate::core::{BotConfig, BotContext, ColdRebootData};
+use crate::core::{BotConfig, BotContext, Cache, ColdRebootData};
 use crate::translation::Translations;
 use crate::utils::Error;
-use crate::{gearbot_error, gearbot_info};
+use crate::{gearbot_error, gearbot_important, gearbot_info};
 use darkredis::ConnectionPool;
 use log::info;
 use std::collections::HashMap;
+use std::time::Instant;
 use twilight::gateway::shard::ResumeSession;
 use twilight::model::user::CurrentUser;
 
@@ -61,6 +62,8 @@ impl GearBot {
                 | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
         );
 
+        let cache = Cache::new(cluster_id);
+
         let mut cb = ClusterConfig::builder(&config.tokens.discord)
             .shard_scheme(sharding_scheme)
             .intents(intents);
@@ -72,11 +75,11 @@ impl GearBot {
             .get(format!("cb_cluster_data_{}", cluster_id))
             .await
             .unwrap();
-        info!("cluster data: {:?}", data);
         match data {
             Some(d) => {
                 let cold_cache: ColdRebootData =
                     serde_json::from_str(&*String::from_utf8(d).unwrap())?;
+                debug!("ColdRebootData: {:?}", cold_cache);
                 if cold_cache.total_shards == total_shards
                     && cold_cache.shard_count == shards_per_cluster
                 {
@@ -90,16 +93,39 @@ impl GearBot {
                             }),
                         );
                     }
-                    cb = cb.resume_sessions(map);
-                    //TODO: load cache
+                    let start = Instant::now();
+                    let result = cache
+                        .restore_cold_resume(
+                            &redis_pool,
+                            cold_cache.guild_chunks,
+                            cold_cache.user_chunks,
+                        )
+                        .await;
+                    match result {
+                        Ok(_) => {
+                            let end = std::time::Instant::now();
+                            gearbot_important!(
+                                "Cold resume defrosting completed in {}ms!",
+                                (end - start).as_millis()
+                            );
+                            cb = cb.resume_sessions(map);
+                        }
+
+                        Err(e) => {
+                            gearbot_error!("Cold resume defrosting failed! {}", e);
+                            cache.reset();
+                        }
+                    }
                 }
             }
+
             None => {}
         };
         let cluster_config = cb.build();
 
         let cluster = Cluster::new(cluster_config);
         let context = Arc::new(BotContext::new(
+            cache,
             cluster,
             http,
             user,

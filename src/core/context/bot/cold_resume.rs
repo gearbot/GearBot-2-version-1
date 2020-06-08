@@ -9,7 +9,7 @@ use twilight::model::gateway::presence::{ActivityType, Status};
 impl BotContext {
     pub async fn initiate_cold_resume(&self) -> Result<(), Error> {
         // preparing for update rollout, set status to atleast give some indication to users
-        gearbot_important!("Preparing for cold resume!");
+        // gearbot_important!("Preparing for cold resume!");
         // self.set_cluster_activity(
         //     Status::Idle,
         //     ActivityType::Watching,
@@ -27,7 +27,7 @@ impl BotContext {
         info!("Resume data acquired");
 
         let resume_data = self.cluster.down_resumable().await;
-        self.cache.prepare_cold_resume(&self.redis_pool, 4).await;
+        let (guild_chunks, user_chunks) = self.cache.prepare_cold_resume(&self.redis_pool).await;
 
         // prepare resume data
         let mut map = HashMap::new();
@@ -39,7 +39,9 @@ impl BotContext {
         let data = ColdRebootData {
             resume_data: map,
             total_shards: self.total_shards,
+            guild_chunks,
             shard_count: self.shards_per_cluster,
+            user_chunks,
         };
 
         connection

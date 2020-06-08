@@ -79,29 +79,29 @@ pub struct ColdStorageGuild {
     pub verification_level: VerificationLevel,
     #[serde(rename = "k")]
     pub default_message_notifications: DefaultMessageNotificationLevel,
-    #[serde(rename = "i")]
-    pub roles: Vec<CachedRole>,
     #[serde(rename = "l")]
+    pub roles: Vec<CachedRole>,
+    #[serde(rename = "m")]
     pub emoji: Vec<CachedEmoji>,
-    #[serde(rename = "m", default, skip_serializing_if = "is_default")]
+    #[serde(rename = "n", default, skip_serializing_if = "is_default")]
     pub features: Vec<String>,
-    #[serde(rename = "n")]
-    pub members: Vec<ColdStorageMember>,
     #[serde(rename = "o")]
+    pub members: Vec<ColdStorageMember>,
+    #[serde(rename = "p")]
     pub channels: Vec<CachedChannel>,
-    #[serde(rename = "p", default, skip_serializing_if = "is_default")]
-    pub max_presences: Option<u64>,
     #[serde(rename = "q", default, skip_serializing_if = "is_default")]
-    pub max_members: Option<u64>,
+    pub max_presences: Option<u64>,
     #[serde(rename = "r", default, skip_serializing_if = "is_default")]
-    pub description: Option<String>,
+    pub max_members: Option<u64>,
     #[serde(rename = "s", default, skip_serializing_if = "is_default")]
-    pub banner: Option<String>,
+    pub description: Option<String>,
     #[serde(rename = "t", default, skip_serializing_if = "is_default")]
-    pub premium_tier: PremiumTier,
+    pub banner: Option<String>,
     #[serde(rename = "u", default, skip_serializing_if = "is_default")]
-    pub premium_subscription_count: u64,
+    pub premium_tier: PremiumTier,
     #[serde(rename = "v", default, skip_serializing_if = "is_default")]
+    pub premium_subscription_count: u64,
+    #[serde(rename = "w", default, skip_serializing_if = "is_default")]
     pub preferred_locale: String,
 }
 
