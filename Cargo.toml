@@ -30,7 +30,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "0.2", default_features = false, features = ["macros", "sync", "rt-core"] }
 toml = "0.5"
-twilight = { path="../../../rust/twilight/twilight" }
+twilight = { git="https://github.com/AEnterprise/twilight", branch="gearbot" }
 tokio-postgres = { version = "0.5", default_features = false }
 url = "2.1"
 unic-langid = { version = "0.9", features = ["macros", "serde"] }

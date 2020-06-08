@@ -647,19 +647,12 @@ impl Cache {
     }
 
     async fn defrost_users(&self, redis_pool: &ConnectionPool, index: usize) -> Result<(), Error> {
+        let key = format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index);
         let mut connection = redis_pool.get().await;
         let mut users: Vec<CachedUser> = serde_json::from_str(
-            &*String::from_utf8(
-                connection
-                    .get(format!(
-                        "cb_cluster_{}_user_chunk_{}",
-                        self.cluster_id, index
-                    ))
-                    .await?
-                    .unwrap(),
-            )
-            .unwrap(),
+            &*String::from_utf8(connection.get(&key).await?.unwrap()).unwrap(),
         )?;
+        connection.del(key).await?;
         debug!("Worker {} found {} users to defrost", index, users.len());
         for user in users.drain(..) {
             self.users.insert(user.id, Arc::new(user));
@@ -670,19 +663,12 @@ impl Cache {
     }
 
     async fn defrost_guilds(&self, redis_pool: &ConnectionPool, index: usize) -> Result<(), Error> {
+        let key = format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index);
         let mut connection = redis_pool.get().await;
         let mut guilds: Vec<ColdStorageGuild> = serde_json::from_str(
-            &*String::from_utf8(
-                connection
-                    .get(format!(
-                        "cb_cluster_{}_guild_chunk_{}",
-                        self.cluster_id, index
-                    ))
-                    .await?
-                    .unwrap(),
-            )
-            .unwrap(),
+            &*String::from_utf8(connection.get(&key).await?.unwrap()).unwrap(),
         )?;
+        connection.del(key).await?;
         debug!("Worker {} found {} guilds to defrost", index, guilds.len());
         for cold_guild in guilds.drain(..) {
             let mut guild = CachedGuild {

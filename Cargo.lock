@@ -2127,6 +2127,7 @@ dependencies = [
 [[package]]
 name = "twilight"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "twilight-builders",
  "twilight-cache",
@@ -2140,6 +2141,7 @@ dependencies = [
 [[package]]
 name = "twilight-builders"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "twilight-model",
 ]
@@ -2147,6 +2149,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "twilight-cache-inmemory",
  "twilight-cache-trait",
@@ -2155,6 +2158,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-inmemory"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -2168,6 +2172,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-trait"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "async-trait",
  "twilight-model",
@@ -2176,6 +2181,7 @@ dependencies = [
 [[package]]
 name = "twilight-command-parser"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "unicase",
 ]
@@ -2183,6 +2189,7 @@ dependencies = [
 [[package]]
 name = "twilight-gateway"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -2202,6 +2209,7 @@ dependencies = [
 [[package]]
 name = "twilight-http"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "bytes",
  "futures",
@@ -2219,6 +2227,7 @@ dependencies = [
 [[package]]
 name = "twilight-model"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "bitflags",
  "serde",
@@ -2230,6 +2239,7 @@ dependencies = [
 [[package]]
 name = "twilight-standby"
 version = "0.1.0"
+source = "git+https://github.com/AEnterprise/twilight?branch=gearbot#3e084f65e2ae930a4454f360f5007f456d339ca7"
 dependencies = [
  "futures-channel",
  "futures-util",
