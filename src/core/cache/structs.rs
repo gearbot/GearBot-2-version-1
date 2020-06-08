@@ -12,9 +12,11 @@ use twilight::model::guild::{
 };
 use twilight::model::id::{ChannelId, EmojiId, GuildId, RoleId, UserId};
 use twilight::model::user::UserFlags;
-const NO_PERMISSIONS: &[PermissionOverwrite] = &[];
 
-#[derive(Debug, Serialize, Deserialize)]
+const NO_PERMISSIONS: &[PermissionOverwrite] = &[];
+use serde;
+
+#[derive(Debug)]
 pub struct CachedGuild {
     // api fields
     pub id: GuildId,
@@ -53,31 +55,115 @@ pub struct CachedGuild {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CachedRole {
-    pub id: RoleId,
+pub struct ColdStorageGuild {
+    #[serde(rename = "a")]
+    pub id: GuildId,
+    #[serde(rename = "b")]
     pub name: String,
+    #[serde(rename = "c", default, skip_serializing_if = "is_default")]
+    pub icon: Option<String>,
+    #[serde(rename = "d", default, skip_serializing_if = "is_default")]
+    pub splash: Option<String>,
+    #[serde(rename = "e", default, skip_serializing_if = "is_default")]
+    pub discovery_splash: Option<String>,
+    #[serde(rename = "f")]
+    pub owner_id: UserId,
+    #[serde(rename = "g", default, skip_serializing_if = "is_default")]
+    pub region: String,
+    //can technically be an enum but that will fail as soon as they add a new region
+    #[serde(rename = "h", default, skip_serializing_if = "is_default")]
+    pub afk_channel_id: Option<ChannelId>,
+    #[serde(rename = "i", default, skip_serializing_if = "is_default")]
+    pub afk_timeout: u64,
+    #[serde(rename = "j")]
+    pub verification_level: VerificationLevel,
+    #[serde(rename = "k")]
+    pub default_message_notifications: DefaultMessageNotificationLevel,
+    #[serde(rename = "i")]
+    pub roles: Vec<CachedRole>,
+    #[serde(rename = "l")]
+    pub emoji: Vec<CachedEmoji>,
+    #[serde(rename = "m", default, skip_serializing_if = "is_default")]
+    pub features: Vec<String>,
+    #[serde(rename = "n")]
+    pub members: Vec<ColdStorageMember>,
+    #[serde(rename = "o")]
+    pub channels: Vec<CachedChannel>,
+    #[serde(rename = "p", default, skip_serializing_if = "is_default")]
+    pub max_presences: Option<u64>,
+    #[serde(rename = "q", default, skip_serializing_if = "is_default")]
+    pub max_members: Option<u64>,
+    #[serde(rename = "r", default, skip_serializing_if = "is_default")]
+    pub description: Option<String>,
+    #[serde(rename = "s", default, skip_serializing_if = "is_default")]
+    pub banner: Option<String>,
+    #[serde(rename = "t", default, skip_serializing_if = "is_default")]
+    pub premium_tier: PremiumTier,
+    #[serde(rename = "u", default, skip_serializing_if = "is_default")]
+    pub premium_subscription_count: u64,
+    #[serde(rename = "v", default, skip_serializing_if = "is_default")]
+    pub preferred_locale: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CachedRole {
+    #[serde(rename = "a")]
+    pub id: RoleId,
+    #[serde(rename = "b")]
+    pub name: String,
+    #[serde(rename = "c", default, skip_serializing_if = "is_default")]
     pub color: u32,
+    #[serde(rename = "d", default, skip_serializing_if = "is_default")]
     pub hoisted: bool,
+    #[serde(rename = "e", default, skip_serializing_if = "is_default")]
     pub position: i64,
+    #[serde(rename = "f")]
     pub permissions: Permissions,
+    #[serde(rename = "g", default, skip_serializing_if = "is_default")]
     pub managed: bool,
+    #[serde(rename = "h", default, skip_serializing_if = "is_default")]
     pub mentionable: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CachedEmoji {
+    #[serde(rename = "a")]
     pub id: EmojiId,
+    #[serde(rename = "b")]
     pub name: String,
-    //only null in reaction objects, but we can fetch from cache for those
+    #[serde(rename = "c", default, skip_serializing_if = "is_default")]
     pub roles: Vec<RoleId>,
+    #[serde(rename = "d", default, skip_serializing_if = "is_default")]
     pub created_by: Option<UserId>,
+    #[serde(rename = "i", default, skip_serializing_if = "is_default")]
     pub requires_colons: bool,
+    #[serde(rename = "j", default, skip_serializing_if = "is_default")]
     pub managed: bool,
+    #[serde(rename = "k", default, skip_serializing_if = "is_default")]
     pub animated: bool,
+    #[serde(rename = "l", default = "get_true", skip_serializing_if = "is_true")]
     pub available: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ColdStorageMember {
+    #[serde(rename = "i", default, skip_serializing_if = "is_default")]
+    pub id: UserId,
+    #[serde(rename = "n", default, skip_serializing_if = "is_default")]
+    pub nickname: Option<String>,
+    #[serde(rename = "r", default, skip_serializing_if = "is_default")]
+    pub roles: Vec<RoleId>,
+    #[serde(rename = "j", default, skip_serializing_if = "is_default")]
+    pub joined_at: Option<String>,
+    #[serde(rename = "b", default, skip_serializing_if = "is_default")]
+    pub boosting_since: Option<String>,
+    #[serde(rename = "d", default, skip_serializing_if = "is_default")]
+    pub server_deafened: bool,
+    #[serde(rename = "m", default, skip_serializing_if = "is_default")]
+    pub server_muted: bool,
+}
+
+#[derive(Debug)]
 pub struct CachedMember {
     pub user: Arc<CachedUser>,
     pub nickname: Option<String>,
@@ -90,17 +176,27 @@ pub struct CachedMember {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum CachedChannel {
     TextChannel {
+        #[serde(rename = "a")]
         id: ChannelId,
+        #[serde(rename = "b")]
         guild_id: GuildId,
+        #[serde(rename = "c", default, skip_serializing_if = "is_default")]
         position: i64,
         //should be always present in guild create,
+        #[serde(rename = "d", default, skip_serializing_if = "is_default")]
         permission_overrides: Vec<PermissionOverwrite>,
+        #[serde(rename = "e")]
         name: String,
+        #[serde(rename = "f", default, skip_serializing_if = "is_default")]
         topic: Option<String>,
+        #[serde(rename = "g", default, skip_serializing_if = "is_default")]
         nsfw: bool,
+        #[serde(rename = "h", default, skip_serializing_if = "is_default")]
         slowmode: Option<u64>,
+        #[serde(rename = "i", default, skip_serializing_if = "is_default")]
         parent_id: Option<ChannelId>,
     },
     DM {
@@ -108,14 +204,22 @@ pub enum CachedChannel {
         //TODO: see what else is relevant here, recipients to find the user this is for?
     },
     VoiceChannel {
+        #[serde(rename = "a")]
         id: ChannelId,
+        #[serde(rename = "b")]
         guild_id: GuildId,
+        #[serde(rename = "c", default, skip_serializing_if = "is_default")]
         position: i64,
         //should be always present in guild create,
+        #[serde(rename = "d", default, skip_serializing_if = "is_default")]
         permission_overrides: Vec<PermissionOverwrite>,
+        #[serde(rename = "e")]
         name: String,
+        #[serde(rename = "f", default, skip_serializing_if = "is_default")]
         bitrate: u64,
+        #[serde(rename = "g", default, skip_serializing_if = "is_default")]
         user_limit: Option<u64>,
+        #[serde(rename = "h", default, skip_serializing_if = "is_default")]
         parent_id: Option<ChannelId>,
     },
     GroupDM {
@@ -123,20 +227,31 @@ pub enum CachedChannel {
         //TODO: see what else is relevant here
     },
     Category {
+        #[serde(rename = "a")]
         id: ChannelId,
+        #[serde(rename = "b")]
         guild_id: GuildId,
+        #[serde(rename = "c", default, skip_serializing_if = "is_default")]
         position: i64,
         //should be always present in guild create,
+        #[serde(rename = "d", default, skip_serializing_if = "is_default")]
         permission_overrides: Vec<PermissionOverwrite>,
+        #[serde(rename = "e")]
         name: String,
     },
     AnnouncementsChannel {
+        #[serde(rename = "a")]
         id: ChannelId,
+        #[serde(rename = "b")]
         guild_id: GuildId,
+        #[serde(rename = "c", default, skip_serializing_if = "is_default")]
         position: i64,
         //should be always present in guild create,
+        #[serde(rename = "d", default, skip_serializing_if = "is_default")]
         permission_overrides: Vec<PermissionOverwrite>,
+        #[serde(rename = "e")]
         name: String,
+        #[serde(rename = "f", default, skip_serializing_if = "is_default")]
         parent_id: Option<ChannelId>,
     },
     StoreChannel {
@@ -260,11 +375,30 @@ impl CachedChannel {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CachedUser {
+    #[serde(rename = "i")]
     pub id: UserId,
+    #[serde(rename = "u")]
     pub username: String,
+    #[serde(rename = "d")]
     pub discriminator: String,
+    #[serde(rename = "a", default, skip_serializing_if = "is_default")]
     pub avatar: Option<String>,
+    #[serde(rename = "b", default, skip_serializing_if = "is_default")]
     pub bot_user: bool,
+    #[serde(rename = "s", default, skip_serializing_if = "is_default")]
     pub system_user: bool,
+    #[serde(rename = "f", default, skip_serializing_if = "is_default")]
     pub public_flags: Option<UserFlags>,
+}
+
+fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    t == &T::default()
+}
+
+fn is_true(t: &bool) -> bool {
+    !t
+}
+
+fn get_true() -> bool {
+    true
 }

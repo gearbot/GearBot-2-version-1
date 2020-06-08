@@ -25,6 +25,8 @@ use utils::Error;
 
 mod translation;
 use crate::core::gearbot::GearBot;
+use std::time::Duration;
+use tokio::runtime::Runtime;
 use translation::load_translations;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -34,8 +36,16 @@ pub type CommandResult = Result<(), Error>;
 
 pub type EncryptionKey = GenericArray<u8, U32>;
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
+    let mut runtime = Runtime::new()?;
+
+    runtime.block_on(async move { real_main().await })?;
+
+    runtime.shutdown_timeout(Duration::from_secs(90));
+    Ok(())
+}
+
+async fn real_main() -> Result<(), Error> {
     //parse CLI args
     let args = App::new("GearBot")
         .arg(Arg::with_name("cluster"))

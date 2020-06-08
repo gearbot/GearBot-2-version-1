@@ -14,10 +14,10 @@ pub async fn handle_event<'a>(
 ) -> Result<(), Error> {
     match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
-            debug!(
-                "Received a message from {}, saying {}",
-                msg.author.name, msg.content
-            );
+            // debug!(
+            // "Received a message from {}, saying {}",
+            // msg.author.name, msg.content
+            // );
 
             let p = match msg.guild_id {
                 Some(guild_id) => {

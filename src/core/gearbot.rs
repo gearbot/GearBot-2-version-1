@@ -117,7 +117,7 @@ impl GearBot {
             // We need a seperate runtime, because at this point in the program,
             // the tokio::main instance isn't running anymore.
             let mut rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(checkpoint_to_redis(shutdown_ctx.clone()));
+            rt.block_on(shutdown_ctx.initiate_cold_resume());
             process::exit(0);
         })
         .expect("Failed to register shutdown handler!");
@@ -135,6 +135,7 @@ impl GearBot {
                 }
             });
         }
+        context.cluster.down().await;
 
         Ok(())
     }
@@ -142,7 +143,7 @@ impl GearBot {
 
 async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), Error> {
     // Process anything that uses the event ID that we care about, aka shard events
-    debug!("Got a {:?} event on shard {}", event.1.kind(), event.0);
+    // debug!("Got a {:?} event on shard {}", event.1.kind(), event.0);
     modlog::handle_event(event.0, &event.1, ctx.clone()).await?;
     general::handle_event(event.0, &event.1, ctx.clone()).await?;
 
@@ -156,22 +157,4 @@ async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), E
     commands::handle_event(event.0, event.1, ctx.clone()).await?;
 
     Ok(())
-}
-
-async fn checkpoint_to_redis(ctx: Arc<BotContext>) {
-    println!("Shutting down and dumping stats!");
-
-    // This is a placeholder for actual Redis actions
-    // We will need to set a flag value inside Redis that the
-    // bot checks on startup to see if it needs to load from Redis or
-    // get everything from scratch
-    async {
-        let x = 3;
-        let _ = x + 2;
-    }
-    .await;
-
-    let stats = &ctx.stats;
-
-    println!("We had a total of {:?} guilds when online", stats.guilds);
 }

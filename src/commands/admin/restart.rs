@@ -10,8 +10,10 @@ use twilight::model::gateway::payload::UpdateStatus;
 use twilight::model::gateway::presence::{Activity, ActivityType, Status};
 
 pub async fn restart(ctx: CommandContext, msg: Message, _: Parser) -> CommandResult {
-    ctx.send_message("Shutting down", msg.channel_id).await?;
-    gearbot_important!("Reboot initiated by {}", msg.author.name);
-    ctx.initiate_cold_resume().await?;
+    if msg.author.id.0 == 106354106196570112 {
+        ctx.send_message("Shutting down", msg.channel_id).await?;
+        gearbot_important!("Reboot initiated by {}", msg.author.name);
+        ctx.initiate_cold_resume().await?;
+    }
     Ok(())
 }

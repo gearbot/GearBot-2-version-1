@@ -19,7 +19,8 @@ pub struct Cache {
     //counters
     guild_count: AtomicU64,
     unique_users: AtomicU64,
-    total_users: AtomicU64, //is this even possible to get accurate across multiple clusters?
+    total_users: AtomicU64,
+    //is this even possible to get accurate across multiple clusters?
     partial_guilds: AtomicU64,
     filling: AtomicBool,
 
@@ -228,7 +229,6 @@ impl Cache {
                 self.guilds.insert(e.id, Arc::new(guild));
                 self.guild_count.fetch_add(1, Ordering::Relaxed);
                 let old = self.partial_guilds.fetch_add(1, Ordering::SeqCst);
-                debug!("partial_guilds: {}", old);
             }
             Event::MemberChunk(chunk) => {
                 match self.get_guild(&chunk.guild_id) {
@@ -248,8 +248,8 @@ impl Cache {
                         }
                         if (chunk.chunk_count - 1) == chunk.chunk_index {
                             debug!(
-                                "Finished processing all chunks for {} ({})",
-                                guild.name, guild.id.0
+                                "Finished processing all chunks for {} ({}). {:?} guilds to go!",
+                                guild.name, guild.id.0, self.partial_guilds
                             );
                             let old = self.partial_guilds.fetch_sub(1, Ordering::SeqCst);
                             // if we where at 1 we are now at 0
@@ -327,14 +327,14 @@ impl Cache {
 
     pub async fn prepare_cold_resume(&self, redis_pool: &ConnectionPool, handlers: usize) {
         //clear global caches so arcs can be cleaned up
-        self.users.clear();
         self.guild_channels.clear();
-        debug!("we have {:?} guilds to dump to redis", self.guild_count);
         //let's go to hyperspeed
         let mut tasks = vec![];
+        let mut user_tasks = vec![];
 
         //but not yet, collect their work first before they start sabotaging each other again >.>
         let mut work_orders: Vec<Vec<GuildId>> = vec![vec![]; handlers];
+        let mut user_work_orders: Vec<Vec<UserId>> = vec![vec![]; handlers];
 
         let mut count = 0;
         for guard in self.guilds.iter() {
@@ -342,38 +342,253 @@ impl Cache {
             count += 1;
         }
 
+        debug!("Freezing {:?} guilds", self.guild_count);
         for i in 0..handlers {
-            tasks.push(self._prepare_cold_resume(redis_pool, work_orders[i].clone()))
+            tasks.push(self._prepare_cold_resume_guild(redis_pool, work_orders[i].clone(), i));
         }
 
         future::join_all(tasks).await;
+
+        count = 0;
+        let user_chunks = (self.unique_users.load(Ordering::Relaxed) / 100000 + 1) as usize;
+        let mut user_work_orders: Vec<Vec<UserId>> = vec![vec![]; user_chunks];
+        for guard in self.users.iter() {
+            user_work_orders[count % user_chunks].push(guard.key().clone());
+            count += 1;
+        }
+        debug!("Freezing {:?} users", self.unique_users);
+        redis_pool.get().await.set
+        for i in 0..user_chunks {
+            user_tasks.push(self._prepare_cold_resume_user(redis_pool, user_work_orders[i].clone(), i));
+        }
+
+        future::join_all(user_tasks).await;
+        self.users.clear();
     }
 
-    async fn _prepare_cold_resume(&self, redis_pool: &ConnectionPool, todo: Vec<GuildId>) {
+    async fn _prepare_cold_resume_guild(
+        &self,
+        redis_pool: &ConnectionPool,
+        todo: Vec<GuildId>,
+        index: usize,
+    ) {
+        debug!(
+            "Guild dumper {} started freezing {} guilds",
+            index,
+            todo.len()
+        );
         let mut connection = redis_pool.get().await;
-
         for key in todo {
-            let guild = self.guilds.remove_take(&key).unwrap();
-            let data = serde_json::to_string(guild.value()).unwrap();
-            if let Err(e) = connection
-                .set_and_expire_seconds(format!("cb_guild_{}", guild.id.0), data, 180)
-                .await
-            {
-                error!(
-                    "Something went wrong dumping guild {} to redis: {}",
-                    guild.id.0, e
-                );
-            }
+            let data = {
+                let g = self.guilds.remove_take(&key).unwrap();
+                let mut csg = ColdStorageGuild {
+                    id: g.id,
+                    name: g.name.clone(),
+                    icon: g.icon.clone(),
+                    splash: g.splash.clone(),
+                    discovery_splash: g.discovery_splash.clone(),
+                    owner_id: g.owner_id,
+                    region: g.region.clone(),
+                    afk_channel_id: g.afk_channel_id,
+                    afk_timeout: g.afk_timeout,
+                    verification_level: g.verification_level,
+                    default_message_notifications: g.default_message_notifications,
+                    roles: vec![],
+                    emoji: vec![],
+                    features: g.features.clone(),
+                    members: vec![],
+                    channels: vec![],
+                    max_presences: g.max_presences,
+                    max_members: g.max_members,
+                    description: g.description.clone(),
+                    banner: g.banner.clone(),
+                    premium_tier: g.premium_tier,
+                    premium_subscription_count: g.premium_subscription_count,
+                    preferred_locale: g.preferred_locale.clone(),
+                };
+                for role in &g.roles {
+                    csg.roles.push(CachedRole {
+                        id: role.id,
+                        name: role.name.clone(),
+                        color: role.color,
+                        hoisted: role.hoisted,
+                        position: role.position,
+                        permissions: role.permissions,
+                        managed: role.managed,
+                        mentionable: role.mentionable,
+                    })
+                }
+                g.roles.clear();
+
+                for emoji in &g.emoji {
+                    csg.emoji.push(emoji.as_ref().clone());
+                }
+                for member in &g.members {
+                    csg.members.push({
+                        ColdStorageMember {
+                            id: member.user.id,
+                            nickname: member.nickname.clone(),
+                            roles: member.roles.clone(),
+                            joined_at: member.joined_at.clone(),
+                            boosting_since: member.joined_at.clone(),
+                            server_deafened: member.server_deafened,
+                            server_muted: member.server_muted,
+                        }
+                    });
+                }
+                g.members.clear();
+
+                for channel in &g.channels {
+                    csg.channels.push(match channel.as_ref() {
+                        CachedChannel::TextChannel {
+                            id,
+                            guild_id,
+                            position,
+                            permission_overrides,
+                            name,
+                            topic,
+                            nsfw,
+                            slowmode,
+                            parent_id,
+                        } => CachedChannel::TextChannel {
+                            id: id.clone(),
+                            guild_id: guild_id.clone(),
+                            position: position.clone(),
+                            permission_overrides: permission_overrides.clone(),
+                            name: name.clone(),
+                            topic: topic.clone(),
+                            nsfw: nsfw.clone(),
+                            slowmode: slowmode.clone(),
+                            parent_id: parent_id.clone(),
+                        },
+                        CachedChannel::DM { id } => CachedChannel::DM { id: id.clone() },
+                        CachedChannel::VoiceChannel {
+                            id,
+                            guild_id,
+                            position,
+                            permission_overrides,
+                            name,
+                            bitrate,
+                            user_limit,
+                            parent_id,
+                        } => CachedChannel::VoiceChannel {
+                            id: id.clone(),
+                            guild_id: guild_id.clone(),
+                            position: position.clone(),
+                            permission_overrides: permission_overrides.clone(),
+                            name: name.clone(),
+                            bitrate: bitrate.clone(),
+                            user_limit: user_limit.clone(),
+                            parent_id: parent_id.clone(),
+                        },
+                        CachedChannel::GroupDM { id } => CachedChannel::GroupDM { id: id.clone() },
+                        CachedChannel::Category {
+                            id,
+                            guild_id,
+                            position,
+                            permission_overrides,
+                            name,
+                        } => CachedChannel::Category {
+                            id: id.clone(),
+                            guild_id: guild_id.clone(),
+                            position: position.clone(),
+                            permission_overrides: permission_overrides.clone(),
+                            name: name.clone(),
+                        },
+                        CachedChannel::AnnouncementsChannel {
+                            id,
+                            guild_id,
+                            position,
+                            permission_overrides,
+                            name,
+                            parent_id,
+                        } => CachedChannel::AnnouncementsChannel {
+                            id: id.clone(),
+                            guild_id: guild_id.clone(),
+                            position: position.clone(),
+                            permission_overrides: permission_overrides.clone(),
+                            name: name.clone(),
+                            parent_id: parent_id.clone(),
+                        },
+                        CachedChannel::StoreChannel {
+                            id,
+                            guild_id,
+                            position,
+                            name,
+                            parent_id,
+                            permission_overrides,
+                        } => CachedChannel::StoreChannel {
+                            id: id.clone(),
+                            guild_id: guild_id.clone(),
+                            position: position.clone(),
+                            name: name.clone(),
+                            parent_id: parent_id.clone(),
+                            permission_overrides: permission_overrides.clone(),
+                        },
+                    });
+                }
+
+                csg
+            };
+            let serialized = serde_json::to_string(&data).unwrap();
+            connection
+                .set_and_expire_seconds(format!("cb_guild_{}", data.id.0), serialized, 180)
+                .await;
+            connection
+                .rpush(
+                    "cb_cluster_{}_guild_list",
+                    self.cluster_id,
+                    data.id.0.to_string(),
+                )
+                .await;
         }
+    }
+
+    async fn _prepare_cold_resume_user(
+        &self,
+        redis_pool: &ConnectionPool,
+        todo: Vec<UserId>,
+        index: usize,
+    ) {
+        debug!(
+            "Guild dumper {} started freezing {} users",
+            index,
+            todo.len()
+        );
+        let mut connection = redis_pool.get().await;
+        let mut chunk = Vec::with_capacity(todo.len());
+        for key in todo {
+            let user = self.users.remove_take(&key).unwrap();
+            chunk.push(CachedUser {
+                id: user.id.clone(),
+                username: user.username.clone(),
+                discriminator: user.discriminator.clone(),
+                avatar: user.avatar.clone(),
+                bot_user: user.bot_user,
+                system_user: user.system_user,
+                public_flags: user.public_flags.clone(),
+            });
+        }
+        let serialized = serde_json::to_string(&chunk).unwrap();
+        connection
+            .set_and_expire_seconds(
+                format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index),
+                serialized,
+                180,
+            )
+            .await;
     }
 }
 
 mod structs;
+
 pub use structs::*;
 
 use crate::utils::Error;
 use chrono::format::Numeric::Ordinal;
 use darkredis::ConnectionPool;
+use std::any::Any;
+use std::borrow::Borrow;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use twilight::gateway::Event;
