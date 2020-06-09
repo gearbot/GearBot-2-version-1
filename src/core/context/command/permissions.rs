@@ -1,10 +1,10 @@
-use super::CommandContext;
-
 use twilight::model::{
-    channel::{permission_overwrite::PermissionOverwriteType, GuildChannel},
+    channel::permission_overwrite::PermissionOverwriteType,
     guild::Permissions,
     id::{ChannelId, UserId},
 };
+
+use super::CommandContext;
 
 impl CommandContext {
     pub async fn bot_has_guild_permissions(&self, permissions: Permissions) -> bool {

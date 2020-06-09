@@ -1,15 +1,23 @@
 use std::str::FromStr;
+use std::time::Duration;
 
 use aes_gcm::aead::generic_array::{typenum::U32, GenericArray};
+use clap::{App, Arg};
+use darkredis::ConnectionPool;
 use deadpool_postgres::{Manager, Pool};
-use git_version::git_version;
 use log::{debug, info};
+use tokio::runtime::Runtime;
 use tokio_postgres::{Config, NoTls};
 use twilight::http::{
     request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient,
 };
 
-use crate::core::{gearbot, logging, BotConfig, ColdRebootData};
+use git_version::git_version;
+use translation::load_translations;
+use utils::Error;
+
+use crate::core::gearbot::GearBot;
+use crate::core::{logging, BotConfig};
 use crate::database::migrations::embedded;
 
 mod commands;
@@ -17,16 +25,8 @@ mod core;
 mod database;
 mod parser;
 
-mod utils;
-use clap::{App, Arg};
-use darkredis::{CommandList, ConnectionPool, Value};
-use utils::Error;
-
 mod translation;
-use crate::core::gearbot::GearBot;
-use std::time::Duration;
-use tokio::runtime::Runtime;
-use translation::load_translations;
+mod utils;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const GIT_VERSION: &str = git_version!();

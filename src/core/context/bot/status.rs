@@ -1,7 +1,8 @@
-use crate::core::BotContext;
-use crate::utils::Error;
 use twilight::model::gateway::payload::UpdateStatus;
 use twilight::model::gateway::presence::{Activity, ActivityType, Status};
+
+use crate::core::BotContext;
+use crate::utils::Error;
 
 impl BotContext {
     pub async fn set_cluster_activity(

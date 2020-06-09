@@ -1,10 +1,11 @@
-use super::CommandContext;
-use crate::Error;
-
 use twilight::model::{
     channel::{embed::Embed, Message},
     id::{ChannelId, MessageId},
 };
+
+use crate::Error;
+
+use super::CommandContext;
 
 impl CommandContext {
     pub async fn send_message(

@@ -1,8 +1,9 @@
-use crate::utils::Error;
 use deadpool_postgres::Pool;
 use postgres_types::Type;
 use twilight::model::channel::message::MessageType;
 use twilight::model::channel::{Attachment, Message};
+
+use crate::utils::Error;
 
 pub async fn insert_message(pool: &Pool, content: Vec<u8>, msg: &Message) -> Result<(), Error> {
     let client = pool.get().await?;

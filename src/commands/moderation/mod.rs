@@ -1,3 +1,3 @@
-mod userinfo;
-
 pub use userinfo::userinfo;
+
+mod userinfo;

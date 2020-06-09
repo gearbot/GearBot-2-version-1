@@ -1,12 +1,12 @@
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use log::debug;
 use twilight::gateway::Event;
 
-use crate::core::{BotContext, CachedGuild};
+use crate::core::BotContext;
 use crate::parser::Parser;
 use crate::utils::Error;
-use std::sync::atomic::Ordering;
 
 pub async fn handle_event<'a>(
     shard_id: u64,

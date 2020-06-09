@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::Instant;
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ColdRebootData {

@@ -1,16 +1,19 @@
-use crate::translation::{GearBotStrings, GuildTranslator, DEFAULT_LANG};
-use crate::Error;
-
-use dashmap::ElementGuard;
-use fluent_bundle::{FluentArgs, FluentValue};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::core::context::bot::BotStats;
-use crate::core::{BotContext, CachedGuild, GuildConfig};
+use dashmap::ElementGuard;
+use fluent_bundle::{FluentArgs, FluentValue};
 use twilight::gateway::shard::Information;
-use twilight::model::channel::Message;
 use twilight::model::{id::GuildId, user::CurrentUser};
+
+pub use command_message::CommandMessage;
+
+use crate::core::cache::CachedGuild;
+use crate::core::context::bot::BotStats;
+use crate::core::{BotContext, GuildConfig};
+use crate::translation::{GearBotStrings, GuildTranslator, DEFAULT_LANG};
+use crate::utils::CommandError;
+use crate::Error;
 
 /// The guild context that is returned inside commands that is specific to each guild, with things like the config,
 /// language, etc, set and usable behind wrapper methods for simplicity.
@@ -97,5 +100,3 @@ mod command_message;
 mod messaging;
 mod object_fetcher;
 mod permissions;
-use crate::utils::{CommandError, ParseError};
-pub use command_message::CommandMessage;

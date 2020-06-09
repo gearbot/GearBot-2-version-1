@@ -1,18 +1,16 @@
-use super::CommandContext;
-use crate::Error;
-
 use std::sync::Arc;
 
-use crate::core::cache::CachedChannel;
-use crate::core::{CachedMember, CachedRole, CachedUser};
-use crate::utils::CommandError;
-use twilight::cache::twilight_cache_inmemory::model as cache_model;
 use twilight::model::{
-    channel::GuildChannel,
-    guild::{Ban, Role},
+    guild::Ban,
     id::{ChannelId, RoleId, UserId},
-    user::User,
 };
+
+use crate::core::cache::CachedChannel;
+use crate::core::cache::{CachedMember, CachedRole, CachedUser};
+use crate::utils::CommandError;
+use crate::Error;
+
+use super::CommandContext;
 
 impl CommandContext {
     pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, Error> {

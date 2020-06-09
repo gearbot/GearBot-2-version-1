@@ -1,8 +1,9 @@
-use super::{get_true, is_default, is_true};
 use serde::{Deserialize, Serialize};
 use twilight::model::channel::permission_overwrite::PermissionOverwrite;
-use twilight::model::channel::{Channel, ChannelType, GuildChannel};
+use twilight::model::channel::{ChannelType, GuildChannel};
 use twilight::model::id::{ChannelId, GuildId};
+
+use super::is_default;
 
 const NO_PERMISSIONS: &[PermissionOverwrite] = &[];
 #[derive(Debug, Serialize, Deserialize)]
@@ -204,7 +205,7 @@ impl CachedChannel {
 }
 
 impl CachedChannel {
-    pub fn from(channel: GuildChannel, guild_id: GuildId) -> Self {
+    pub fn from(channel: GuildChannel, guild_id: Option<GuildId>) -> Self {
         let (
             kind,
             id,
@@ -262,7 +263,7 @@ impl CachedChannel {
         match kind {
             ChannelType::GuildText => CachedChannel::TextChannel {
                 id,
-                guild_id,
+                guild_id: guild_id.unwrap(),
                 position,
                 permission_overrides,
                 name,
@@ -274,7 +275,7 @@ impl CachedChannel {
             ChannelType::Private => CachedChannel::DM { id },
             ChannelType::GuildVoice => CachedChannel::VoiceChannel {
                 id,
-                guild_id,
+                guild_id: guild_id.unwrap(),
                 position,
                 permission_overrides,
                 name,
@@ -285,14 +286,14 @@ impl CachedChannel {
             ChannelType::Group => CachedChannel::GroupDM { id },
             ChannelType::GuildCategory => CachedChannel::Category {
                 id,
-                guild_id,
+                guild_id: guild_id.unwrap(),
                 position,
                 permission_overrides,
                 name,
             },
             ChannelType::GuildNews => CachedChannel::AnnouncementsChannel {
                 id,
-                guild_id,
+                guild_id: guild_id.unwrap(),
                 position,
                 permission_overrides,
                 name,
@@ -300,7 +301,7 @@ impl CachedChannel {
             },
             ChannelType::GuildStore => CachedChannel::StoreChannel {
                 id,
-                guild_id,
+                guild_id: guild_id.unwrap(),
                 position,
                 name,
                 parent_id,

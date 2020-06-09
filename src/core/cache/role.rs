@@ -1,9 +1,11 @@
-use super::{get_true, is_default, is_true};
+use std::sync::Arc;
+
 use dashmap::ElementGuard;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use twilight::model::guild::{Permissions, Role};
 use twilight::model::id::RoleId;
+
+use super::is_default;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CachedRole {

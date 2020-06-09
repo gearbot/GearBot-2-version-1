@@ -1,19 +1,20 @@
-use crate::core::{Cache, GuildConfig};
-use crate::translation::Translations;
-use crate::utils::LogType;
-use crate::EncryptionKey;
-
 use aes_gcm::aead::generic_array::GenericArray;
 use chrono::{DateTime, Utc};
 use darkredis::ConnectionPool;
 use dashmap::DashMap;
 use deadpool_postgres::Pool;
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
-
-use twilight::cache::InMemoryCache;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
 use twilight::model::{channel::Message, id::GuildId, user::CurrentUser};
+
+pub use stats::BotStats;
+
+use crate::core::cache::Cache;
+use crate::core::GuildConfig;
+use crate::translation::Translations;
+use crate::utils::LogType;
+use crate::EncryptionKey;
 
 pub struct BotContext {
     pub cache: Cache,
@@ -88,8 +89,6 @@ mod cache;
 mod database;
 mod logpump;
 
-mod stats;
-pub use stats::BotStats;
-
 mod cold_resume;
+mod stats;
 mod status;

@@ -1,7 +1,6 @@
 use crate::core::{CommandContext, GuildConfig};
 use crate::parser::Parser;
 use crate::CommandResult;
-use twilight::model::channel::Message;
 
 pub async fn get_config(ctx: CommandContext, _: Parser) -> CommandResult {
     let stringified_config = serde_json::to_string(ctx.get_config()?)?;

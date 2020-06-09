@@ -1,15 +1,13 @@
+use chrono::{DateTime, Utc};
+use twilight::builders::embed::EmbedBuilder;
+use twilight::model::guild::Permissions;
+use twilight::model::user::UserFlags;
+
 use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::utils::Emoji;
 use crate::utils::{CommandError, Error};
 use crate::{utils, CommandResult};
-
-use chrono::{DateTime, Utc};
-
-use twilight::builders::embed::EmbedBuilder;
-use twilight::model::channel::Message;
-use twilight::model::guild::Permissions;
-use twilight::model::user::UserFlags;
 
 const USER_INFO_COLOR: u32 = 0x00_cea2;
 

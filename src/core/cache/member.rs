@@ -1,10 +1,13 @@
-use super::{get_true, is_default, is_true};
-use crate::core::{Cache, CachedUser};
+use std::sync::Arc;
+
 use dashmap::ElementGuard;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use twilight::model::guild::Member;
 use twilight::model::id::{RoleId, UserId};
+
+use crate::core::cache::{Cache, CachedUser};
+
+use super::{get_true, is_default, is_true};
 
 #[derive(Debug)]
 pub struct CachedMember {

@@ -1,7 +1,5 @@
 use std::time::{Duration, Instant};
 
-use twilight::model::channel::Message;
-
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
 use crate::parser::Parser;

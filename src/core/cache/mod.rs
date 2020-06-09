@@ -1,9 +1,23 @@
-use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
+
+use darkredis::ConnectionPool;
 use dashmap::DashMap;
 use futures::future;
-use log::{debug, error, info};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use log::{debug, info};
+use twilight::gateway::Event;
 use twilight::model::id::{ChannelId, EmojiId, GuildId, UserId};
+use twilight::model::user::User;
+
+pub use channel::CachedChannel;
+pub use emoji::CachedEmoji;
+pub use guild::{CachedGuild, ColdStorageGuild};
+pub use member::{CachedMember, ColdStorageMember};
+pub use role::CachedRole;
+pub use user::CachedUser;
+
+use crate::utils::Error;
+use crate::{gearbot_error, gearbot_important, gearbot_warn};
 
 pub struct Cache {
     //cluster info
@@ -407,42 +421,17 @@ impl Cache {
     }
 }
 
-use crate::utils::Error;
-use chrono::format::Numeric::Ordinal;
-use darkredis::ConnectionPool;
-use std::any::Any;
-use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use twilight::gateway::Event;
-use twilight::model::channel::Channel::Guild;
-use twilight::model::channel::ChannelType;
-use twilight::model::channel::GuildChannel;
-use twilight::model::user::User;
-
 mod guild;
-
-pub use guild::{CachedGuild, ColdStorageGuild};
 
 mod role;
 
-pub use role::CachedRole;
-
 mod emoji;
-
-pub use emoji::CachedEmoji;
 
 mod member;
 
-pub use member::{CachedMember, ColdStorageMember};
-
 mod channel;
 
-pub use channel::CachedChannel;
-
 mod user;
-
-pub use user::CachedUser;
 
 fn update_user_with_user(old: Arc<CachedUser>, new: Arc<CachedUser>) -> CachedUser {
     let public_flags = match new.public_flags {

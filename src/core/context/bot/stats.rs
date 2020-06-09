@@ -1,8 +1,11 @@
-use crate::core::BotContext;
-use chrono::{DateTime, Utc};
-use git_version::git_version;
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+use chrono::{DateTime, Utc};
 use twilight::model::channel::Message;
+
+use git_version::git_version;
+
+use crate::core::BotContext;
 
 #[derive(Debug)]
 pub struct BotStats {

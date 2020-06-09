@@ -1,8 +1,3 @@
-use crate::core::{BotContext, GuildConfig};
-use crate::database::cache::{get_channel_for_message, get_full_message};
-use crate::database::guild::{get_guild_config, set_guild_config};
-use crate::utils::{Error, FetchError};
-use crate::{database, EncryptionKey};
 use aes_gcm::aead::generic_array::GenericArray;
 use aes_gcm::{
     aead::{Aead, NewAead},
@@ -16,6 +11,12 @@ use serde_json::to_value;
 use twilight::model::channel::message::MessageType;
 use twilight::model::channel::Message;
 use twilight::model::id::{ChannelId, GuildId, MessageId, UserId};
+
+use crate::core::{BotContext, GuildConfig};
+use crate::database::cache::{get_channel_for_message, get_full_message};
+use crate::database::guild::{get_guild_config, set_guild_config};
+use crate::utils::{Error, FetchError};
+use crate::{database, EncryptionKey};
 
 #[derive(Debug)]
 pub struct UserMessage {

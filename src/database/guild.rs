@@ -1,8 +1,9 @@
-use crate::core::{BotContext, GuildConfig};
-use crate::utils::Error;
 use log::info;
 use postgres_types::Type;
 use serde_json::Value;
+
+use crate::core::{BotContext, GuildConfig};
+use crate::utils::Error;
 
 pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<GuildConfig, Error> {
     let client = ctx.pool.get().await?;

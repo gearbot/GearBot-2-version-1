@@ -1,2 +1,3 @@
-mod config;
 pub use config::*;
+
+mod config;

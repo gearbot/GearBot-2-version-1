@@ -1,22 +1,16 @@
 use std::sync::Arc;
 
-use log::{debug, info};
+use log::debug;
+use twilight::model::channel::Message;
 use twilight::model::gateway::payload::MessageCreate;
+use twilight::model::id::{ChannelId, GuildId, UserId};
 
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
-use crate::core::{
-    BotContext, CachedMember, CachedUser, CommandContext, CommandMessage, GuildConfig,
-};
+use crate::core::cache::{CachedMember, CachedUser};
+use crate::core::{BotContext, CommandContext, CommandMessage};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
-
-use dashmap::ElementGuard;
-use twilight::model::channel::GuildChannel;
-use twilight::model::channel::Message;
-use twilight::model::guild::Permissions;
-use twilight::model::id::{ChannelId, GuildId, MessageId, UserId};
-use twilight::model::user::User;
 
 #[derive(Clone)]
 pub struct Parser {

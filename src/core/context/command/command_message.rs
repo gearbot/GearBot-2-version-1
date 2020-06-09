@@ -1,11 +1,10 @@
-use crate::core::{CachedChannel, CachedMember, CachedUser};
 use std::sync::Arc;
+
+use crate::core::cache::{CachedChannel, CachedMember, CachedUser};
 use twilight::model::channel::embed::Embed;
 use twilight::model::channel::message::{MessageFlags, MessageType};
-use twilight::model::channel::{Attachment, ChannelMention};
-use twilight::model::guild::Role;
+use twilight::model::channel::Attachment;
 use twilight::model::id::MessageId;
-use twilight::model::user::User;
 
 pub struct CommandMessage {
     pub id: MessageId,

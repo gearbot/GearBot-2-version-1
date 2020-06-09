@@ -1,7 +1,8 @@
-use super::{get_true, is_default, is_true};
 use serde::{Deserialize, Serialize};
 use twilight::model::id::UserId;
 use twilight::model::user::{User, UserFlags};
+
+use super::is_default;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CachedUser {

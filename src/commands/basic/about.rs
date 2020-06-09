@@ -3,7 +3,6 @@ use std::sync::atomic::Ordering;
 
 use chrono::Utc;
 use twilight::builders::embed::EmbedBuilder;
-use twilight::model::channel::Message;
 
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::{BotStats, CommandContext};

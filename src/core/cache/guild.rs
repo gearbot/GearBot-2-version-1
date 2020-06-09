@@ -1,17 +1,18 @@
-use crate::core::{Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole, ColdStorageMember};
+use std::sync::atomic::{AtomicBool, AtomicU64};
+use std::sync::Arc;
+
 use dashmap::{DashMap, ElementGuard};
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Arc;
 use twilight::model::guild::{
     DefaultMessageNotificationLevel, Guild, PremiumTier, VerificationLevel,
 };
 use twilight::model::id::{ChannelId, GuildId, RoleId, UserId};
 
-use super::{get_true, is_default, is_true};
-use std::sync::atomic::Ordering::AcqRel;
-use twilight::model::channel::GuildChannel;
-use twilight::model::gateway::payload::GuildCreate;
+use crate::core::cache::{
+    Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole, ColdStorageMember,
+};
+
+use super::is_default;
 
 #[derive(Debug)]
 pub struct CachedGuild {
@@ -91,9 +92,10 @@ impl From<Guild> for CachedGuild {
 
         //channels
         for (channel_id, channel) in guild.channels {
-            cached_guild
-                .channels
-                .insert(channel_id, Arc::new(CachedChannel::from(channel, guild.id)));
+            cached_guild.channels.insert(
+                channel_id,
+                Arc::new(CachedChannel::from(channel, Some(guild.id))),
+            );
         }
 
         //emoji

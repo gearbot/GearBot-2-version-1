@@ -1,9 +1,10 @@
+use std::sync::Arc;
+
+use twilight::model::id::UserId;
+
 use crate::core::cache::CachedUser;
 use crate::core::BotContext;
 use crate::utils::{Error, ParseError};
-use std::sync::Arc;
-use twilight::model::id::UserId;
-use twilight::model::user::User;
 
 impl BotContext {
     pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, Error> {

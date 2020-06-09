@@ -2,7 +2,6 @@ use std::{error, fmt, io};
 
 use deadpool_postgres::PoolError;
 use serde::export::Formatter;
-
 use twilight::cache::twilight_cache_inmemory;
 use twilight::gateway::cluster;
 use twilight::http;

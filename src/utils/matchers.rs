@@ -1,7 +1,8 @@
-use lazy_static::lazy_static;
 use log::debug;
 use regex::{Match, Regex, RegexBuilder};
 use url::{Host, Url};
+
+use lazy_static::lazy_static;
 
 const KNOWN_INVITE_DOMAINS: [&str; 6] = [
     "discordapp.com",

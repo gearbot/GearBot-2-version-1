@@ -1,6 +1,7 @@
+use twilight::model::gateway::presence::{ActivityType, Status};
+
 use crate::core::CommandContext;
 use crate::utils::Error;
-use twilight::model::gateway::presence::{ActivityType, Status};
 
 impl CommandContext {
     pub async fn set_cluster_activity(

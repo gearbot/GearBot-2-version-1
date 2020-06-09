@@ -1,21 +1,22 @@
+use std::collections::HashMap;
+
+use log::info;
+use twilight::model::gateway::presence::{ActivityType, Status};
+
 use crate::core::{BotContext, ColdRebootData};
 use crate::gearbot_important;
 use crate::utils::Error;
-use log::{debug, info};
-use std::collections::HashMap;
-use std::time::Duration;
-use twilight::model::gateway::presence::{ActivityType, Status};
 
 impl BotContext {
     pub async fn initiate_cold_resume(&self) -> Result<(), Error> {
         // preparing for update rollout, set status to atleast give some indication to users
-        // gearbot_important!("Preparing for cold resume!");
-        // self.set_cluster_activity(
-        //     Status::Idle,
-        //     ActivityType::Watching,
-        //     String::from("the new update being deployed. Replies might be delayed a bit"),
-        // )
-        // .await?;
+        gearbot_important!("Preparing for cold resume!");
+        self.set_cluster_activity(
+            Status::Idle,
+            ActivityType::Watching,
+            String::from("the new update being deployed. Replies might be delayed a bit"),
+        )
+        .await?;
 
         let start = std::time::Instant::now();
 

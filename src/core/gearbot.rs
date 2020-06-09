@@ -1,33 +1,28 @@
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::error;
 use std::process;
 use std::sync::Arc;
+use std::time::Instant;
 
 use ctrlc;
+use darkredis::ConnectionPool;
 use deadpool_postgres::Pool;
 use log::debug;
 use tokio::{self, stream::StreamExt};
-use twilight::cache::twilight_cache_inmemory::config::{
-    EventType as CacheEventType, InMemoryConfigBuilder,
-};
-
-use twilight::cache::InMemoryCache;
 use twilight::gateway::cluster::config::ShardScheme;
+use twilight::gateway::shard::ResumeSession;
 use twilight::gateway::{Cluster, ClusterConfig, Event};
 use twilight::http::Client as HttpClient;
 use twilight::model::gateway::GatewayIntents;
+use twilight::model::user::CurrentUser;
 
+use crate::core::cache::Cache;
 use crate::core::handlers::{commands, general, modlog};
-use crate::core::{BotConfig, BotContext, Cache, ColdRebootData};
+use crate::core::{BotConfig, BotContext, ColdRebootData};
 use crate::translation::Translations;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info};
-use darkredis::ConnectionPool;
-use log::info;
-use std::collections::HashMap;
-use std::time::Instant;
-use twilight::gateway::shard::ResumeSession;
-use twilight::model::user::CurrentUser;
 
 pub struct GearBot;
 
@@ -88,10 +83,10 @@ impl GearBot {
                     for (id, data) in cold_cache.resume_data {
                         map.insert(
                             id,
-                            (ResumeSession {
+                            ResumeSession {
                                 session_id: data.0,
                                 sequence: data.1,
-                            }),
+                            },
                         );
                     }
                     let start = Instant::now();

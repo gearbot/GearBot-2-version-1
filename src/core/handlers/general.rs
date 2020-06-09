@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use log::debug;
 use twilight::gateway::Event;
-use twilight::model::gateway::{
-    payload::UpdateStatus,
-    presence::{Activity, ActivityType, Status},
-};
+use twilight::model::gateway::presence::{Activity, ActivityType, Status};
 
 use crate::core::BotContext;
 use crate::utils::Error;

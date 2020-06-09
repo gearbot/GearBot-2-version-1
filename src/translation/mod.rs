@@ -52,11 +52,11 @@ impl Translations {
 
     /// Retreives a string key to use when sending a message to chat that *does not* require arguments and can be sent as fetched with no
     /// further modifications.
-    pub fn get_text_plain<'a>(
-        &'a self,
+    pub fn get_text_plain(
+        &self,
         lang_key: &LanguageIdentifier,
         string_key: GearBotStrings,
-    ) -> Cow<'a, str> {
+    ) -> Cow<str> {
         // TODO: See how well this will work out in practice with unwrapping
         let lang_bundle = self.0.get(lang_key).unwrap();
 
