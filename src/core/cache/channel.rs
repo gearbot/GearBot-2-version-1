@@ -1,180 +1,10 @@
-use dashmap::{DashMap, ElementGuard};
+use super::{get_true, is_default, is_true};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::atomic::AtomicU64;
-use std::sync::Arc;
-use twilight::model::channel::permission_overwrite::{
-    PermissionOverwrite, PermissionOverwriteType,
-};
-use twilight::model::channel::Channel;
-use twilight::model::guild::{
-    DefaultMessageNotificationLevel, Permissions, PremiumTier, VerificationLevel,
-};
-use twilight::model::id::{ChannelId, EmojiId, GuildId, RoleId, UserId};
-use twilight::model::user::UserFlags;
+use twilight::model::channel::permission_overwrite::PermissionOverwrite;
+use twilight::model::channel::{Channel, ChannelType, GuildChannel};
+use twilight::model::id::{ChannelId, GuildId};
 
 const NO_PERMISSIONS: &[PermissionOverwrite] = &[];
-use serde;
-
-#[derive(Debug)]
-pub struct CachedGuild {
-    // api fields
-    pub id: GuildId,
-    pub name: String,
-    pub icon: Option<String>,
-    pub splash: Option<String>,
-    pub discovery_splash: Option<String>,
-    pub owner_id: UserId,
-    pub region: String,
-    //can technically be an enum but that will fail as soon as they add a new region
-    pub afk_channel_id: Option<ChannelId>,
-    pub afk_timeout: u64,
-    pub verification_level: VerificationLevel,
-    pub default_message_notifications: DefaultMessageNotificationLevel,
-    pub roles: DashMap<RoleId, CachedRole>,
-    pub emoji: Vec<Arc<CachedEmoji>>,
-    pub features: Vec<String>,
-    //same as region, will cause issues when they add one
-    pub unavailable: bool,
-    pub members: DashMap<UserId, Arc<CachedMember>>,
-    pub channels: DashMap<ChannelId, Arc<CachedChannel>>,
-    //use our own version, easier to work with then twilight's enum
-    pub max_presences: Option<u64>,
-    //defaults to 25000 if null in the guild create
-    pub max_members: Option<u64>,
-    // should always be present in guild create, but option just in case
-    pub description: Option<String>,
-    pub banner: Option<String>,
-    pub premium_tier: PremiumTier,
-    pub premium_subscription_count: u64,
-    pub preferred_locale: String,
-
-    //own fields
-    pub complete: bool,
-    pub member_count: AtomicU64, //own field because we do not rely on the guild create info for this but rather the
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ColdStorageGuild {
-    #[serde(rename = "a")]
-    pub id: GuildId,
-    #[serde(rename = "b")]
-    pub name: String,
-    #[serde(rename = "c", default, skip_serializing_if = "is_default")]
-    pub icon: Option<String>,
-    #[serde(rename = "d", default, skip_serializing_if = "is_default")]
-    pub splash: Option<String>,
-    #[serde(rename = "e", default, skip_serializing_if = "is_default")]
-    pub discovery_splash: Option<String>,
-    #[serde(rename = "f")]
-    pub owner_id: UserId,
-    #[serde(rename = "g", default, skip_serializing_if = "is_default")]
-    pub region: String,
-    //can technically be an enum but that will fail as soon as they add a new region
-    #[serde(rename = "h", default, skip_serializing_if = "is_default")]
-    pub afk_channel_id: Option<ChannelId>,
-    #[serde(rename = "i", default, skip_serializing_if = "is_default")]
-    pub afk_timeout: u64,
-    #[serde(rename = "j")]
-    pub verification_level: VerificationLevel,
-    #[serde(rename = "k")]
-    pub default_message_notifications: DefaultMessageNotificationLevel,
-    #[serde(rename = "l")]
-    pub roles: Vec<CachedRole>,
-    #[serde(rename = "m")]
-    pub emoji: Vec<CachedEmoji>,
-    #[serde(rename = "n", default, skip_serializing_if = "is_default")]
-    pub features: Vec<String>,
-    #[serde(rename = "o")]
-    pub members: Vec<ColdStorageMember>,
-    #[serde(rename = "p")]
-    pub channels: Vec<CachedChannel>,
-    #[serde(rename = "q", default, skip_serializing_if = "is_default")]
-    pub max_presences: Option<u64>,
-    #[serde(rename = "r", default, skip_serializing_if = "is_default")]
-    pub max_members: Option<u64>,
-    #[serde(rename = "s", default, skip_serializing_if = "is_default")]
-    pub description: Option<String>,
-    #[serde(rename = "t", default, skip_serializing_if = "is_default")]
-    pub banner: Option<String>,
-    #[serde(rename = "u", default, skip_serializing_if = "is_default")]
-    pub premium_tier: PremiumTier,
-    #[serde(rename = "v", default, skip_serializing_if = "is_default")]
-    pub premium_subscription_count: u64,
-    #[serde(rename = "w", default, skip_serializing_if = "is_default")]
-    pub preferred_locale: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CachedRole {
-    #[serde(rename = "a")]
-    pub id: RoleId,
-    #[serde(rename = "b")]
-    pub name: String,
-    #[serde(rename = "c", default, skip_serializing_if = "is_default")]
-    pub color: u32,
-    #[serde(rename = "d", default, skip_serializing_if = "is_default")]
-    pub hoisted: bool,
-    #[serde(rename = "e", default, skip_serializing_if = "is_default")]
-    pub position: i64,
-    #[serde(rename = "f")]
-    pub permissions: Permissions,
-    #[serde(rename = "g", default, skip_serializing_if = "is_default")]
-    pub managed: bool,
-    #[serde(rename = "h", default, skip_serializing_if = "is_default")]
-    pub mentionable: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CachedEmoji {
-    #[serde(rename = "a")]
-    pub id: EmojiId,
-    #[serde(rename = "b")]
-    pub name: String,
-    #[serde(rename = "c", default, skip_serializing_if = "is_default")]
-    pub roles: Vec<RoleId>,
-    #[serde(rename = "d", default, skip_serializing_if = "is_default")]
-    pub created_by: Option<UserId>,
-    #[serde(rename = "i", default, skip_serializing_if = "is_default")]
-    pub requires_colons: bool,
-    #[serde(rename = "j", default, skip_serializing_if = "is_default")]
-    pub managed: bool,
-    #[serde(rename = "k", default, skip_serializing_if = "is_default")]
-    pub animated: bool,
-    #[serde(rename = "l", default = "get_true", skip_serializing_if = "is_true")]
-    pub available: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ColdStorageMember {
-    #[serde(rename = "i", default, skip_serializing_if = "is_default")]
-    pub id: UserId,
-    #[serde(rename = "n", default, skip_serializing_if = "is_default")]
-    pub nickname: Option<String>,
-    #[serde(rename = "r", default, skip_serializing_if = "is_default")]
-    pub roles: Vec<RoleId>,
-    #[serde(rename = "j", default, skip_serializing_if = "is_default")]
-    pub joined_at: Option<String>,
-    #[serde(rename = "b", default, skip_serializing_if = "is_default")]
-    pub boosting_since: Option<String>,
-    #[serde(rename = "d", default, skip_serializing_if = "is_default")]
-    pub server_deafened: bool,
-    #[serde(rename = "m", default, skip_serializing_if = "is_default")]
-    pub server_muted: bool,
-}
-
-#[derive(Debug)]
-pub struct CachedMember {
-    pub user: Arc<CachedUser>,
-    pub nickname: Option<String>,
-    pub roles: Vec<RoleId>,
-    pub joined_at: Option<String>,
-    //TODO: convert to date
-    pub boosting_since: Option<String>,
-    pub server_deafened: bool,
-    pub server_muted: bool,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum CachedChannel {
@@ -373,32 +203,109 @@ impl CachedChannel {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CachedUser {
-    #[serde(rename = "i")]
-    pub id: UserId,
-    #[serde(rename = "u")]
-    pub username: String,
-    #[serde(rename = "d")]
-    pub discriminator: String,
-    #[serde(rename = "a", default, skip_serializing_if = "is_default")]
-    pub avatar: Option<String>,
-    #[serde(rename = "b", default, skip_serializing_if = "is_default")]
-    pub bot_user: bool,
-    #[serde(rename = "s", default, skip_serializing_if = "is_default")]
-    pub system_user: bool,
-    #[serde(rename = "f", default, skip_serializing_if = "is_default")]
-    pub public_flags: Option<UserFlags>,
-}
+impl CachedChannel {
+    pub fn from(channel: GuildChannel, guild_id: GuildId) -> Self {
+        let (
+            kind,
+            id,
+            position,
+            permission_overrides,
+            name,
+            topic,
+            nsfw,
+            slowmode,
+            parent_id,
+            bitrate,
+            user_limit,
+        ) = match channel {
+            GuildChannel::Category(category) => (
+                category.kind,
+                category.id,
+                category.position,
+                category.permission_overwrites,
+                category.name,
+                None,
+                false,
+                None,
+                None,
+                0,
+                None,
+            ),
+            GuildChannel::Text(text) => (
+                text.kind,
+                text.id,
+                text.position,
+                text.permission_overwrites,
+                text.name,
+                text.topic,
+                text.nsfw,
+                text.rate_limit_per_user,
+                text.parent_id,
+                0,
+                None,
+            ),
+            GuildChannel::Voice(voice) => (
+                voice.kind,
+                voice.id,
+                voice.position,
+                voice.permission_overwrites,
+                voice.name,
+                None,
+                false,
+                None,
+                voice.parent_id,
+                voice.bitrate,
+                voice.user_limit,
+            ),
+        };
 
-fn is_default<T: Default + PartialEq>(t: &T) -> bool {
-    t == &T::default()
-}
-
-fn is_true(t: &bool) -> bool {
-    !t
-}
-
-fn get_true() -> bool {
-    true
+        match kind {
+            ChannelType::GuildText => CachedChannel::TextChannel {
+                id,
+                guild_id,
+                position,
+                permission_overrides,
+                name,
+                topic,
+                nsfw,
+                slowmode,
+                parent_id,
+            },
+            ChannelType::Private => CachedChannel::DM { id },
+            ChannelType::GuildVoice => CachedChannel::VoiceChannel {
+                id,
+                guild_id,
+                position,
+                permission_overrides,
+                name,
+                bitrate,
+                user_limit,
+                parent_id,
+            },
+            ChannelType::Group => CachedChannel::GroupDM { id },
+            ChannelType::GuildCategory => CachedChannel::Category {
+                id,
+                guild_id,
+                position,
+                permission_overrides,
+                name,
+            },
+            ChannelType::GuildNews => CachedChannel::AnnouncementsChannel {
+                id,
+                guild_id,
+                position,
+                permission_overrides,
+                name,
+                parent_id,
+            },
+            ChannelType::GuildStore => CachedChannel::StoreChannel {
+                id,
+                guild_id,
+                position,
+                name,
+                parent_id,
+                permission_overrides,
+            },
+        }
+    }
 }

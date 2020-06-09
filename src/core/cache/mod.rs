@@ -67,184 +67,26 @@ impl Cache {
     pub fn update(&self, event: &Event) {
         match event {
             Event::GuildCreate(e) => {
-                let mut guild = CachedGuild {
-                    id: e.id,
-                    name: e.name.clone(),
-                    icon: e.icon.clone(),
-                    splash: e.splash.clone(),
-                    discovery_splash: e.discovery_splash.clone(),
-                    owner_id: e.owner_id,
-                    region: e.region.clone(),
-                    afk_channel_id: e.afk_channel_id,
-                    afk_timeout: e.afk_timeout,
-                    verification_level: e.verification_level,
-                    default_message_notifications: e.default_message_notifications,
-                    roles: DashMap::new(),
-                    emoji: vec![],
-                    features: e.features.clone(),
-                    unavailable: false,
-                    members: DashMap::new(),
-                    channels: DashMap::new(),
-                    max_presences: e.max_presences,
-                    max_members: e.max_members,
-                    description: e.description.clone(),
-                    banner: e.banner.clone(),
-                    premium_tier: e.premium_tier,
-                    premium_subscription_count: e.premium_subscription_count.unwrap_or(0),
-                    preferred_locale: e.preferred_locale.clone(),
-                    complete: false,
-                    member_count: AtomicU64::new(0),
-                };
+                let guild = CachedGuild::from(e.0.clone());
 
-                //handle roles
-                for (role_id, role) in e.roles.clone() {
-                    let role = CachedRole {
-                        id: role_id.clone(),
-                        name: role.name.clone(),
-                        color: role.color,
-                        hoisted: role.hoist,
-                        position: role.position,
-                        permissions: role.permissions,
-                        managed: role.managed,
-                        mentionable: role.mentionable,
-                    };
-                    guild.roles.insert(role_id, role);
+                for channel in &guild.channels {
+                    self.guild_channels
+                        .insert(channel.get_id(), channel.value().clone());
                 }
+                self.channel_count
+                    .fetch_add(guild.channels.len() as u64, Ordering::Relaxed);
 
-                //channels
-                for (channel_id, channel) in e.channels.clone() {
-                    let (
-                        kind,
-                        id,
-                        position,
-                        permission_overrides,
-                        name,
-                        topic,
-                        nsfw,
-                        slowmode,
-                        parent_id,
-                        bitrate,
-                        user_limit,
-                    ) = match channel {
-                        GuildChannel::Category(category) => (
-                            category.kind,
-                            category.id,
-                            category.position,
-                            category.permission_overwrites,
-                            category.name,
-                            None,
-                            false,
-                            None,
-                            None,
-                            0,
-                            None,
-                        ),
-                        GuildChannel::Text(text) => (
-                            text.kind,
-                            text.id,
-                            text.position,
-                            text.permission_overwrites,
-                            text.name,
-                            text.topic,
-                            text.nsfw,
-                            text.rate_limit_per_user,
-                            text.parent_id,
-                            0,
-                            None,
-                        ),
-                        GuildChannel::Voice(voice) => (
-                            voice.kind,
-                            voice.id,
-                            voice.position,
-                            voice.permission_overwrites,
-                            voice.name,
-                            None,
-                            false,
-                            None,
-                            voice.parent_id,
-                            voice.bitrate,
-                            voice.user_limit,
-                        ),
-                    };
-
-                    let channel = match kind {
-                        ChannelType::GuildText => CachedChannel::TextChannel {
-                            id,
-                            guild_id: guild.id,
-                            position,
-                            permission_overrides,
-                            name,
-                            topic,
-                            nsfw,
-                            slowmode,
-                            parent_id,
-                        },
-                        ChannelType::Private => CachedChannel::DM { id },
-                        ChannelType::GuildVoice => CachedChannel::VoiceChannel {
-                            id,
-                            guild_id: guild.id,
-                            position,
-                            permission_overrides,
-                            name,
-                            bitrate,
-                            user_limit,
-                            parent_id,
-                        },
-                        ChannelType::Group => CachedChannel::GroupDM { id },
-                        ChannelType::GuildCategory => CachedChannel::Category {
-                            id,
-                            guild_id: guild.id,
-                            position,
-                            permission_overrides,
-                            name,
-                        },
-                        ChannelType::GuildNews => CachedChannel::AnnouncementsChannel {
-                            id,
-                            guild_id: guild.id,
-                            position,
-                            permission_overrides,
-                            name,
-                            parent_id,
-                        },
-                        ChannelType::GuildStore => CachedChannel::StoreChannel {
-                            id,
-                            guild_id: guild.id,
-                            position,
-                            name,
-                            parent_id,
-                            permission_overrides,
-                        },
-                    };
-                    let ac = Arc::new(channel);
-                    self.guild_channels.insert(channel_id, ac.clone());
-                    guild.channels.insert(channel_id, ac);
-                    self.channel_count.fetch_add(1, Ordering::Relaxed);
+                for emoji in &guild.emoji {
+                    self.emoji.insert(emoji.id, emoji.clone());
                 }
-
-                //emoji
-                for (emoji_id, emoji) in e.emojis.clone() {
-                    let creator = match emoji.user {
-                        Some(e) => Some(e.id),
-                        None => None,
-                    };
-                    let emoji = Arc::new(CachedEmoji {
-                        id: emoji_id,
-                        name: emoji.name,
-                        roles: emoji.roles,
-                        created_by: creator,
-                        requires_colons: emoji.require_colons,
-                        managed: emoji.managed,
-                        animated: emoji.animated,
-                        available: emoji.available,
-                    });
-                    guild.emoji.push(emoji.clone());
-                    self.emoji_count.fetch_add(1, Ordering::Relaxed);
-                }
+                self.emoji_count
+                    .fetch_add(guild.emoji.len() as u64, Ordering::Relaxed);
 
                 self.guilds.insert(e.id, Arc::new(guild));
                 self.guild_count.fetch_add(1, Ordering::Relaxed);
-                self.partial_guilds.fetch_add(1, Ordering::SeqCst);
+                self.partial_guilds.fetch_add(1, Ordering::Relaxed);
             }
+
             Event::MemberChunk(chunk) => {
                 match self.get_guild(chunk.guild_id) {
                     Some(guild) => {
@@ -274,6 +116,7 @@ impl Cache {
                                     self.cluster_id
                                 );
                                 self.filling.fetch_or(false, Ordering::SeqCst);
+                                guild.complete.store(true, Ordering::SeqCst);
                             }
                         }
                     }
@@ -293,18 +136,10 @@ impl Cache {
         match self.get_user(user.id) {
             Some(user) => user,
             None => {
-                let arc = Arc::new(CachedUser {
-                    id: user.id,
-                    username: user.name,
-                    discriminator: user.discriminator,
-                    avatar: user.avatar,
-                    bot_user: user.bot,
-                    system_user: user.system.unwrap_or(false),
-                    public_flags: user.public_flags,
-                });
-                self.users.insert(user.id, arc);
+                let arc = Arc::new(CachedUser::from(user));
+                self.users.insert(arc.id, arc.clone());
                 self.unique_users.fetch_add(1, Ordering::Relaxed);
-                self.get_user(user.id).unwrap().clone()
+                arc
             }
         }
     }
@@ -409,154 +244,8 @@ impl Cache {
         let mut to_dump = Vec::with_capacity(todo.len());
         for key in todo {
             let g = self.guilds.remove_take(&key).unwrap();
-            let mut csg = ColdStorageGuild {
-                id: g.id,
-                name: g.name.clone(),
-                icon: g.icon.clone(),
-                splash: g.splash.clone(),
-                discovery_splash: g.discovery_splash.clone(),
-                owner_id: g.owner_id,
-                region: g.region.clone(),
-                afk_channel_id: g.afk_channel_id,
-                afk_timeout: g.afk_timeout,
-                verification_level: g.verification_level,
-                default_message_notifications: g.default_message_notifications,
-                roles: vec![],
-                emoji: vec![],
-                features: g.features.clone(),
-                members: vec![],
-                channels: vec![],
-                max_presences: g.max_presences,
-                max_members: g.max_members,
-                description: g.description.clone(),
-                banner: g.banner.clone(),
-                premium_tier: g.premium_tier,
-                premium_subscription_count: g.premium_subscription_count,
-                preferred_locale: g.preferred_locale.clone(),
-            };
-            for role in &g.roles {
-                csg.roles.push(CachedRole {
-                    id: role.id,
-                    name: role.name.clone(),
-                    color: role.color,
-                    hoisted: role.hoisted,
-                    position: role.position,
-                    permissions: role.permissions,
-                    managed: role.managed,
-                    mentionable: role.mentionable,
-                })
-            }
-            g.roles.clear();
 
-            for emoji in &g.emoji {
-                csg.emoji.push(emoji.as_ref().clone());
-            }
-            for member in &g.members {
-                csg.members.push({
-                    ColdStorageMember {
-                        id: member.user.id,
-                        nickname: member.nickname.clone(),
-                        roles: member.roles.clone(),
-                        joined_at: member.joined_at.clone(),
-                        boosting_since: member.joined_at.clone(),
-                        server_deafened: member.server_deafened,
-                        server_muted: member.server_muted,
-                    }
-                });
-            }
-            g.members.clear();
-
-            for channel in &g.channels {
-                csg.channels.push(match channel.as_ref() {
-                    CachedChannel::TextChannel {
-                        id,
-                        guild_id,
-                        position,
-                        permission_overrides,
-                        name,
-                        topic,
-                        nsfw,
-                        slowmode,
-                        parent_id,
-                    } => CachedChannel::TextChannel {
-                        id: id.clone(),
-                        guild_id: guild_id.clone(),
-                        position: position.clone(),
-                        permission_overrides: permission_overrides.clone(),
-                        name: name.clone(),
-                        topic: topic.clone(),
-                        nsfw: nsfw.clone(),
-                        slowmode: slowmode.clone(),
-                        parent_id: parent_id.clone(),
-                    },
-                    CachedChannel::DM { id } => CachedChannel::DM { id: id.clone() },
-                    CachedChannel::VoiceChannel {
-                        id,
-                        guild_id,
-                        position,
-                        permission_overrides,
-                        name,
-                        bitrate,
-                        user_limit,
-                        parent_id,
-                    } => CachedChannel::VoiceChannel {
-                        id: id.clone(),
-                        guild_id: guild_id.clone(),
-                        position: position.clone(),
-                        permission_overrides: permission_overrides.clone(),
-                        name: name.clone(),
-                        bitrate: bitrate.clone(),
-                        user_limit: user_limit.clone(),
-                        parent_id: parent_id.clone(),
-                    },
-                    CachedChannel::GroupDM { id } => CachedChannel::GroupDM { id: id.clone() },
-                    CachedChannel::Category {
-                        id,
-                        guild_id,
-                        position,
-                        permission_overrides,
-                        name,
-                    } => CachedChannel::Category {
-                        id: id.clone(),
-                        guild_id: guild_id.clone(),
-                        position: position.clone(),
-                        permission_overrides: permission_overrides.clone(),
-                        name: name.clone(),
-                    },
-                    CachedChannel::AnnouncementsChannel {
-                        id,
-                        guild_id,
-                        position,
-                        permission_overrides,
-                        name,
-                        parent_id,
-                    } => CachedChannel::AnnouncementsChannel {
-                        id: id.clone(),
-                        guild_id: guild_id.clone(),
-                        position: position.clone(),
-                        permission_overrides: permission_overrides.clone(),
-                        name: name.clone(),
-                        parent_id: parent_id.clone(),
-                    },
-                    CachedChannel::StoreChannel {
-                        id,
-                        guild_id,
-                        position,
-                        name,
-                        parent_id,
-                        permission_overrides,
-                    } => CachedChannel::StoreChannel {
-                        id: id.clone(),
-                        guild_id: guild_id.clone(),
-                        position: position.clone(),
-                        name: name.clone(),
-                        parent_id: parent_id.clone(),
-                        permission_overrides: permission_overrides.clone(),
-                    },
-                });
-            }
-
-            to_dump.push(csg);
+            to_dump.push(ColdStorageGuild::from(g));
         }
         let serialized = serde_json::to_string(&to_dump).unwrap();
         connection
@@ -671,71 +360,23 @@ impl Cache {
         connection.del(key).await?;
         debug!("Worker {} found {} guilds to defrost", index, guilds.len());
         for cold_guild in guilds.drain(..) {
-            let mut guild = CachedGuild {
-                id: cold_guild.id,
-                name: cold_guild.name,
-                icon: cold_guild.icon,
-                splash: cold_guild.splash,
-                discovery_splash: cold_guild.discovery_splash,
-                owner_id: cold_guild.owner_id,
-                region: cold_guild.region,
-                afk_channel_id: cold_guild.afk_channel_id,
-                afk_timeout: cold_guild.afk_timeout,
-                verification_level: cold_guild.verification_level,
-                default_message_notifications: cold_guild.default_message_notifications,
-                roles: DashMap::new(),
-                emoji: vec![],
-                features: vec![],
-                unavailable: false,
-                members: DashMap::new(),
-                channels: DashMap::new(),
-                max_presences: cold_guild.max_presences,
-                max_members: cold_guild.max_members,
-                description: cold_guild.description,
-                banner: cold_guild.banner,
-                premium_tier: cold_guild.premium_tier,
-                premium_subscription_count: cold_guild.premium_subscription_count,
-                preferred_locale: cold_guild.preferred_locale,
-                complete: true,
-                member_count: AtomicU64::new(cold_guild.members.len() as u64),
-            };
+            let guild = CachedGuild::defrost(&self, cold_guild);
 
-            for role in cold_guild.roles {
-                guild.roles.insert(role.id, role);
-                self.role_count.fetch_add(1, Ordering::Relaxed);
+            for channel in &guild.channels {
+                self.guild_channels
+                    .insert(channel.get_id(), channel.value().clone());
             }
-            self.total_users
-                .fetch_add(cold_guild.members.len() as u64, Ordering::Relaxed);
-            for member in cold_guild.members {
-                guild.members.insert(
-                    member.id,
-                    Arc::new(CachedMember {
-                        user: self.get_user(member.id).unwrap(),
-                        nickname: member.nickname,
-                        roles: member.roles,
-                        joined_at: member.joined_at,
-                        boosting_since: member.boosting_since,
-                        server_deafened: member.server_deafened,
-                        server_muted: member.server_muted,
-                    }),
-                );
-            }
-
             self.channel_count
-                .fetch_add(cold_guild.channels.len() as u64, Ordering::Relaxed);
-            for channel in cold_guild.channels {
-                let c = Arc::new(channel);
-                guild.channels.insert(c.get_id(), c.clone());
-                self.guild_channels.insert(c.get_id(), c);
-            }
+                .fetch_add(guild.channels.len() as u64, Ordering::Relaxed);
 
-            self.emoji_count
-                .fetch_add(cold_guild.emoji.len() as u64, Ordering::Relaxed);
-            for emoji in cold_guild.emoji {
-                let e = Arc::new(emoji);
-                guild.emoji.push(e.clone());
-                self.emoji.insert(e.id, e);
+            for emoji in &guild.emoji {
+                self.emoji.insert(emoji.id, emoji.clone());
             }
+            self.emoji_count
+                .fetch_add(guild.emoji.len() as u64, Ordering::Relaxed);
+
+            self.total_users
+                .fetch_add(guild.members.len() as u64, Ordering::Relaxed);
 
             self.guilds.insert(guild.id, Arc::new(guild));
             self.guild_count.fetch_add(1, Ordering::Relaxed);
@@ -744,10 +385,6 @@ impl Cache {
         Ok(())
     }
 }
-
-mod structs;
-
-pub use structs::*;
 
 use crate::utils::Error;
 use chrono::format::Numeric::Ordinal;
@@ -761,3 +398,28 @@ use twilight::model::channel::Channel::Guild;
 use twilight::model::channel::ChannelType;
 use twilight::model::channel::GuildChannel;
 use twilight::model::user::User;
+
+mod guild;
+pub use guild::{CachedGuild, ColdStorageGuild};
+mod role;
+pub use role::CachedRole;
+mod emoji;
+pub use emoji::CachedEmoji;
+mod member;
+pub use member::{CachedMember, ColdStorageMember};
+mod channel;
+pub use channel::CachedChannel;
+mod user;
+pub use user::CachedUser;
+
+fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    t == &T::default()
+}
+
+fn is_true(t: &bool) -> bool {
+    !t
+}
+
+fn get_true() -> bool {
+    true
+}

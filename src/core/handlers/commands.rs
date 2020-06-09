@@ -6,6 +6,7 @@ use twilight::gateway::Event;
 use crate::core::{BotContext, CachedGuild};
 use crate::parser::Parser;
 use crate::utils::Error;
+use std::sync::atomic::Ordering;
 
 pub async fn handle_event<'a>(
     shard_id: u64,
@@ -14,17 +15,17 @@ pub async fn handle_event<'a>(
 ) -> Result<(), Error> {
     match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
-            // debug!(
-            // "Received a message from {}, saying {}",
-            // msg.author.name, msg.content
-            // );
+            debug!(
+                "Received a message from {}, saying {}",
+                msg.author.name, msg.content
+            );
 
             let p = match msg.guild_id {
                 Some(guild_id) => {
                     let guild = ctx.cache.get_guild(guild_id);
                     match guild {
                         Some(g) => {
-                            if !g.complete {
+                            if !g.complete.load(Ordering::SeqCst) {
                                 return Ok(()); //not cached yet, just ignore for now
                             }
                         }
