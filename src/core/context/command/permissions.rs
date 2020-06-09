@@ -36,7 +36,7 @@ impl CommandContext {
     ) -> Permissions {
         let mut permissions = Permissions::empty();
 
-        if let Some(channel) = self.get_cached_guild_channel(channel_id).await {
+        if let Some(channel) = self.get_channel(channel_id).await {
             permissions = self.get_guild_permissions_for(user_id).await;
             if let Some(member) = self.get_member(user_id).await {
                 let overrides = channel.get_permission_overrides();

@@ -1,4 +1,4 @@
-use crate::{gearbot_error, gearbot_important, gearbot_info};
+use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
 use dashmap::DashMap;
 use futures::future;
 use log::{debug, error, info};
@@ -175,6 +175,32 @@ impl Cache {
         }
     }
 
+    /// we get member updates for all
+    pub fn update_user(&self, new: Arc<CachedUser>) {
+        match self.get_user(new.id) {
+            Some(old) => {
+                let updated = update_user_with_user(old, new);
+                let user = Arc::new(updated);
+                for guard in &self.guilds {
+                    if let Some(member) = guard.members.get(&user.id) {
+                        guard
+                            .members
+                            .insert(user.id, Arc::new(member.replace_user(user.clone())));
+                    }
+                }
+                self.users.insert(user.id, user);
+            }
+            None => {
+                gearbot_warn!(
+                    "Trying to update user {}#{} (``{}``) but they where not found in the cache!",
+                    new.username,
+                    new.discriminator,
+                    new.id.0
+                );
+            }
+        }
+    }
+
     pub async fn prepare_cold_resume(&self, redis_pool: &ConnectionPool) -> (usize, usize) {
         //clear global caches so arcs can be cleaned up
         self.guild_channels.clear();
@@ -306,7 +332,7 @@ impl Cache {
                     return Err(Error::CacheDefrostError(format!(
                         "Failed to defrost users: {}",
                         e
-                    )))
+                    )));
                 }
                 Ok(_) => {}
             }
@@ -324,7 +350,7 @@ impl Cache {
                     return Err(Error::CacheDefrostError(format!(
                         "Failed to defrost guilds: {}",
                         e
-                    )))
+                    )));
                 }
                 Ok(_) => {}
             }
@@ -400,17 +426,44 @@ use twilight::model::channel::GuildChannel;
 use twilight::model::user::User;
 
 mod guild;
+
 pub use guild::{CachedGuild, ColdStorageGuild};
+
 mod role;
+
 pub use role::CachedRole;
+
 mod emoji;
+
 pub use emoji::CachedEmoji;
+
 mod member;
+
 pub use member::{CachedMember, ColdStorageMember};
+
 mod channel;
+
 pub use channel::CachedChannel;
+
 mod user;
+
 pub use user::CachedUser;
+
+fn update_user_with_user(old: Arc<CachedUser>, new: Arc<CachedUser>) -> CachedUser {
+    let public_flags = match new.public_flags {
+        Some(flags) => Some(flags),
+        None => old.public_flags,
+    };
+    CachedUser {
+        id: old.id,
+        username: new.username.clone(),
+        discriminator: new.discriminator.clone(),
+        avatar: new.avatar.clone(),
+        bot_user: new.bot_user,
+        system_user: new.system_user,
+        public_flags,
+    }
+}
 
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()

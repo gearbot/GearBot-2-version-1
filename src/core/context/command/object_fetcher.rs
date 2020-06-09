@@ -4,7 +4,7 @@ use crate::Error;
 use std::sync::Arc;
 
 use crate::core::cache::CachedChannel;
-use crate::core::{CachedMember, CachedUser};
+use crate::core::{CachedMember, CachedRole, CachedUser};
 use crate::utils::CommandError;
 use twilight::cache::twilight_cache_inmemory::model as cache_model;
 use twilight::model::{
@@ -26,16 +26,19 @@ impl CommandContext {
         }
     }
 
-    pub async fn get_cached_guild_channel(
-        &self,
-        channel_id: ChannelId,
-    ) -> Option<Arc<CachedChannel>> {
+    pub async fn get_channel(&self, channel_id: ChannelId) -> Option<Arc<CachedChannel>> {
         self.bot_context.cache.get_channel(channel_id)
     }
 
-    // pub async fn get_cached_role(&self, role_id: RoleId) -> Option<Arc<Role>> {
-    //     self.bot_context.cache.role(role_id).await.unwrap()
-    // }
+    pub async fn get_role(&self, role_id: RoleId) -> Option<Arc<CachedRole>> {
+        match &self.guild {
+            Some(g) => match g.roles.get(&role_id) {
+                Some(guard) => Some(guard.value().clone()),
+                None => None,
+            },
+            None => None,
+        }
+    }
 
     pub async fn get_ban(&self, user_id: UserId) -> Result<Option<Ban>, Error> {
         match &self.guild {

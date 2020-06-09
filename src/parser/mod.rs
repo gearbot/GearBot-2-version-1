@@ -119,10 +119,18 @@ impl Parser {
                     )));
                 }
 
+                let author =
+                    match ctx.cache.get_user(message.author.id) {
+                        Some(author) => author,
+                        None => return Err(Error::CorruptCacheError(String::from(
+                            "Got a message with a command from a user that is not in the cache!",
+                        ))),
+                    };
+
                 let cmdm = CommandMessage {
                     id: message.id,
                     content: message.content.clone(),
-                    author: message.author.clone(),
+                    author,
                     author_as_member: member,
                     channel: channel.unwrap(),
                     attachments: message.attachments.clone(),
@@ -244,13 +252,16 @@ impl Parser {
         }
     }
 
-    // pub async fn get_user_or(&mut self, alternative: &CachedUser) -> Result<Arc<CachedUser>, Error> {
-    //     if self.has_next() {
-    //         Ok(self.get_user().await?)
-    //     } else {
-    //         Ok(alternative)
-    //     }
-    // }
+    pub async fn get_user_or(
+        &mut self,
+        alternative: Arc<CachedUser>,
+    ) -> Result<Arc<CachedUser>, Error> {
+        if self.has_next() {
+            Ok(self.get_user().await?)
+        } else {
+            Ok(alternative)
+        }
+    }
 
     pub async fn get_message(&mut self, requester: UserId) -> Result<Message, Error> {
         let input = self.get_next()?;

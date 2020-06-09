@@ -1,4 +1,4 @@
-use crate::core::{CachedChannel, CachedMember};
+use crate::core::{CachedChannel, CachedMember, CachedUser};
 use std::sync::Arc;
 use twilight::model::channel::embed::Embed;
 use twilight::model::channel::message::{MessageFlags, MessageType};
@@ -10,7 +10,7 @@ use twilight::model::user::User;
 pub struct CommandMessage {
     pub id: MessageId,
     pub content: String,
-    pub author: User,
+    pub author: Arc<CachedUser>,
     pub author_as_member: Option<Arc<CachedMember>>,
     pub channel: Arc<CachedChannel>,
     pub attachments: Vec<Attachment>,

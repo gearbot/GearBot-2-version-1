@@ -28,7 +28,7 @@ pub struct CachedGuild {
     pub afk_timeout: u64,
     pub verification_level: VerificationLevel,
     pub default_message_notifications: DefaultMessageNotificationLevel,
-    pub roles: DashMap<RoleId, CachedRole>,
+    pub roles: DashMap<RoleId, Arc<CachedRole>>,
     pub emoji: Vec<Arc<CachedEmoji>>,
     pub features: Vec<String>,
     //same as region, will cause issues when they add one
@@ -84,7 +84,9 @@ impl From<Guild> for CachedGuild {
 
         //handle roles
         for (role_id, role) in guild.roles {
-            cached_guild.roles.insert(role_id, CachedRole::from(role));
+            cached_guild
+                .roles
+                .insert(role_id, Arc::new(CachedRole::from(role)));
         }
 
         //channels
@@ -134,7 +136,7 @@ impl CachedGuild {
         };
 
         for role in cold_guild.roles {
-            guild.roles.insert(role.id, role);
+            guild.roles.insert(role.id, Arc::new(role));
         }
 
         for member in cold_guild.members {
