@@ -20,7 +20,6 @@ mod parser;
 mod utils;
 use clap::{App, Arg};
 use darkredis::{CommandList, ConnectionPool, Value};
-use futures::TryStreamExt;
 use utils::Error;
 
 mod translation;

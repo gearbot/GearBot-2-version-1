@@ -91,16 +91,8 @@ impl Cache {
                 match self.get_guild(chunk.guild_id) {
                     Some(guild) => {
                         for (user_id, member) in chunk.members.clone() {
-                            let user = self.get_or_insert_user(member.user);
-                            let member = Arc::new(CachedMember {
-                                user,
-                                nickname: member.nick,
-                                roles: member.roles,
-                                joined_at: member.joined_at,
-                                boosting_since: member.premium_since,
-                                server_deafened: member.deaf,
-                                server_muted: member.mute,
-                            });
+                            self.get_or_insert_user(member.user.clone());
+                            let member = Arc::new(CachedMember::from_member(member, self));
                             guild.members.insert(user_id, member);
                         }
                         if (chunk.chunk_count - 1) == chunk.chunk_index {
@@ -260,7 +252,7 @@ impl Cache {
         redis_pool: &ConnectionPool,
         todo: Vec<GuildId>,
         index: usize,
-    ) {
+    ) -> Result<(), Error> {
         debug!(
             "Guild dumper {} started freezing {} guilds",
             index,
@@ -280,7 +272,8 @@ impl Cache {
                 serialized,
                 180,
             )
-            .await;
+            .await?;
+        Ok(())
     }
 
     async fn _prepare_cold_resume_user(
@@ -288,7 +281,7 @@ impl Cache {
         redis_pool: &ConnectionPool,
         todo: Vec<UserId>,
         index: usize,
-    ) {
+    ) -> Result<(), Error> {
         debug!("Worker {} freezing {} users", index, todo.len());
         let mut connection = redis_pool.get().await;
         let mut chunk = Vec::with_capacity(todo.len());
@@ -311,7 +304,9 @@ impl Cache {
                 serialized,
                 180,
             )
-            .await;
+            .await?;
+
+        Ok(())
     }
 
     pub async fn restore_cold_resume(

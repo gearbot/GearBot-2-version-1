@@ -52,7 +52,7 @@ pub struct CachedGuild {
 }
 
 impl From<Guild> for CachedGuild {
-    fn from(mut guild: Guild) -> Self {
+    fn from(guild: Guild) -> Self {
         let mut cached_guild = CachedGuild {
             id: guild.id,
             name: guild.name,
@@ -140,18 +140,9 @@ impl CachedGuild {
         }
 
         for member in cold_guild.members {
-            guild.members.insert(
-                member.id,
-                Arc::new(CachedMember {
-                    user: cache.get_user(member.id).unwrap(),
-                    nickname: member.nickname,
-                    roles: member.roles,
-                    joined_at: member.joined_at,
-                    boosting_since: member.boosting_since,
-                    server_deafened: member.server_deafened,
-                    server_muted: member.server_muted,
-                }),
-            );
+            guild
+                .members
+                .insert(member.id, Arc::new(CachedMember::defrost(member, cache)));
         }
 
         for channel in cold_guild.channels {

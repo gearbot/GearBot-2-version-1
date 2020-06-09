@@ -15,7 +15,7 @@ impl BotContext {
                 //TODO: cache in redis
 
                 match user {
-                    Some(user) => Err(Error::ParseError(ParseError::InvalidUserID(user_id.0))), //Ok(user),
+                    Some(_) => Err(Error::ParseError(ParseError::InvalidUserID(user_id.0))), //Ok(user),
                     None => Err(Error::ParseError(ParseError::InvalidUserID(user_id.0))),
                 }
             }

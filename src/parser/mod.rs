@@ -282,7 +282,7 @@ impl Parser {
         unreachable!();
 
         // No DMs here
-        let guild_id = self.guild_id.unwrap();
+        // let guild_id = self.guild_id.unwrap();
         // let guild_ctx = generate_guild_context(self.ctx.clone(), guild_id).await?;
         //
         // info!("{:?}", channel);

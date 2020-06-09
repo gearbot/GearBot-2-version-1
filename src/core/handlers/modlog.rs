@@ -126,21 +126,3 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
     }
     Ok(())
 }
-
-async fn generate_role_display(roles: &[RoleId], ctx: &BotContext) -> Result<String, Error> {
-    let mut display_string = String::new();
-
-    // for (pos, role_id) in roles.iter().enumerate() {
-    //     if let Some(role) = ctx.cache.role(*role_id).await? {
-    //         let disp = if pos != roles.len() {
-    //             format!("{}, ", role.name)
-    //         } else {
-    //             role.name.to_string()
-    //         };
-    //
-    //         display_string.push_str(&disp);
-    //     }
-    // }
-
-    Ok(display_string)
-}

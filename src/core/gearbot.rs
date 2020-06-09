@@ -80,7 +80,7 @@ impl GearBot {
                 debug!("ColdRebootData: {:?}", cold_cache);
                 connection
                     .del(format!("cb_cluster_data_{}", cluster_id))
-                    .await;
+                    .await?;
                 if cold_cache.total_shards == total_shards
                     && cold_cache.shard_count == shards_per_cluster
                 {
@@ -144,7 +144,7 @@ impl GearBot {
             // We need a seperate runtime, because at this point in the program,
             // the tokio::main instance isn't running anymore.
             let mut rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(shutdown_ctx.initiate_cold_resume());
+            let _ = rt.block_on(shutdown_ctx.initiate_cold_resume());
             process::exit(0);
         })
         .expect("Failed to register shutdown handler!");

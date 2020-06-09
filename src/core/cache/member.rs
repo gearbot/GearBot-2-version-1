@@ -1,5 +1,5 @@
 use super::{get_true, is_default, is_true};
-use crate::core::CachedUser;
+use crate::core::{Cache, CachedUser};
 use dashmap::ElementGuard;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -18,9 +18,29 @@ pub struct CachedMember {
     pub server_muted: bool,
 }
 
-impl From<Member> for CachedMember {
-    fn from(member: Member) -> Self {
-        unimplemented!()
+impl CachedMember {
+    pub fn defrost(member: ColdStorageMember, cache: &Cache) -> Self {
+        CachedMember {
+            user: cache.get_user(member.id).unwrap(),
+            nickname: member.nickname,
+            roles: member.roles,
+            joined_at: member.joined_at,
+            boosting_since: member.boosting_since,
+            server_deafened: member.server_deafened,
+            server_muted: member.server_muted,
+        }
+    }
+
+    pub fn from_member(member: Member, cache: &Cache) -> Self {
+        CachedMember {
+            user: cache.get_user(member.user.id).unwrap(),
+            nickname: member.nick,
+            roles: member.roles,
+            joined_at: member.joined_at,
+            boosting_since: member.premium_since,
+            server_deafened: member.deaf,
+            server_muted: member.mute,
+        }
     }
 }
 
