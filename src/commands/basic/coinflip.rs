@@ -6,7 +6,7 @@ use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::utils;
 
-pub async fn coinflip(ctx: CommandContext, msg: Message, parser: Parser) -> CommandResult {
+pub async fn coinflip(ctx: CommandContext, parser: Parser) -> CommandResult {
     let thing_todo: String = parser
         .parts
         .into_iter()
@@ -17,8 +17,7 @@ pub async fn coinflip(ctx: CommandContext, msg: Message, parser: Parser) -> Comm
     let thing_todo = if !thing_todo.is_empty() {
         utils::clean(&thing_todo, true, true, true, true)
     } else {
-        ctx.send_message("You didn't give me anything to flip on!", msg.channel_id)
-            .await?;
+        ctx.reply("You didn't give me anything to flip on!").await?;
         return Ok(());
     };
 
@@ -28,7 +27,7 @@ pub async fn coinflip(ctx: CommandContext, msg: Message, parser: Parser) -> Comm
         format!("No, you should probably not {}", thing_todo)
     };
 
-    ctx.send_message(message_text, msg.channel_id).await?;
+    ctx.reply(message_text).await?;
 
     Ok(())
 }

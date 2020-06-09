@@ -65,4 +65,42 @@ impl CommandContext {
 
         Ok(updated_message_handle)
     }
+
+    pub async fn reply(&self, message: impl Into<String>) -> Result<Message, Error> {
+        let sent_msg_handle = self
+            .bot_context
+            .http
+            .create_message(self.message.channel.get_id())
+            .content(message)?
+            .await?;
+
+        Ok(sent_msg_handle)
+    }
+
+    pub async fn reply_embed(&self, embed: Embed) -> Result<Message, Error> {
+        let sent_embed_handle = self
+            .bot_context
+            .http
+            .create_message(self.message.channel.get_id())
+            .embed(embed)?
+            .await?;
+
+        Ok(sent_embed_handle)
+    }
+
+    pub async fn reply_with_embed(
+        &self,
+        msg: impl Into<String>,
+        embed: Embed,
+    ) -> Result<Message, Error> {
+        let sent_handle = self
+            .bot_context
+            .http
+            .create_message(self.message.channel.get_id())
+            .content(msg)?
+            .embed(embed)?
+            .await?;
+
+        Ok(sent_handle)
+    }
 }

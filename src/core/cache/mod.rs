@@ -246,7 +246,7 @@ impl Cache {
                 self.partial_guilds.fetch_add(1, Ordering::SeqCst);
             }
             Event::MemberChunk(chunk) => {
-                match self.get_guild(&chunk.guild_id) {
+                match self.get_guild(chunk.guild_id) {
                     Some(guild) => {
                         for (user_id, member) in chunk.members.clone() {
                             let user = self.get_or_insert_user(member.user);
@@ -290,7 +290,7 @@ impl Cache {
     }
 
     pub fn get_or_insert_user(&self, user: User) -> Arc<CachedUser> {
-        match self.get_user(&user.id) {
+        match self.get_user(user.id) {
             Some(user) => user,
             None => {
                 let arc = Arc::new(CachedUser {
@@ -304,35 +304,35 @@ impl Cache {
                 });
                 self.users.insert(user.id, arc);
                 self.unique_users.fetch_add(1, Ordering::Relaxed);
-                self.get_user(&user.id).unwrap().clone()
+                self.get_user(user.id).unwrap().clone()
             }
         }
     }
 
-    pub fn get_guild(&self, guild_id: &GuildId) -> Option<Arc<CachedGuild>> {
-        match self.guilds.get(guild_id) {
+    pub fn get_guild(&self, guild_id: GuildId) -> Option<Arc<CachedGuild>> {
+        match self.guilds.get(&guild_id) {
             Some(guard) => Some(guard.value().clone()),
             None => None,
         }
     }
 
-    pub fn get_channel(&self, channel_id: &ChannelId) -> Option<Arc<CachedChannel>> {
-        match self.guild_channels.get(channel_id) {
+    pub fn get_channel(&self, channel_id: ChannelId) -> Option<Arc<CachedChannel>> {
+        match self.guild_channels.get(&channel_id) {
             Some(guard) => Some(guard.value().clone()),
             None => None,
         }
     }
 
-    pub fn get_user(&self, user_id: &UserId) -> Option<Arc<CachedUser>> {
-        match self.users.get(user_id) {
+    pub fn get_user(&self, user_id: UserId) -> Option<Arc<CachedUser>> {
+        match self.users.get(&user_id) {
             Some(guard) => Some(guard.value().clone()),
             None => None,
         }
     }
 
-    pub fn get_member(&self, guild_id: &GuildId, user_id: &UserId) -> Option<Arc<CachedMember>> {
-        match self.guilds.get(guild_id) {
-            Some(guard) => match guard.value().members.get(user_id) {
+    pub fn get_member(&self, guild_id: GuildId, user_id: UserId) -> Option<Arc<CachedMember>> {
+        match self.guilds.get(&guild_id) {
+            Some(guard) => match guard.value().members.get(&user_id) {
                 Some(guard) => Some(guard.value().clone()),
                 None => None,
             },
@@ -710,7 +710,7 @@ impl Cache {
                 guild.members.insert(
                     member.id,
                     Arc::new(CachedMember {
-                        user: self.get_user(&member.id).unwrap(),
+                        user: self.get_user(member.id).unwrap(),
                         nickname: member.nickname,
                         roles: member.roles,
                         joined_at: member.joined_at,
@@ -725,8 +725,8 @@ impl Cache {
                 .fetch_add(cold_guild.channels.len() as u64, Ordering::Relaxed);
             for channel in cold_guild.channels {
                 let c = Arc::new(channel);
-                guild.channels.insert(*c.get_id(), c.clone());
-                self.guild_channels.insert(*c.get_id(), c);
+                guild.channels.insert(c.get_id(), c.clone());
+                self.guild_channels.insert(c.get_id(), c);
             }
 
             self.emoji_count

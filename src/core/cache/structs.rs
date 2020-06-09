@@ -268,42 +268,42 @@ pub enum CachedChannel {
 impl CachedChannel {
     /// returns the channel ID
     /// Note this is different from userid when DMing users
-    pub fn get_id(&self) -> &ChannelId {
+    pub fn get_id(&self) -> ChannelId {
         match self {
-            CachedChannel::TextChannel { id, .. } => id,
-            CachedChannel::DM { id } => id,
-            CachedChannel::VoiceChannel { id, .. } => id,
-            CachedChannel::GroupDM { id } => id,
-            CachedChannel::Category { id, .. } => id,
-            CachedChannel::AnnouncementsChannel { id, .. } => id,
-            CachedChannel::StoreChannel { id, .. } => id,
+            CachedChannel::TextChannel { id, .. } => *id,
+            CachedChannel::DM { id } => *id,
+            CachedChannel::VoiceChannel { id, .. } => *id,
+            CachedChannel::GroupDM { id } => *id,
+            CachedChannel::Category { id, .. } => *id,
+            CachedChannel::AnnouncementsChannel { id, .. } => *id,
+            CachedChannel::StoreChannel { id, .. } => *id,
         }
     }
 
     ///Returns the guild id
-    pub fn get_guild_id(&self) -> Option<&GuildId> {
+    pub fn get_guild_id(&self) -> Option<GuildId> {
         match self {
-            CachedChannel::TextChannel { guild_id, .. } => Some(guild_id),
+            CachedChannel::TextChannel { guild_id, .. } => Some(*guild_id),
             CachedChannel::DM { .. } => None,
-            CachedChannel::VoiceChannel { guild_id, .. } => Some(guild_id),
+            CachedChannel::VoiceChannel { guild_id, .. } => Some(*guild_id),
             CachedChannel::GroupDM { .. } => None,
-            CachedChannel::Category { guild_id, .. } => Some(guild_id),
-            CachedChannel::AnnouncementsChannel { guild_id, .. } => Some(guild_id),
-            CachedChannel::StoreChannel { guild_id, .. } => Some(guild_id),
+            CachedChannel::Category { guild_id, .. } => Some(*guild_id),
+            CachedChannel::AnnouncementsChannel { guild_id, .. } => Some(*guild_id),
+            CachedChannel::StoreChannel { guild_id, .. } => Some(*guild_id),
         }
     }
 
     /// Gets the position of this channel
     /// returns 0 for DM (group) channels
-    pub fn get_position(&self) -> &i64 {
+    pub fn get_position(&self) -> i64 {
         match self {
-            CachedChannel::TextChannel { position, .. } => position,
-            CachedChannel::DM { .. } => &0,
-            CachedChannel::VoiceChannel { position, .. } => position,
-            CachedChannel::GroupDM { .. } => &0,
-            CachedChannel::Category { position, .. } => position,
-            CachedChannel::AnnouncementsChannel { position, .. } => position,
-            CachedChannel::StoreChannel { position, .. } => position,
+            CachedChannel::TextChannel { position, .. } => *position,
+            CachedChannel::DM { .. } => 0,
+            CachedChannel::VoiceChannel { position, .. } => *position,
+            CachedChannel::GroupDM { .. } => 0,
+            CachedChannel::Category { position, .. } => *position,
+            CachedChannel::AnnouncementsChannel { position, .. } => *position,
+            CachedChannel::StoreChannel { position, .. } => *position,
         }
     }
 
@@ -360,15 +360,15 @@ impl CachedChannel {
         }
     }
 
-    pub fn is_nsfw(&self) -> &bool {
+    pub fn is_nsfw(&self) -> bool {
         match self {
-            CachedChannel::TextChannel { nsfw, .. } => nsfw,
-            CachedChannel::DM { .. } => &false,
-            CachedChannel::VoiceChannel { .. } => &false,
-            CachedChannel::GroupDM { .. } => &false,
-            CachedChannel::Category { .. } => &false,
-            CachedChannel::AnnouncementsChannel { .. } => &false,
-            CachedChannel::StoreChannel { .. } => &false,
+            CachedChannel::TextChannel { nsfw, .. } => *nsfw,
+            CachedChannel::DM { .. } => false,
+            CachedChannel::VoiceChannel { .. } => false,
+            CachedChannel::GroupDM { .. } => false,
+            CachedChannel::Category { .. } => false,
+            CachedChannel::AnnouncementsChannel { .. } => false,
+            CachedChannel::StoreChannel { .. } => false,
         }
     }
 }

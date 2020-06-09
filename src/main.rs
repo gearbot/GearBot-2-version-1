@@ -94,9 +94,13 @@ async fn real_main() -> Result<(), Error> {
 
     info!("Connected to postgres!");
 
-    let redis_pool = ConnectionPool::create(config.database.redis.clone(), None, 5)
-        .await
-        .unwrap();
+    let redis_pool = match ConnectionPool::create(config.database.redis.clone(), None, 5).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            gearbot_error!("Failed to connect to the redis database! {}", e);
+            return Err(Error::DarkRedisError(e));
+        }
+    };
     info!("Connected to redis!");
 
     gearbot_info!("Database connections established");

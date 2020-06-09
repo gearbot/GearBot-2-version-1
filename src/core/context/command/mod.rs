@@ -1,4 +1,4 @@
-use crate::translation::{GearBotStrings, GuildTranslator};
+use crate::translation::{GearBotStrings, GuildTranslator, DEFAULT_LANG};
 use crate::Error;
 
 use dashmap::ElementGuard;
@@ -7,31 +7,38 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::core::context::bot::BotStats;
-use crate::core::{BotContext, GuildConfig};
+use crate::core::{BotContext, CachedGuild, GuildConfig};
 use twilight::gateway::shard::Information;
+use twilight::model::channel::Message;
 use twilight::model::{id::GuildId, user::CurrentUser};
 
 /// The guild context that is returned inside commands that is specific to each guild, with things like the config,
 /// language, etc, set and usable behind wrapper methods for simplicity.
 pub struct CommandContext {
-    pub id: GuildId,
     pub translator: Arc<GuildTranslator>,
-    bot_context: Arc<BotContext>,
-    pub config: ElementGuard<GuildId, GuildConfig>,
+    pub bot_context: Arc<BotContext>,
+    config: Option<ElementGuard<GuildId, GuildConfig>>,
+    pub message: CommandMessage,
+    pub guild: Option<Arc<CachedGuild>>,
 }
 
 impl CommandContext {
     pub fn new(
-        id: GuildId,
-        translator: Arc<GuildTranslator>,
         ctx: Arc<BotContext>,
-        config: ElementGuard<GuildId, GuildConfig>,
+        config: Option<ElementGuard<GuildId, GuildConfig>>,
+        message: CommandMessage,
+        guild: Option<Arc<CachedGuild>>,
     ) -> Self {
+        let translator = match &config {
+            Some(guard) => ctx.translations.get_translator(&guard.value().language),
+            None => ctx.translations.get_translator(&DEFAULT_LANG),
+        };
         CommandContext {
-            id,
             translator,
             bot_context: ctx,
             config,
+            message,
+            guild,
         }
     }
 
@@ -69,17 +76,26 @@ impl CommandContext {
         self.bot_context.translations.generate_args(arg_mappings)
     }
 
-    pub fn get_config(&self) -> &GuildConfig {
-        self.config.value()
-    }
-
     pub async fn set_config(&self, new_config: GuildConfig) -> Result<(), Error> {
         // This updates it both in the DB and handles our element guard
-        self.bot_context.set_config(self.id, new_config).await
+        match &self.guild {
+            Some(g) => self.bot_context.set_config(g.id, new_config).await,
+            None => Err(Error::CmdError(CommandError::NoDM)),
+        }
+    }
+
+    pub fn get_config(&self) -> Result<&GuildConfig, Error> {
+        match &self.config {
+            Some(guard) => Ok(guard.value()),
+            None => Err(Error::CmdError(CommandError::NoDM)),
+        }
     }
 }
 
 mod bouncers;
+mod command_message;
 mod messaging;
 mod object_fetcher;
 mod permissions;
+use crate::utils::{CommandError, ParseError};
+pub use command_message::CommandMessage;

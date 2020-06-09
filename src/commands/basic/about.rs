@@ -141,7 +141,7 @@ impl fmt::Display for AboutDescription {
     }
 }
 
-pub async fn about(ctx: CommandContext, msg: Message, _: Parser) -> CommandResult {
+pub async fn about(ctx: CommandContext, _: Parser) -> CommandResult {
     let about_stats = AboutDescription::create(ctx.get_bot_stats()).await;
 
     let embed = EmbedBuilder::new()
@@ -159,7 +159,7 @@ pub async fn about(ctx: CommandContext, msg: Message, _: Parser) -> CommandResul
         .commit()
         .build();
 
-    ctx.send_embed(embed, msg.channel_id).await?;
+    ctx.reply_embed(embed).await?;
 
     Ok(())
 }

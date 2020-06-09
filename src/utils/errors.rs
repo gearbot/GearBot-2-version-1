@@ -37,6 +37,7 @@ pub enum Error {
     UpdateMessageError(UpdateMessageError),
     CacheDefrostError(String),
     DarkRedisError(darkredis::Error),
+    CorruptCacheError(String),
 }
 
 #[derive(Debug)]
@@ -150,6 +151,7 @@ impl fmt::Display for Error {
             Error::DarkRedisError(e) => {
                 write!(f, "Error communicating with the redis cache: {}", e)
             }
+            Error::CorruptCacheError(e) => write!(f, "CRITICAL CACHE CORRUPTION DETECTED: {}", e),
         }
     }
 }

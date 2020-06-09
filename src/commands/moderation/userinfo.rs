@@ -13,12 +13,12 @@ use twilight::model::user::UserFlags;
 
 const USER_INFO_COLOR: u32 = 0x00_cea2;
 
-pub async fn userinfo(ctx: CommandContext, msg: Message, mut parser: Parser) -> CommandResult {
-    // if msg.guild_id.is_none() {
-    //     return Err(Error::CmdError(CommandError::NoDM));
-    // }
-    //
-    // let user = parser.get_user_or(msg.author).await?;
+pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult {
+    if ctx.guild.is_none() {
+        return Err(Error::CmdError(CommandError::NoDM));
+    }
+
+    // let user = parser.get_user_or(con.author).await?;
     //
     // //set some things that are the same regardless
     // let mut content = "".to_string();

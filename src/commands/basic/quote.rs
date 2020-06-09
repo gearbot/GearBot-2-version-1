@@ -4,8 +4,8 @@ use crate::CommandResult;
 use log::info;
 use twilight::model::channel::Message;
 
-pub async fn quote(_ctx: CommandContext, msg: Message, mut parser: Parser) -> CommandResult {
-    let message = parser.get_message(msg.author.id).await?;
+pub async fn quote(ctx: CommandContext, mut parser: Parser) -> CommandResult {
+    let message = parser.get_message(ctx.message.author.id).await?;
     info!("{:?}", message);
     Ok(())
 }

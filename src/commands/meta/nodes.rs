@@ -12,8 +12,7 @@ use crate::utils::Error;
 
 pub type CommandResult = Result<(), Error>;
 pub type CommandResultOuter = Pin<Box<dyn Future<Output = CommandResult> + Send>>;
-pub type CommandHandler =
-    Box<dyn Fn(CommandContext, Message, Parser) -> CommandResultOuter + Send + Sync>;
+pub type CommandHandler = Box<dyn Fn(CommandContext, Parser) -> CommandResultOuter + Send + Sync>;
 
 pub struct Command {
     name: String,
@@ -70,16 +69,11 @@ impl CommandNode {
         }
     }
 
-    pub async fn execute<'a>(
-        &self,
-        ctx: CommandContext,
-        msg: Message,
-        parser: Parser,
-    ) -> CommandResult {
+    pub async fn execute(&self, ctx: CommandContext, parser: Parser) -> CommandResult {
         match &self {
             CommandNode::CommandNodeInner { command } => {
                 let command = &command.handler;
-                command(ctx, msg, parser).await?;
+                command(ctx, parser).await?;
                 Ok(())
             }
             CommandNode::GroupNode {
@@ -89,7 +83,7 @@ impl CommandNode {
             } => match handler {
                 Some(handler) => {
                     let command = handler;
-                    command(ctx, msg, parser).await?;
+                    command(ctx, parser).await?;
                     Ok(())
                 }
                 None => Ok(()),

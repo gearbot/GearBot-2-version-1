@@ -18,15 +18,15 @@ pub fn get_root() -> &'static CommandNode {
                 .set(subcommands!(
                     "ROOT",
                     None,
-                    // command!("coinflip", basic::coinflip),
-                    // command!("ping", basic::ping),
-                    // command!("echo", basic::echo),
-                    // command!("about", basic::about),
-                    // command!("userinfo", moderation::userinfo),
-                    // command!("get_config", debug::get_config),
-                    // command!("set_config", debug::set_config),
-                    // command!("quote", basic::quote),
-                    // command!("uid", basic::uid),
+                    command!("coinflip", basic::coinflip),
+                    command!("ping", basic::ping),
+                    command!("echo", basic::echo),
+                    command!("about", basic::about),
+                    command!("userinfo", moderation::userinfo),
+                    command!("get_config", debug::get_config),
+                    command!("set_config", debug::set_config),
+                    command!("quote", basic::quote),
+                    command!("uid", basic::uid),
                     command!("redis_test", admin::restart)
                 ))
                 .ok()

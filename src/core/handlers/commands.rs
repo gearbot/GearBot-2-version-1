@@ -3,7 +3,7 @@ use std::sync::Arc;
 use log::debug;
 use twilight::gateway::Event;
 
-use crate::core::BotContext;
+use crate::core::{BotContext, CachedGuild};
 use crate::parser::Parser;
 use crate::utils::Error;
 
@@ -21,6 +21,16 @@ pub async fn handle_event<'a>(
 
             let p = match msg.guild_id {
                 Some(guild_id) => {
+                    let guild = ctx.cache.get_guild(guild_id);
+                    match guild {
+                        Some(g) => {
+                            if !g.complete {
+                                return Ok(()); //not cached yet, just ignore for now
+                            }
+                        }
+                        None => return Ok(()), // we didn't even get a guild create yet
+                    }
+
                     let config = ctx.get_config(guild_id).await?;
                     config.value().prefix.clone()
                 }

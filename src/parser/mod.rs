@@ -5,10 +5,13 @@ use twilight::model::gateway::payload::MessageCreate;
 
 use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
-use crate::core::{BotContext, CachedMember, CachedUser, CommandContext};
+use crate::core::{
+    BotContext, CachedMember, CachedUser, CommandContext, CommandMessage, GuildConfig,
+};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
 
+use dashmap::ElementGuard;
 use twilight::model::channel::GuildChannel;
 use twilight::model::channel::Message;
 use twilight::model::guild::Permissions;
@@ -94,12 +97,46 @@ impl Parser {
                 }
                 debug!("Executing command: {}", name);
 
-                let guild_context =
-                    generate_guild_context(ctx.clone(), message.guild_id.unwrap()).await?;
-
                 p.index += command_nodes.len();
                 let channel_id = message.channel_id;
-                let result = node.execute(guild_context, message.0, p).await;
+
+                let (member, config, guild) = {
+                    match message.guild_id {
+                        Some(guild_id) => {
+                            match ctx.cache.get_member(guild_id, message.author.id) {
+                                Some(m) => (Some(m), Some(ctx.get_config(guild_id).await?), Some(ctx.cache.get_guild(guild_id).unwrap())),
+                                None => return Err(Error::CorruptCacheError(String::from("Got a message with a command from someone who is not cached for this guild!")))
+                            }
+                        }
+                        None => (None, None, None)
+                    }
+                };
+
+                let channel = ctx.cache.get_channel(message.channel_id);
+                if channel.is_none() {
+                    return Err(Error::CorruptCacheError(String::from(
+                        "Got a message that we do not know the channel for!",
+                    )));
+                }
+
+                let cmdm = CommandMessage {
+                    id: message.id,
+                    content: message.content.clone(),
+                    author: message.author.clone(),
+                    author_as_member: member,
+                    channel: channel.unwrap(),
+                    attachments: message.attachments.clone(),
+                    embeds: message.embeds.clone(),
+                    flags: message.flags,
+                    kind: message.kind,
+                    mention_everyone: message.mention_everyone,
+                    tts: message.tts,
+                };
+
+                let context = CommandContext::new(ctx.clone(), config, cmdm, guild);
+
+                let result = node.execute(context, p).await;
+
                 match result {
                     Ok(_) => Ok(()),
                     Err(error) => match error {
@@ -185,14 +222,14 @@ impl Parser {
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
-            Some(uid) => match self.ctx.cache.get_member(&gid, &UserId(uid)) {
+            Some(uid) => match self.ctx.cache.get_member(gid, UserId(uid)) {
                 Some(member) => Ok(member),
                 None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
             },
             None => {
                 // is it a userid?
                 match input.parse::<u64>() {
-                    Ok(uid) => match self.ctx.cache.get_member(&gid, &UserId(uid)) {
+                    Ok(uid) => match self.ctx.cache.get_member(gid, UserId(uid)) {
                         Some(member) => Ok(member),
                         None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
                     },
@@ -207,7 +244,7 @@ impl Parser {
         }
     }
 
-    // pub async fn get_user_or(&mut self, alternative: &CachedUser) -> Result<&CachedUser, Error> {
+    // pub async fn get_user_or(&mut self, alternative: &CachedUser) -> Result<Arc<CachedUser>, Error> {
     //     if self.has_next() {
     //         Ok(self.get_user().await?)
     //     } else {
@@ -227,7 +264,7 @@ impl Parser {
             .await?
             .ok_or(ParseError::UnknownMessage)?;
 
-        let channel = self.ctx.cache.get_channel(&ChannelId(channel_id));
+        let channel = self.ctx.cache.get_channel(ChannelId(channel_id));
         if channel.is_none() {
             return Err(Error::ParseError(ParseError::UnknownChannel(channel_id)));
         }
@@ -292,21 +329,4 @@ impl Parser {
         // _ => unreachable!(),
         // }
     }
-}
-
-async fn generate_guild_context(
-    bot_context: Arc<BotContext>,
-    guild_id: GuildId,
-) -> Result<CommandContext, Error> {
-    let config = bot_context.get_config(guild_id).await?;
-
-    let lang = &config.language;
-    let translator = bot_context.translations.get_translator(lang);
-
-    Ok(CommandContext::new(
-        guild_id,
-        translator,
-        bot_context,
-        config,
-    ))
 }

@@ -16,7 +16,7 @@ pub mod macros {
         ($name: literal, $e: expr) => {
             CommandNode::create_command(
                 String::from($name),
-                Box::new(move |ctx, msg, parser| Box::pin($e(ctx, msg, parser))),
+                Box::new(move |ctx, parser| Box::pin($e(ctx, parser))),
             )
         };
     }

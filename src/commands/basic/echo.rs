@@ -5,11 +5,11 @@ use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::utils;
 
-pub async fn echo(ctx: CommandContext, msg: Message, parser: Parser) -> CommandResult {
+pub async fn echo(ctx: CommandContext, parser: Parser) -> CommandResult {
     let ec: Vec<String> = parser.parts.into_iter().skip(1).collect();
     let echo_contents = utils::clean(&ec.join(" "), true, true, true, true);
 
-    ctx.send_message(echo_contents, msg.channel_id).await?;
+    ctx.reply(echo_contents).await?;
 
     Ok(())
 }

@@ -7,7 +7,7 @@ use twilight::model::user::User;
 
 impl BotContext {
     pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, Error> {
-        match self.cache.get_user(&user_id) {
+        match self.cache.get_user(user_id) {
             Some(user) => Ok(user),
             None => {
                 // let's see if we can get em from the api

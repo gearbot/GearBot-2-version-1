@@ -7,10 +7,10 @@ use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::translation::BasicStrings;
 
-pub async fn ping(ctx: CommandContext, msg: Message, _: Parser) -> CommandResult {
+pub async fn ping(ctx: CommandContext, _: Parser) -> CommandResult {
     let start = Instant::now();
 
-    let sent_msg = ctx.send_message(":ping_pong:", msg.channel_id).await?;
+    let sent_msg = ctx.reply(":ping_pong:").await?;
 
     let finished = Instant::now();
 
