@@ -239,8 +239,6 @@ mod tests {
     use std::collections::HashMap;
     use std::fs;
 
-    const ALL_TRANSLATION_VARIANTS: &[GearBotStrings; 1] = &[GearBotStrings::PingPong];
-
     lazy_static! {
         static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 1] =
             [GearBotStrings::PingPong.as_str()];
@@ -261,7 +259,7 @@ mod tests {
             t_data.extend(t_part)
         }
 
-        assert_eq!(t_data.len(), ALL_TRANSLATION_VARIANTS.len());
+        assert_eq!(t_data.len(), ALL_TRANSLATION_STR_KEYS.len());
         t_data
     }
 
@@ -269,8 +267,8 @@ mod tests {
     fn enum_variants_translation_coverage() {
         let translation_data = load_translations("en_US");
 
-        for t_var in ALL_TRANSLATION_VARIANTS {
-            assert!(translation_data.get(t_var.as_str()).is_some());
+        for t_var in ALL_TRANSLATION_STR_KEYS.iter() {
+            assert!(translation_data.get(*t_var).is_some());
         }
     }
 
