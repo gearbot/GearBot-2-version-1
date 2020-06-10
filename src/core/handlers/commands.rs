@@ -14,7 +14,7 @@ pub async fn handle_event<'a>(
     ctx: Arc<BotContext>,
 ) -> Result<(), Error> {
     match event {
-        Event::MessageCreate(msg) if !msg.author.bot => {
+        Event::MessageCreate(msg) => {
             debug!(
                 "Received a message from {}, saying {}",
                 msg.author.name, msg.content
@@ -26,6 +26,10 @@ pub async fn handle_event<'a>(
                     match guild {
                         Some(g) => {
                             if !g.complete.load(Ordering::SeqCst) {
+                                debug!(
+                                    "Command received in {} but the guild isn't fully cached yet!",
+                                    g.id
+                                );
                                 return Ok(()); //not cached yet, just ignore for now
                             }
                         }
@@ -55,6 +59,9 @@ pub async fn handle_event<'a>(
             if let Some(prefix) = prefix {
                 Parser::figure_it_out(&prefix, msg, ctx, shard_id).await?;
             }
+        }
+        Event::MessageUpdate(update) => {
+            debug!("Message updated to {:?}", update.content);
         }
         _ => (),
     }

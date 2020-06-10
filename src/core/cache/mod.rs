@@ -114,6 +114,7 @@ impl Cache {
                                 "Finished processing all chunks for {} ({}). {:?} guilds to go!",
                                 guild.name, guild.id.0, self.partial_guilds
                             );
+                            guild.complete.store(true, Ordering::SeqCst);
                             let old = self.partial_guilds.fetch_sub(1, Ordering::SeqCst);
                             // if we where at 1 we are now at 0
                             if old == 1 && self.filling.fetch_and(true, Ordering::Relaxed) {
@@ -122,7 +123,6 @@ impl Cache {
                                     self.cluster_id
                                 );
                                 self.filling.fetch_or(false, Ordering::SeqCst);
-                                guild.complete.store(true, Ordering::SeqCst);
                             }
                         }
                     }
@@ -133,6 +133,18 @@ impl Cache {
                         );
                     }
                 }
+            }
+            Event::ChannelCreate(event) => {
+                // match event.0 {
+                //     Channel::Group {
+                //
+                //     }
+                // }
+                //
+                // let guild_id = match event.0 {
+                //
+                // }
+                // let channel = CachedChannel::from(event.0.clone(), guild_id);
             }
             _ => {}
         }

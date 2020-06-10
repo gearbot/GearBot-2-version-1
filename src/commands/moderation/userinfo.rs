@@ -5,6 +5,7 @@ use twilight::model::user::UserFlags;
 
 use crate::core::CommandContext;
 use crate::parser::Parser;
+use crate::translation::{FluArgs, GearBotString};
 use crate::utils::Emoji;
 use crate::utils::{CommandError, Error};
 use crate::{utils, CommandResult};
@@ -192,11 +193,12 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
 
     builder = builder.description(content);
 
-    ctx.reply_with_embed(
-        format!("User information about <@!{}>", user.id),
-        builder.build(),
-    )
-    .await?;
+    let args = FluArgs::with_capacity(1)
+        .insert("userid", user.id.to_string())
+        .generate();
+
+    ctx.reply_with_embed(GearBotString::UserinfoHeader, args, builder.build())
+        .await?;
 
     Ok(())
 }

@@ -36,7 +36,7 @@ fn replace_urls(before: String, msg: &mut String) {
 
 fn replace_emotes(before: String, msg: &mut String) {
     for em in matchers::get_emotes(&before).iter().rev() {
-        println!("{:?}", em);
+        // println!("{:?}", em);
         msg.insert_str(em.start(), "\\");
         msg.insert_str(em.end() + 1, "\\");
     }
@@ -67,7 +67,7 @@ pub fn clean(msg: &str, markdown: bool, links: bool, emotes: bool, lookalikes: b
         replace_emotes(msg.clone(), &mut msg);
     }
 
-    println!("{:?}", msg);
+    // println!("{:?}", msg);
 
     msg
 }

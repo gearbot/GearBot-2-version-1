@@ -6,9 +6,28 @@ use twilight::model::{
 use crate::Error;
 
 use super::CommandContext;
+use crate::translation::GearBotString;
+use fluent_bundle::{FluentArgs, FluentValue};
 
 impl CommandContext {
     pub async fn send_message(
+        &self,
+        channel_id: ChannelId,
+        key: GearBotString,
+        args: FluentArgs<'_>,
+    ) -> Result<Message, Error> {
+        let translated = self.translate_with_args(key, &args);
+        let sent_msg_handle = self
+            .bot_context
+            .http
+            .create_message(channel_id)
+            .content(translated)?
+            .await?;
+
+        Ok(sent_msg_handle)
+    }
+
+    pub async fn send_message_raw(
         &self,
         message: impl Into<String>,
         channel_id: ChannelId,
@@ -67,7 +86,19 @@ impl CommandContext {
         Ok(updated_message_handle)
     }
 
-    pub async fn reply(&self, message: impl Into<String>) -> Result<Message, Error> {
+    pub async fn reply(&self, key: GearBotString, args: FluentArgs<'_>) -> Result<Message, Error> {
+        let translated = self.translate_with_args(key, &args);
+        let sent_msg_handle = self
+            .bot_context
+            .http
+            .create_message(self.message.channel.get_id())
+            .content(translated)?
+            .await?;
+
+        Ok(sent_msg_handle)
+    }
+
+    pub async fn reply_raw(&self, message: impl Into<String>) -> Result<Message, Error> {
         let sent_msg_handle = self
             .bot_context
             .http
@@ -91,14 +122,16 @@ impl CommandContext {
 
     pub async fn reply_with_embed(
         &self,
-        msg: impl Into<String>,
+        key: GearBotString,
+        args: FluentArgs<'_>,
         embed: Embed,
     ) -> Result<Message, Error> {
+        let translated = self.translate_with_args(key, &args);
         let sent_handle = self
             .bot_context
             .http
             .create_message(self.message.channel.get_id())
-            .content(msg)?
+            .content(translated)?
             .embed(embed)?
             .await?;
 

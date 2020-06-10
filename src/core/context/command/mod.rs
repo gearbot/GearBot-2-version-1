@@ -11,9 +11,10 @@ pub use command_message::CommandMessage;
 use crate::core::cache::CachedGuild;
 use crate::core::context::bot::BotStats;
 use crate::core::{BotContext, GuildConfig};
-use crate::translation::{GearBotStrings, GuildTranslator, DEFAULT_LANG};
+use crate::translation::{GearBotString, GuildTranslator, DEFAULT_LANG};
 use crate::utils::CommandError;
 use crate::Error;
+use std::borrow::Cow;
 
 /// The guild context that is returned inside commands that is specific to each guild, with things like the config,
 /// language, etc, set and usable behind wrapper methods for simplicity.
@@ -57,9 +58,16 @@ impl CommandContext {
         &self.bot_context.stats
     }
 
+    pub fn translate<'a>(&'a self, key: GearBotString) -> String {
+        self.bot_context
+            .translations
+            .get_text_plain(&self.translator.language, key)
+            .to_string()
+    }
+
     pub fn translate_with_args<'a>(
         &'a self,
-        string_key: GearBotStrings,
+        string_key: GearBotString,
         args: &'a FluentArgs<'a>,
     ) -> String {
         let guild_lang = &self.translator.language;

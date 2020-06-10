@@ -3,7 +3,7 @@ use rand;
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
 use crate::parser::Parser;
-use crate::translation::FluArgs;
+use crate::translation::{FluArgs, GearBotString};
 use crate::utils;
 
 pub async fn coinflip(ctx: CommandContext, parser: Parser) -> CommandResult {
@@ -15,19 +15,23 @@ pub async fn coinflip(ctx: CommandContext, parser: Parser) -> CommandResult {
         .join(" ");
 
     let thing_todo = if !thing_todo.is_empty() {
-        utils::clean(&thing_todo, true, true, true, true)
+        //todo: couple links to invoking user having embed perms
+        utils::clean(&thing_todo, false, true, false, false)
     } else {
-        ctx.reply("You didn't give me anything to flip on!").await?;
-        return Ok(());
+        ctx.translate(GearBotString::CoinflipDefault)
     };
 
-    let message_text = if rand::random() {
-        format!("Yes, you should absolutely {}", thing_todo)
+    let key = if rand::random() {
+        GearBotString::CoinflipYes
     } else {
-        format!("No, you should probably not {}", thing_todo)
+        GearBotString::CoinflipNo
     };
 
-    ctx.reply(message_text).await?;
+    let args = FluArgs::with_capacity(1)
+        .insert("input", thing_todo)
+        .generate();
+
+    ctx.reply(key, args).await?;
 
     Ok(())
 }

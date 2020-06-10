@@ -13,10 +13,10 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
-      - name: Install beta toolchain
+      - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: beta
+          toolchain: stable
           override: true
 
       - name: Cache cargo registry
@@ -37,6 +37,11 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-release-${{ hashFiles('**/Cargo.lock') }}
 
+
+      - name: Run cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
       - name: Create release build
         uses: actions-rs/cargo@v1
         with:

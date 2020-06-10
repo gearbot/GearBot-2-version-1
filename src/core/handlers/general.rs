@@ -61,23 +61,3 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
     }
     Ok(())
 }
-
-fn gen_activity(name: String) -> Activity {
-    Activity {
-        assets: None,
-        application_id: None,
-        created_at: None,
-        details: None,
-        flags: None,
-        id: None,
-        instance: None,
-        kind: ActivityType::Watching,
-        name,
-        emoji: None,
-        party: None,
-        secrets: None,
-        state: None,
-        timestamps: None,
-        url: None,
-    }
-}

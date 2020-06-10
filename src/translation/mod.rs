@@ -10,6 +10,7 @@ use serde_json;
 use unic_langid::{langid, LanguageIdentifier};
 
 use crate::gearbot_warn;
+use log::debug;
 
 const TRANSLATION_DIR: &str = "./lang";
 const FAILED_TRANSLATE_FALLBACK_MSG: &str = "A translation error occured and no fallback could be found! Something may be wrong with the guild configuration!";
@@ -58,7 +59,7 @@ impl Translations {
     pub fn get_text_plain(
         &self,
         lang_key: &LanguageIdentifier,
-        string_key: GearBotStrings,
+        string_key: GearBotString,
     ) -> Cow<str> {
         // TODO: See how well this will work out in practice with unwrapping
         let lang_bundle = self.0.get(lang_key).unwrap();
@@ -102,7 +103,7 @@ impl Translations {
     pub fn get_text_with_args<'a>(
         &'a self,
         lang_key: &LanguageIdentifier,
-        string_key: GearBotStrings,
+        string_key: GearBotString,
         args: &'a FluentArgs<'a>,
     ) -> Cow<'a, str> {
         let lang_bundle = self.0.get(lang_key).unwrap();
@@ -113,6 +114,10 @@ impl Translations {
             let pattern = expected_msg.value.unwrap();
 
             let value = lang_bundle.format_pattern(pattern, Some(args), &mut errors);
+
+            for c in value.escape_unicode() {
+                print!("{}", c);
+            }
 
             handle_translation_error(&errors, string_key, false);
 
@@ -148,16 +153,17 @@ impl Translations {
     }
 }
 
-fn handle_translation_error(errors: &[FluentError], key: GearBotStrings, is_fallback: bool) {
-    for _error in errors {
+fn handle_translation_error(errors: &[FluentError], key: GearBotString, is_fallback: bool) {
+    for error in errors {
         if is_fallback {
             gearbot_warn!(
-                "A translation error occured and had to fallback to '{}' while trying to translate the key: '{}'", key.as_str(), DEFAULT_LANG,
+                "A translation error occured and had to fallback to '{}' while trying to translate the **``{}``** key: ``{:?}``", key.as_str(), DEFAULT_LANG, error
             );
         } else {
             gearbot_warn!(
-                "A translation error occured while trying to translate the key: '{}'",
-                key.as_str()
+                "A translation error occured while trying to translate the **``{}``** key: ``{:?}``",
+                key.as_str(),
+                error
             );
         }
     }
@@ -166,15 +172,23 @@ fn handle_translation_error(errors: &[FluentError], key: GearBotStrings, is_fall
 // This allows us to take full advantage of the type system to make sure that a key always exists in an
 // ergonomic way instead of checking a bunch of options.
 /// This is where *all* of the different things Gearbot can say should go.
-pub enum GearBotStrings {
+pub enum GearBotString {
     // Basic commands
-    PingPong, // TODO: Add more command variants
+    PingPong,
+    CoinflipDefault,
+    CoinflipYes,
+    CoinflipNo,
+    UserinfoHeader,
 }
 
-impl GearBotStrings {
+impl GearBotString {
     fn as_str(&self) -> &'static str {
         match self {
-            GearBotStrings::PingPong => "basic__ping_pong",
+            GearBotString::PingPong => "basic__ping_pong",
+            GearBotString::CoinflipDefault => "bacic__coinflip_default_input",
+            GearBotString::CoinflipYes => "basic__coinflip_yes",
+            GearBotString::CoinflipNo => "basic__coinflip_no",
+            GearBotString::UserinfoHeader => "basic__userinfo_header",
         }
     }
 
@@ -233,15 +247,19 @@ pub fn load_translations() -> Translations {
 
 #[cfg(test)]
 mod tests {
-    use super::{GearBotStrings, TRANSLATION_DIR};
+    use super::{GearBotString, TRANSLATION_DIR};
     use lazy_static::lazy_static;
     use serde_json;
     use std::collections::HashMap;
     use std::fs;
 
     lazy_static! {
-        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 1] =
-            [GearBotStrings::PingPong.as_str()];
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 4] = [
+            GearBotString::PingPong.as_str(),
+            GearBotString::CoinflipDefault.as_str(),
+            GearBotString::CoinflipYes.as_str(),
+            GearBotString::CoinflipNo.as_str(),
+        ];
     }
 
     fn load_translations(lang: &str) -> HashMap<String, String> {

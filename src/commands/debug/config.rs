@@ -5,7 +5,7 @@ use crate::CommandResult;
 pub async fn get_config(ctx: CommandContext, _: Parser) -> CommandResult {
     let stringified_config = serde_json::to_string(ctx.get_config()?)?;
 
-    ctx.reply(stringified_config).await?;
+    ctx.reply_raw(stringified_config).await?;
 
     Ok(())
 }

@@ -7,7 +7,7 @@ use twilight::model::id::{RoleId, UserId};
 
 use crate::core::cache::{Cache, CachedUser};
 
-use super::{get_true, is_default, is_true};
+use super::is_default;
 
 #[derive(Debug)]
 pub struct CachedMember {
