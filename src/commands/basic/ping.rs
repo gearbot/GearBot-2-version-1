@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
 use crate::parser::Parser;
-use crate::translation::BasicStrings;
+use crate::translation::{FluArgs, GearBotStrings};
 
 pub async fn ping(ctx: CommandContext, _: Parser) -> CommandResult {
     let start = Instant::now();
@@ -23,10 +23,12 @@ pub async fn ping(ctx: CommandContext, _: Parser) -> CommandResult {
         .sum::<Duration>()
         .as_millis();
 
-    let arg_parts = [("rest", &rest_time), ("latency", &ws_time_avg)];
-    let args = ctx.generate_args(&arg_parts);
+    let args = FluArgs::with_capacity(2)
+        .insert("rest", rest_time)
+        .insert("latency", ws_time_avg)
+        .generate();
 
-    let edited_msg = ctx.translate_with_args(BasicStrings::PingPong.into(), &args);
+    let edited_msg = ctx.translate_with_args(GearBotStrings::PingPong, &args);
 
     ctx.update_message(edited_msg, sent_msg.channel_id, sent_msg.id)
         .await?;

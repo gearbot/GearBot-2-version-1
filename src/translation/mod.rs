@@ -28,28 +28,31 @@ pub struct GuildTranslator {
     pub translator: Arc<FluentBundle<FluentResource>>,
 }
 
-impl Translations {
-    /// Generates the arguments needed for getting a text string that takes arguments. The advised type to pass in here
-    /// (for resource efficiency) is a &[(key, &dynamic_value_string_ref)] since the output only borrows the input.
-    pub fn generate_args<'a, P: 'a, T>(&self, arg_mappings: T) -> FluentArgs<'a>
-    where
-        &'a P: Into<FluentValue<'a>>,
-        T: IntoIterator<Item = &'a (&'a str, &'a P)>,
-    {
-        let mappings = arg_mappings.into_iter();
+pub struct FluArgs<'a>(FluentArgs<'a>);
 
-        // Try to be smart with our allocations
-        let mut args = FluentArgs::with_capacity(mappings.size_hint().1.unwrap_or_default());
-
-        for (arg_key, arg_inserted_value) in mappings {
-            let f_value = (*arg_inserted_value).into();
-
-            args.insert(arg_key, f_value);
-        }
-
-        args
+impl<'a> FluArgs<'a> {
+    pub fn new() -> Self {
+        Self(FluentArgs::new())
     }
 
+    pub fn with_capacity(cap: usize) -> Self {
+        Self(FluentArgs::with_capacity(cap))
+    }
+
+    pub fn insert<P>(mut self, key: &'a str, value: P) -> Self
+    where
+        P: Into<FluentValue<'a>>,
+    {
+        self.0.insert(key, value.into());
+        self
+    }
+
+    pub fn generate(self) -> FluentArgs<'a> {
+        self.0
+    }
+}
+
+impl Translations {
     /// Retreives a string key to use when sending a message to chat that *does not* require arguments and can be sent as fetched with no
     /// further modifications.
     pub fn get_text_plain(
@@ -164,32 +167,14 @@ fn handle_translation_error(errors: &[FluentError], key: GearBotStrings, is_fall
 // ergonomic way instead of checking a bunch of options.
 /// This is where *all* of the different things Gearbot can say should go.
 pub enum GearBotStrings {
-    Basic(BasicStrings),
-}
-
-/// The strings that basic commands use.
-pub enum BasicStrings {
-    PingPong,
-}
-
-impl BasicStrings {
-    fn as_str(&self) -> &str {
-        match self {
-            BasicStrings::PingPong => "basic__ping_pong",
-        }
-    }
-}
-
-impl From<BasicStrings> for GearBotStrings {
-    fn from(basic: BasicStrings) -> Self {
-        GearBotStrings::Basic(basic)
-    }
+    // Basic commands
+    PingPong, // TODO: Add more command variants
 }
 
 impl GearBotStrings {
-    fn as_str(&self) -> &str {
+    fn as_str(&self) -> &'static str {
         match self {
-            GearBotStrings::Basic(basic) => basic.as_str(),
+            GearBotStrings::PingPong => "basic__ping_pong",
         }
     }
 
@@ -244,4 +229,63 @@ pub fn load_translations() -> Translations {
     }
 
     Translations(translations)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{GearBotStrings, TRANSLATION_DIR};
+    use lazy_static::lazy_static;
+    use serde_json;
+    use std::collections::HashMap;
+    use std::fs;
+
+    const ALL_TRANSLATION_VARIANTS: &[GearBotStrings; 1] = &[GearBotStrings::PingPong];
+
+    lazy_static! {
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 1] =
+            [GearBotStrings::PingPong.as_str()];
+    }
+
+    fn load_translations(lang: &str) -> HashMap<String, String> {
+        let mut t_data = HashMap::new();
+        let path = format!("{}/{}", TRANSLATION_DIR, lang);
+        for t_file in fs::read_dir(path).unwrap() {
+            let t_file = {
+                let tmp = t_file.unwrap();
+                fs::File::open(tmp.path()).expect("Failed to read a translation file in!")
+            };
+
+            let t_part: HashMap<String, String> = serde_json::from_reader(&t_file).unwrap();
+            // We should always have the same number of keys
+
+            t_data.extend(t_part)
+        }
+
+        assert_eq!(t_data.len(), ALL_TRANSLATION_VARIANTS.len());
+        t_data
+    }
+
+    #[test]
+    fn enum_variants_translation_coverage() {
+        let translation_data = load_translations("en_US");
+
+        for t_var in ALL_TRANSLATION_VARIANTS {
+            assert!(translation_data.get(t_var.as_str()).is_some());
+        }
+    }
+
+    #[test]
+    fn translation_strings_are_used() {
+        let translation_data = load_translations("en_US");
+
+        let mut covered = 0;
+
+        for (t_key, _) in translation_data {
+            ALL_TRANSLATION_STR_KEYS.contains(&t_key.as_str());
+            covered += 1;
+        }
+
+        // Make sure we exhausted everything
+        assert_eq!(covered, ALL_TRANSLATION_STR_KEYS.len())
+    }
 }

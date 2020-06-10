@@ -17,7 +17,7 @@ impl CommandContext {
     }
 
     pub async fn get_guild_permissions_for(&self, user_id: UserId) -> Permissions {
-        let mut permissions = Permissions::empty();
+        let permissions = Permissions::empty();
 
         // if let Some(member) = self.get_cached_member(user_id).await {
         //     for role_id in &member.roles {

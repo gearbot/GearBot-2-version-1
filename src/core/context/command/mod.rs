@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use dashmap::ElementGuard;
-use fluent_bundle::{FluentArgs, FluentValue};
+use fluent_bundle::FluentArgs;
 use twilight::gateway::shard::Information;
 use twilight::model::{id::GuildId, user::CurrentUser};
 
@@ -68,15 +68,6 @@ impl CommandContext {
             .translations
             .get_text_with_args(guild_lang, string_key, args)
             .to_string()
-    }
-
-    // TODO: Make a macro for compile time validation
-    pub fn generate_args<'a, P: 'a, T>(&self, arg_mappings: T) -> FluentArgs<'a>
-    where
-        &'a P: Into<FluentValue<'a>>,
-        T: IntoIterator<Item = &'a (&'a str, &'a P)>,
-    {
-        self.bot_context.translations.generate_args(arg_mappings)
     }
 
     pub async fn set_config(&self, new_config: GuildConfig) -> Result<(), Error> {

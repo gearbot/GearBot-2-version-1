@@ -3,6 +3,7 @@ use rand;
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
 use crate::parser::Parser;
+use crate::translation::FluArgs;
 use crate::utils;
 
 pub async fn coinflip(ctx: CommandContext, parser: Parser) -> CommandResult {
