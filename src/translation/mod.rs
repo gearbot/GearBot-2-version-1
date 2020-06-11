@@ -254,11 +254,12 @@ mod tests {
     use std::fs;
 
     lazy_static! {
-        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 4] = [
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 5] = [
             GearBotString::PingPong.as_str(),
             GearBotString::CoinflipDefault.as_str(),
             GearBotString::CoinflipYes.as_str(),
             GearBotString::CoinflipNo.as_str(),
+            GearBotString::UserinfoHeader.as_str(),
         ];
     }
 
