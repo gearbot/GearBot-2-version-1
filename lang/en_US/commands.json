@@ -3,5 +3,5 @@
   "basic__coinflip_yes": "Yes, you should absolutely {$input}",
   "basic__coinflip_no": "No, you should probably not {$input}",
   "bacic__coinflip_default_input": "do the thing",
-  "basic__userinfo_header": "User information about <!@{$userid}>"
+  "basic__userinfo_header": "User information about <@!{$userid}>"
 }

@@ -220,7 +220,7 @@ pub fn load_translations() -> Translations {
 
         // Make the bundle of the specific language
         let mut bundle = FluentBundle::new(&[langid.clone()]);
-
+        bundle.set_use_isolating(false);
         for t_file in fs::read_dir(lang_dir.path()).unwrap() {
             let t_file = {
                 let tmp = t_file.unwrap();
