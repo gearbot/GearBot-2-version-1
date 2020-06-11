@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use log::debug;
+use log::{debug, info};
 use twilight::model::channel::Message;
 use twilight::model::gateway::payload::MessageCreate;
 use twilight::model::id::{ChannelId, GuildId, UserId};
@@ -9,8 +9,10 @@ use crate::commands;
 use crate::commands::meta::nodes::CommandNode;
 use crate::core::cache::{CachedMember, CachedUser};
 use crate::core::{BotContext, CommandContext, CommandMessage};
+use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
+use twilight::model::guild::Permissions;
 
 #[derive(Clone)]
 pub struct Parser {
@@ -112,6 +114,7 @@ impl Parser {
                         "Got a message that we do not know the channel for!",
                     )));
                 }
+                let channel = channel.unwrap();
 
                 let author =
                     match ctx.cache.get_user(message.author.id) {
@@ -124,9 +127,9 @@ impl Parser {
                 let cmdm = CommandMessage {
                     id: message.id,
                     content: message.content.clone(),
-                    author,
+                    author: author.clone(),
                     author_as_member: member,
-                    channel: channel.unwrap(),
+                    channel: channel.clone(),
                     attachments: message.attachments.clone(),
                     embeds: message.embeds.clone(),
                     flags: message.flags,
@@ -136,6 +139,33 @@ impl Parser {
                 };
 
                 let context = CommandContext::new(ctx.clone(), config, cmdm, guild);
+                // debug!("Bot channel perms: {:?}", context.get_bot_channel_permissions());
+                // debug!("USER channel perms: {:?}", context.get_author_channel_permissions());
+                //check if we can send a reply
+                if !context.bot_has_channel_permissions(Permissions::SEND_MESSAGES) {
+                    info!("{}#{} ({}) tried to run the {} command in #{} ({}) but i lack send message permissions to execute the command", author.username, author.discriminator, author.id, name, channel.get_name(), channel.get_id());
+
+                    let dm_channel = ctx.http.create_private_channel(author.id).await?;
+
+                    let key =
+                        if context.author_has_channel_permissions(Permissions::MANAGE_CHANNELS) {
+                            GearBotString::UnableToReplyForManager
+                        } else {
+                            GearBotString::UnableToReply
+                        };
+
+                    let args = FluArgs::with_capacity(1)
+                        .insert("channel", channel.get_name())
+                        .generate();
+                    let translated = context.translate_with_args(key, &args);
+                    // we don't really care if this works or not, nothing we can do if they don't allow DMs from our mutual server(s)
+                    let _ = ctx
+                        .http
+                        .create_message(dm_channel.id)
+                        .content(translated)?
+                        .await;
+                    return Ok(());
+                }
 
                 let result = node.execute(context, p).await;
 

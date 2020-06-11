@@ -3,5 +3,7 @@
   "basic__coinflip_yes": "Yes, you should absolutely {$input}",
   "basic__coinflip_no": "No, you should probably not {$input}",
   "bacic__coinflip_default_input": "do the thing",
-  "basic__userinfo_header": "User information about <@!{$userid}>"
+  "basic__userinfo_header": "User information about <@!{$userid}>",
+  "errors_unable_to_reply": "You tried to execute a command in #{$channel} but i do not have permissions to send the reply there. Please contact the server moderators/admins to get this resolved",
+  "errors_unable_to_reply_manager": "You tried to execute a command in #{$channel} but i do not have permissions to send the reply there. Please either grant me the **``SEND MESSAGES``** permission in the channel so i can respond to commands or revoke my **``READ MESSAGES``** permission in the channel to disable this notification."
 }

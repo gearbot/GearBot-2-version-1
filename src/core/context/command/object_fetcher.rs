@@ -17,18 +17,18 @@ impl CommandContext {
         self.bot_context.get_user(user_id).await
     }
 
-    pub async fn get_member(&self, user_id: UserId) -> Option<Arc<CachedMember>> {
+    pub fn get_member(&self, user_id: UserId) -> Option<Arc<CachedMember>> {
         match &self.guild {
             Some(g) => self.bot_context.cache.get_member(g.id, user_id),
             None => None,
         }
     }
 
-    pub async fn get_channel(&self, channel_id: ChannelId) -> Option<Arc<CachedChannel>> {
+    pub fn get_channel(&self, channel_id: ChannelId) -> Option<Arc<CachedChannel>> {
         self.bot_context.cache.get_channel(channel_id)
     }
 
-    pub async fn get_role(&self, role_id: RoleId) -> Option<Arc<CachedRole>> {
+    pub fn get_role(&self, role_id: RoleId) -> Option<Arc<CachedRole>> {
         match &self.guild {
             Some(g) => match g.roles.get(&role_id) {
                 Some(guard) => Some(guard.value().clone()),

@@ -14,7 +14,7 @@ pub async fn handle_event<'a>(
     ctx: Arc<BotContext>,
 ) -> Result<(), Error> {
     match event {
-        Event::MessageCreate(msg) => {
+        Event::MessageCreate(msg) if !msg.author.bot => {
             debug!(
                 "Received a message from {}, saying {}",
                 msg.author.name, msg.content

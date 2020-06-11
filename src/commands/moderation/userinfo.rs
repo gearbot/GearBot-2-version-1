@@ -119,13 +119,13 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
         utils::age(created_at, Utc::now(), 2)
     );
 
-    let cached_member = ctx.get_member(user.id).await;
+    let cached_member = ctx.get_member(user.id);
 
     match cached_member {
         Some(member) => {
             if let Some(role) = member.roles.first() {
                 // This role has to exist
-                let cached_role = ctx.get_role(*role).await.unwrap();
+                let cached_role = ctx.get_role(*role).unwrap();
 
                 builder = builder.color(cached_role.color);
 
@@ -179,9 +179,7 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
         }
     }
 
-    let bot_has_guild_permissions = ctx
-        .bot_has_guild_permissions(Permissions::BAN_MEMBERS)
-        .await
+    let bot_has_guild_permissions = ctx.bot_has_guild_permissions(Permissions::BAN_MEMBERS)
         && ctx.get_ban(user.id).await?.is_some();
 
     if bot_has_guild_permissions {

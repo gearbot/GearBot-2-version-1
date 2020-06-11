@@ -7,39 +7,57 @@ use twilight::model::{
 use super::CommandContext;
 
 impl CommandContext {
-    pub async fn bot_has_guild_permissions(&self, permissions: Permissions) -> bool {
-        self.get_bot_guild_permissions().await.contains(permissions)
+    pub fn bot_has_guild_permissions(&self, permissions: Permissions) -> bool {
+        self.get_bot_guild_permissions().contains(permissions)
     }
 
-    pub async fn get_bot_guild_permissions(&self) -> Permissions {
+    pub fn get_bot_guild_permissions(&self) -> Permissions {
         let bot_user = self.get_bot_user();
-        self.get_guild_permissions_for(bot_user.id).await
+        self.get_guild_permissions_for(bot_user.id)
     }
 
-    pub async fn get_guild_permissions_for(&self, user_id: UserId) -> Permissions {
-        let permissions = Permissions::empty();
+    pub fn get_guild_permissions_for(&self, user_id: UserId) -> Permissions {
+        //owners can do whatever they want
+        if let Some(guild) = &self.guild {
+            if guild.owner_id == user_id {
+                return Permissions::all();
+            }
+        }
 
-        // if let Some(member) = self.get_cached_member(user_id).await {
-        //     for role_id in &member.roles {
-        //         if let Some(role) = self.get_cached_role(*role_id).await {
-        //             permissions |= role.permissions;
-        //         }
-        //     }
-        // };
-        permissions
+        let mut permissions = Permissions::empty();
+
+        if let Some(member) = self.get_member(user_id) {
+            for role_id in &member.roles {
+                if let Some(role) = self.get_role(*role_id) {
+                    permissions |= role.permissions;
+                }
+            }
+        };
+        if permissions.contains(Permissions::ADMINISTRATOR) {
+            //admins also can do whatever they want
+            Permissions::all()
+        } else {
+            permissions
+        }
     }
 
-    pub async fn get_channel_permissions_for(
+    pub fn get_channel_permissions_for(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
     ) -> Permissions {
         let mut permissions = Permissions::empty();
 
-        if let Some(channel) = self.get_channel(channel_id).await {
-            permissions = self.get_guild_permissions_for(user_id).await;
-            if let Some(member) = self.get_member(user_id).await {
+        if let Some(channel) = self.get_channel(channel_id) {
+            permissions = self.get_guild_permissions_for(user_id);
+            //admins don't give a **** about overrides
+            if permissions.contains(Permissions::ADMINISTRATOR) {
+                return Permissions::all();
+            }
+            if let Some(member) = &self.message.author_as_member {
                 let overrides = channel.get_permission_overrides();
+                let mut everyone_allowed = Permissions::empty();
+                let mut everyone_denied = Permissions::empty();
                 let mut user_allowed = Permissions::empty();
                 let mut user_denied = Permissions::empty();
                 let mut role_allowed = Permissions::empty();
@@ -53,13 +71,19 @@ impl CommandContext {
                             }
                         }
                         PermissionOverwriteType::Role(role_id) => {
-                            if member.roles.contains(&role_id) {
+                            if role_id.0 == channel.get_guild_id().unwrap().0 {
+                                everyone_allowed |= o.allow;
+                                everyone_denied |= o.deny
+                            } else if member.roles.contains(&role_id) {
                                 role_allowed |= o.allow;
                                 role_denied |= o.deny;
                             }
                         }
                     }
                 }
+
+                permissions &= !everyone_denied;
+                permissions |= everyone_allowed;
 
                 permissions &= !role_denied;
                 permissions |= role_allowed;
@@ -72,30 +96,50 @@ impl CommandContext {
         permissions
     }
 
-    pub async fn get_bot_channel_permissions(&self, channel_id: ChannelId) -> Permissions {
-        let bot_user = self.get_bot_user();
-        self.get_channel_permissions_for(bot_user.id, channel_id)
-            .await
+    pub fn get_bot_channel_permissions(&self) -> Permissions {
+        self.get_bot_permissions_for_channel(self.message.channel.get_id())
     }
 
-    pub async fn has_channel_permissions(
+    pub fn get_bot_permissions_for_channel(&self, channel_id: ChannelId) -> Permissions {
+        self.get_channel_permissions_for(self.get_bot_user().id, channel_id)
+    }
+
+    pub fn has_channel_permissions(
         &self,
         user_id: UserId,
         channel_id: ChannelId,
         permissions: Permissions,
     ) -> bool {
         self.get_channel_permissions_for(user_id, channel_id)
-            .await
             .contains(permissions)
     }
 
-    pub async fn bot_has_channel_permissions(
+    pub fn bot_has_channel_permissions(&self, permissions: Permissions) -> bool {
+        self.bot_has_permissions_in_channel(self.message.channel.get_id(), permissions)
+    }
+
+    pub fn bot_has_permissions_in_channel(
         &self,
         channel_id: ChannelId,
         permissions: Permissions,
     ) -> bool {
-        self.get_bot_channel_permissions(channel_id)
-            .await
+        self.get_bot_permissions_for_channel(channel_id)
             .contains(permissions)
+    }
+
+    pub fn get_author_channel_permissions(&self) -> Permissions {
+        self.get_channel_permissions_for(self.message.author.id, self.message.channel.get_id())
+    }
+
+    pub fn get_author_guild_permissions(&self) -> Permissions {
+        self.get_guild_permissions_for(self.message.author.id)
+    }
+
+    pub fn author_has_channel_permissions(&self, permissions: Permissions) -> bool {
+        self.get_author_channel_permissions().contains(permissions)
+    }
+
+    pub fn author_has_guild_permissions(&self, permissions: Permissions) -> bool {
+        self.get_author_guild_permissions().contains(permissions)
     }
 }

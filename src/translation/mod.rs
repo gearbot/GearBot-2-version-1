@@ -115,10 +115,6 @@ impl Translations {
 
             let value = lang_bundle.format_pattern(pattern, Some(args), &mut errors);
 
-            for c in value.escape_unicode() {
-                print!("{}", c);
-            }
-
             handle_translation_error(&errors, string_key, false);
 
             value
@@ -179,6 +175,10 @@ pub enum GearBotString {
     CoinflipYes,
     CoinflipNo,
     UserinfoHeader,
+
+    //DM error strings
+    UnableToReply,
+    UnableToReplyForManager,
 }
 
 impl GearBotString {
@@ -189,6 +189,8 @@ impl GearBotString {
             GearBotString::CoinflipYes => "basic__coinflip_yes",
             GearBotString::CoinflipNo => "basic__coinflip_no",
             GearBotString::UserinfoHeader => "basic__userinfo_header",
+            GearBotString::UnableToReply => "errors_unable_to_reply",
+            GearBotString::UnableToReplyForManager => "errors_unable_to_reply_manager",
         }
     }
 
