@@ -262,6 +262,8 @@ mod tests {
             GearBotString::CoinflipYes.as_str(),
             GearBotString::CoinflipNo.as_str(),
             GearBotString::UserinfoHeader.as_str(),
+            GearBotString::UnableToReply.as_str(),
+            GearBotString::UnableToReplyForManager.as_str(),
         ];
     }
 
