@@ -1,10 +1,10 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use darkredis::ConnectionPool;
-use dashmap::DashMap;
+use dashmap::{DashMap, ElementGuard};
 use futures::future;
-use log::{debug, info};
+use log::{trace, debug, info};
 use twilight::gateway::Event;
 use twilight::model::id::{ChannelId, EmojiId, GuildId, UserId};
 use twilight::model::user::User;
@@ -17,7 +17,10 @@ pub use role::CachedRole;
 pub use user::CachedUser;
 
 use crate::utils::Error;
-use crate::{gearbot_error, gearbot_important, gearbot_warn};
+use crate::{gearbot_error, gearbot_important, gearbot_warn, gearbot_info};
+use twilight::model::channel::{Channel, GuildChannel, PrivateChannel};
+use twilight::model::gateway::payload::ChannelDelete;
+use std::borrow::Borrow;
 
 pub struct Cache {
     //cluster info
@@ -26,6 +29,8 @@ pub struct Cache {
     //cache
     guilds: DashMap<GuildId, Arc<CachedGuild>>,
     guild_channels: DashMap<ChannelId, Arc<CachedChannel>>,
+    private_channels: DashMap<ChannelId, Arc<CachedChannel>>,
+    dm_channels_by_user: DashMap<UserId, Arc<CachedChannel>>,
     users: DashMap<UserId, Arc<CachedUser>>,
     emoji: DashMap<EmojiId, Arc<CachedEmoji>>,
     //TODO: handle guild on outage
@@ -42,6 +47,8 @@ pub struct Cache {
     role_count: AtomicU64,
     channel_count: AtomicU64,
     emoji_count: AtomicU64,
+    unavailable_guild_count: AtomicU64,
+    unavailable_guilds: Mutex<Vec<GuildId>>,
 }
 
 impl Cache {
@@ -50,6 +57,8 @@ impl Cache {
             cluster_id,
             guilds: DashMap::new(),
             guild_channels: DashMap::new(),
+            private_channels: DashMap::new(),
+            dm_channels_by_user: DashMap::new(),
             users: DashMap::new(),
             emoji: DashMap::new(),
             guild_count: AtomicU64::new(0),
@@ -60,6 +69,8 @@ impl Cache {
             role_count: AtomicU64::new(0),
             channel_count: AtomicU64::new(0),
             emoji_count: AtomicU64::new(0),
+            unavailable_guild_count: AtomicU64::new(0),
+            unavailable_guilds: Mutex::new(vec![]),
         }
     }
 
@@ -76,11 +87,13 @@ impl Cache {
         self.channel_count.store(0, Ordering::SeqCst);
         self.emoji_count.store(0, Ordering::SeqCst);
         self.filling.store(true, Ordering::SeqCst);
+        self.private_channels.clear();
     }
 
     pub fn update(&self, event: &Event) {
         match event {
             Event::GuildCreate(e) => {
+                trace!("Received guild create event for {} ({})", e.name, e.id);
                 let guild = CachedGuild::from(e.0.clone());
 
                 for channel in &guild.channels {
@@ -96,17 +109,60 @@ impl Cache {
                 self.emoji_count
                     .fetch_add(guild.emoji.len() as u64, Ordering::Relaxed);
 
+                //we usually don't need this mutable but acquire a write lock regardless to prevent potential deadlocks
+                let mut list = self.unavailable_guilds.lock().unwrap();
+                match list.iter().position(|id| id.0 == guild.id.0) {
+                    Some(index) => {
+                        list.remove(index);
+                        gearbot_info!("Guild {}, ``{}`` is available again!", guild.name, guild.id);
+                    }
+                    None => {}
+                }
                 self.guilds.insert(e.id, Arc::new(guild));
                 self.guild_count.fetch_add(1, Ordering::Relaxed);
                 self.partial_guilds.fetch_add(1, Ordering::Relaxed);
             }
+            Event::GuildUpdate(update) => {
+                trace!("Receive guild update for {} ({})", update.name, update.id);
+                debug!("{:?}", update);
 
+                match self.get_guild(update.id) {
+                    Some(old_guild) => {
+                        let guild = old_guild.update(&update.0);
+
+                        self.role_count.fetch_sub(old_guild.roles.len() as u64, Ordering::Relaxed);
+                        self.role_count.fetch_add(guild.roles.len() as u64, Ordering::Relaxed);
+                    }
+                    None => {
+                        gearbot_warn!("Got a guild update for {} (``{}``) but the guild was not found in cache!", update.name, update.id);
+                    }
+                }
+            }
+            Event::GuildEmojisUpdate(event) => {}
+            Event::GuildDelete(guild) => {
+                match self.get_guild(guild.id) {
+                    Some(cached_guild) => {
+                        if guild.unavailable.unwrap_or(false) {
+                            self.guild_unavailable(&cached_guild);
+                        } else {
+                            if !cached_guild.complete.load(Ordering::SeqCst) {
+                                self.partial_guilds.fetch_sub(1, Ordering::Relaxed);
+                            }
+                            self.guild_count.fetch_sub(1, Ordering::Relaxed);
+                        }
+                        self.nuke_guild_cache(&cached_guild)
+                    }
+                    None => {}
+                }
+            }
             Event::MemberChunk(chunk) => {
+                trace!("Recieved member chunk {}/{} (nonce: {:?}) for guild {}", chunk.chunk_index + 1, chunk.chunk_count, chunk.nonce, chunk.guild_id);
                 match self.get_guild(chunk.guild_id) {
                     Some(guild) => {
                         for (user_id, member) in chunk.members.clone() {
-                            self.get_or_insert_user(member.user.clone());
-                            let member = Arc::new(CachedMember::from_member(member, self));
+                            self.get_or_insert_user(&member.user);
+                            let member = Arc::new(CachedMember::from_member(&member, self));
+                            member.user.mutual_servers.fetch_add(1, Ordering::SeqCst);
                             guild.members.insert(user_id, member);
                         }
                         if (chunk.chunk_count - 1) == chunk.chunk_index {
@@ -134,27 +190,240 @@ impl Cache {
                     }
                 }
             }
+
             Event::ChannelCreate(event) => {
-                // match event.0 {
-                //     Channel::Group {
-                //
-                //     }
-                // }
-                //
-                // let guild_id = match event.0 {
-                //
-                // }
-                // let channel = CachedChannel::from(event.0.clone(), guild_id);
+                //todo: add more details
+                trace!("Received channel create event for channel a channel");
+                match &event.0 {
+                    Channel::Group(group) => {} //we do not care about groups in the slightest
+                    Channel::Guild(guild_channel) => {
+                        let guild_id = match guild_channel {
+                            GuildChannel::Category(category) => category.guild_id,
+                            GuildChannel::Text(text) => text.guild_id,
+                            GuildChannel::Voice(voice) => voice.guild_id
+                        };
+                        match guild_id {
+                            Some(guild_id) => {
+                                let channel = CachedChannel::from_guild_channel(guild_channel, guild_id);
+                                match self.get_guild(guild_id) {
+                                    Some(guild) => {
+                                        let arced = Arc::new(channel);
+                                        guild.channels.insert(arced.get_id(), arced.clone());
+                                        self.guild_channels.insert(arced.get_id(), arced);
+                                        self.channel_count.fetch_add(1, Ordering::Relaxed);
+                                    }
+                                    None => { gearbot_error!("Channel create received for #{} **``{}``** in guild **``{}``** but this guild does not exist in cache!", channel.get_name(), channel.get_id(), guild_id) }
+                                }
+                            }
+                            None => { gearbot_warn!("We got a channel create event for a guild type channel without guild id!") }
+                        }
+                    }
+                    Channel::Private(private_channel) => {
+                        self.insert_private_channel(private_channel);
+                    }
+                };
             }
+            Event::ChannelUpdate(channel) => {
+                match &channel.0 {
+                    Channel::Group(_) => {}//get out of here!
+                    Channel::Guild(guild_channel) => {
+                        let guild_id = match guild_channel {
+                            GuildChannel::Category(cateogry) => cateogry.guild_id,
+                            GuildChannel::Text(text) => text.guild_id,
+                            GuildChannel::Voice(voice) => voice.guild_id
+                        };
+                        match guild_id {
+                            Some(guild_id) => {
+                                match self.get_guild(guild_id) {
+                                    Some(guild) => {
+                                        let channel = CachedChannel::from_guild_channel(guild_channel, guild.id);
+                                        let arced = Arc::new(channel);
+                                        guild.channels.insert(arced.get_id(), arced.clone());
+                                        self.guild_channels.insert(arced.get_id(), arced);
+                                    }
+                                    None => { gearbot_warn!("Got a channel update for guild ``{}`` but we do not have this guild cached!", guild_id) }
+                                }
+                            }
+                            None => { gearbot_warn!("Got a channel update for  of a guild type channel but it did not have a guild id!") }
+                        }
+                    }
+                    Channel::Private(private) => { self.insert_private_channel(private); }
+                }
+            }
+            Event::ChannelDelete(channel) => {
+                //todo: add more info
+                trace!("Got a channel delete event for a channel");
+
+                match &channel.0 {
+                    Channel::Group(_) => {} //nope, still don't care
+                    Channel::Guild(guild_channel) => {
+                        let (guild_id, channel_id) = match guild_channel {
+                            GuildChannel::Text(text) => { (text.guild_id, text.id) }
+                            GuildChannel::Voice(voice) => { (voice.guild_id, voice.id) }
+                            GuildChannel::Category(category) => { (category.guild_id, category.id) }
+                        };
+                        match guild_id {
+                            Some(guild_id) => {
+                                match self.get_guild(guild_id) {
+                                    Some(guild) => {
+                                        guild.channels.remove(&channel_id);
+                                        self.channel_count.fetch_sub(1, Ordering::Relaxed);
+                                    }
+                                    None => {
+                                        gearbot_warn!("Got a channel delete for channel ``{}`` event for guild ``{}`` but we do not have this guild in the cache", channel_id, guild_id);
+                                    }
+                                }
+                            }
+                            None => {
+                                gearbot_warn!("Got a channel delete for channel ``{}`` that is supposed to belong to a guild but does not have a guild id attached", channel_id);
+                            }
+                        }
+                    }
+                    //Do these even ever get deleted?
+                    Channel::Private(channel) => {
+                        self.private_channels.remove(&channel.id);
+                        if channel.recipients.len() == 1 {
+                            self.dm_channels_by_user.remove(&channel.recipients[0].id);
+                        }
+                    }
+                }
+            }
+
+            Event::MemberAdd(event) => {
+                //TODO: remove unwrap once we update twilight
+                match self.get_guild(event.guild_id.unwrap()) {
+                    Some(guild) => {
+                        guild.members.insert(event.user.id, Arc::new(CachedMember::from_member(&event.0, &self)));
+                        guild.member_count.fetch_add(1, Ordering::Relaxed);
+                        self.total_users.fetch_add(1, Ordering::Relaxed);
+                    }
+                    None => { gearbot_warn!("Got a member add event for guild {} before guild create", event.guild_id.unwrap()) }
+                }
+            }
+
+            Event::MemberUpdate(event) => {
+                //TODO: remove unwrap once we update twilight
+                match self.get_guild(event.guild_id) {
+                    Some(guild) => {
+                        match self.get_user(event.user.id) {
+                            Some(user) => {
+                                if !user.is_same_as(&event.user) {
+                                    //just update the global cache if it's different, we will receive an event for all mutual servers if the inner user changed
+                                    self.users.insert(event.user.id, Arc::new(CachedUser::from_user(&event.user)));
+                                }
+                            }
+                            None => { gearbot_warn!("Received a member update with an uncached inner user!") }
+                        }
+                        match guild.members.get(&event.user.id) {
+                            Some(member) => {
+                                guild.members.insert(member.user.id, Arc::new(member.update(&*event, &self)));
+                            }
+                            None => {gearbot_warn!("Received a member update for an unknown member in guild {}", event.guild_id)}
+                        }
+
+                    }
+                    None => { gearbot_warn!("Received a member update for an uncached guild: {}", event.guild_id); }
+                }
+            }
+
+            Event::MemberRemove(event) => {
+                match self.get_guild(event.guild_id) {
+                    Some(guild) => {
+                        match guild.members.remove_take(&event.user.id) {
+                            Some(member) => {
+                                let servers = member.user.mutual_servers.fetch_sub(1, Ordering::SeqCst);
+                                if servers == 1 {
+                                    self.users.remove(&member.user.id);
+                                    self.unique_users.fetch_sub(1, Ordering::Relaxed);
+                                }
+                                self.total_users.fetch_sub(1, Ordering::Relaxed);
+                            }
+                            None => { gearbot_warn!("Received a member remove event for a member that is not in that guild") }
+                        }
+                    }
+                    None => { gearbot_warn!("Received a member remove for guild {} but no such guild exists in cache", event.guild_id) }
+                }
+            }
+
+            Event::RoleCreate(event) => {
+                match self.get_guild(event.guild_id) {
+                    Some(guild) => {
+                        guild.roles.insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
+                        self.role_count.fetch_add(1, Ordering::Relaxed);
+                    }
+                    None => { gearbot_warn!("Received a role create event for guild {} but no such guild exists in cache", event.guild_id) }
+                }
+            }
+
+            Event::RoleUpdate(event) => {
+                match self.get_guild(event.guild_id) {
+                    Some(guild) => {
+                        guild.roles.insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
+                    }
+                    None => { gearbot_warn!("Received a role update event for guild {} but no such guild exists in cache", event.guild_id) }
+                }
+            }
+
+            Event::RoleDelete(event) => {
+                match self.get_guild(event.guild_id) {
+                    Some(guild) => {
+                        guild.roles.remove(&event.role_id);
+                        self.role_count.fetch_sub(1, Ordering::Relaxed);
+                    }
+                    None => {gearbot_warn!("Received a role delete event for guild {} but no such guild exists in cache", event.guild_id)}
+                }
+            }
+
             _ => {}
         }
     }
 
-    pub fn get_or_insert_user(&self, user: User) -> Arc<CachedUser> {
+    fn guild_unavailable(&self, guild: &Arc<CachedGuild>) {
+        gearbot_warn!("Guild \"{}\", ``{}`` became unavailable due to an outage", guild.name, guild.id);
+        self.unavailable_guild_count.fetch_add(1, Ordering::Relaxed);
+        let mut list = self.unavailable_guilds.lock().unwrap();
+        list.push(guild.id);
+    }
+
+    fn nuke_guild_cache(&self, guild: &Arc<CachedGuild>) {
+        for channel in &guild.channels {
+            self.guild_channels.remove(channel.key());
+        }
+        self.channel_count.fetch_sub(guild.channels.len() as u64, Ordering::Relaxed);
+
+        for member in &guild.members {
+            let remaining = member.user.mutual_servers.fetch_sub(1, Ordering::SeqCst);
+            if remaining == 1 {
+                self.users.remove(&member.user.id);
+                self.unique_users.fetch_sub(1, Ordering::Relaxed);
+            }
+        }
+        self.total_users.fetch_sub(guild.members.len() as u64, Ordering::Relaxed);
+
+        for emoji in &guild.emoji {
+            self.emoji.remove(&emoji.id);
+        }
+        self.emoji_count.fetch_sub(guild.emoji.len() as u64, Ordering::Relaxed);
+
+        self.role_count.fetch_sub(guild.roles.len() as u64, Ordering::Relaxed);
+    }
+
+    pub fn insert_private_channel(&self, private_channel: &PrivateChannel) -> Arc<CachedChannel> {
+        let channel = CachedChannel::from_private(private_channel, self);
+        let arced = Arc::new(channel);
+        match arced.as_ref() {
+            CachedChannel::DM { receiver, .. } => { self.dm_channels_by_user.insert(receiver.id, arced.clone()); }
+            _ => {}
+        };
+        self.private_channels.insert(arced.get_id(), arced.clone());
+        arced
+    }
+
+    pub fn get_or_insert_user(&self, user: &User) -> Arc<CachedUser> {
         match self.get_user(user.id) {
             Some(user) => user,
             None => {
-                let arc = Arc::new(CachedUser::from(user));
+                let arc = Arc::new(CachedUser::from_user(user));
                 self.users.insert(arc.id, arc.clone());
                 self.unique_users.fetch_add(1, Ordering::Relaxed);
                 arc
@@ -172,7 +441,19 @@ impl Cache {
     pub fn get_channel(&self, channel_id: ChannelId) -> Option<Arc<CachedChannel>> {
         match self.guild_channels.get(&channel_id) {
             Some(guard) => Some(guard.value().clone()),
-            None => None,
+            None => {
+                match self.private_channels.get(&channel_id) {
+                    Some(guard) => Some(guard.value().clone()),
+                    None => None
+                }
+            }
+        }
+    }
+
+    pub fn get_dm_channel_for(&self, user_id: UserId) -> Option<Arc<CachedChannel>> {
+        match self.dm_channels_by_user.get(&user_id) {
+            Some(guard) => Some(guard.value().clone()),
+            None => None
         }
     }
 
@@ -222,6 +503,9 @@ impl Cache {
     pub async fn prepare_cold_resume(&self, redis_pool: &ConnectionPool) -> (usize, usize) {
         //clear global caches so arcs can be cleaned up
         self.guild_channels.clear();
+        //we do not want to drag along DM channels, we get guild creates for them when they send a message anyways
+        self.private_channels.clear();
+
         //let's go to hyperspeed
         let mut tasks = vec![];
         let mut user_tasks = vec![];
@@ -321,6 +605,7 @@ impl Cache {
                 bot_user: user.bot_user,
                 system_user: user.system_user,
                 public_flags: user.public_flags.clone(),
+                mutual_servers: AtomicU64::new(0),
             });
         }
         let serialized = serde_json::to_string(&chunk).unwrap();
@@ -458,6 +743,7 @@ fn update_user_with_user(old: Arc<CachedUser>, new: Arc<CachedUser>) -> CachedUs
         bot_user: new.bot_user,
         system_user: new.system_user,
         public_flags,
+        mutual_servers: AtomicU64::new(old.mutual_servers.load(Ordering::SeqCst)),
     }
 }
 

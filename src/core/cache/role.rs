@@ -27,11 +27,11 @@ pub struct CachedRole {
     pub mentionable: bool,
 }
 
-impl From<Role> for CachedRole {
-    fn from(role: Role) -> Self {
+impl CachedRole {
+    pub fn from_role(role: &Role) -> Self {
         CachedRole {
             id: role.id,
-            name: role.name,
+            name: role.name.clone(),
             color: role.color,
             hoisted: role.hoist,
             position: role.position,

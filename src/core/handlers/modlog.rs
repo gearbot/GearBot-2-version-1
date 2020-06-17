@@ -11,8 +11,6 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
     match &event {
         Event::MemberChunk(_chunk) => {}
         Event::UserUpdate(update) => {
-            debug!("User update event triggered");
-            debug!("{:?}", update);
         }
         Event::MemberUpdate(update) => {
             // According to the docs, cache commands can never error, but just to be safe and

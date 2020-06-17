@@ -145,7 +145,7 @@ impl Parser {
                 if !context.bot_has_channel_permissions(Permissions::SEND_MESSAGES) {
                     info!("{}#{} ({}) tried to run the {} command in #{} ({}) but i lack send message permissions to execute the command", author.username, author.discriminator, author.id, name, channel.get_name(), channel.get_id());
 
-                    let dm_channel = ctx.http.create_private_channel(author.id).await?;
+                    let dm_channel = context.get_dm_for_author().await?;
 
                     let key =
                         if context.author_has_channel_permissions(Permissions::MANAGE_CHANNELS) {
@@ -161,7 +161,7 @@ impl Parser {
                     // we don't really care if this works or not, nothing we can do if they don't allow DMs from our mutual server(s)
                     let _ = ctx
                         .http
-                        .create_message(dm_channel.id)
+                        .create_message(dm_channel.get_id())
                         .content(translated)?
                         .await;
                     return Ok(());

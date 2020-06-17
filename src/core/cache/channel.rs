@@ -1,9 +1,12 @@
 use serde::{Deserialize, Serialize};
 use twilight::model::channel::permission_overwrite::PermissionOverwrite;
-use twilight::model::channel::{ChannelType, GuildChannel};
+use twilight::model::channel::{ChannelType, GuildChannel, PrivateChannel};
 use twilight::model::id::{ChannelId, GuildId};
 
 use super::is_default;
+use crate::core::cache::{Cache, CachedUser};
+use std::sync::Arc;
+use log::debug;
 
 const NO_PERMISSIONS: &[PermissionOverwrite] = &[];
 #[derive(Debug, Serialize, Deserialize)]
@@ -32,7 +35,7 @@ pub enum CachedChannel {
     },
     DM {
         id: ChannelId,
-        //TODO: see what else is relevant here, recipients to find the user this is for?
+        receiver: Arc<CachedUser>
     },
     VoiceChannel {
         #[serde(rename = "a")]
@@ -55,7 +58,7 @@ pub enum CachedChannel {
     },
     GroupDM {
         id: ChannelId,
-        //TODO: see what else is relevant here
+        receivers: Vec<Arc<CachedUser>>
     },
     Category {
         #[serde(rename = "a")]
@@ -102,9 +105,9 @@ impl CachedChannel {
     pub fn get_id(&self) -> ChannelId {
         match self {
             CachedChannel::TextChannel { id, .. } => *id,
-            CachedChannel::DM { id } => *id,
+            CachedChannel::DM { id, .. } => *id,
             CachedChannel::VoiceChannel { id, .. } => *id,
-            CachedChannel::GroupDM { id } => *id,
+            CachedChannel::GroupDM { id, .. } => *id,
             CachedChannel::Category { id, .. } => *id,
             CachedChannel::AnnouncementsChannel { id, .. } => *id,
             CachedChannel::StoreChannel { id, .. } => *id,
@@ -202,10 +205,17 @@ impl CachedChannel {
             CachedChannel::StoreChannel { .. } => false,
         }
     }
+
+    pub fn is_dm(&self) -> bool{
+        match self {
+            CachedChannel::DM{..} => true,
+            _ => false
+        }
+    }
 }
 
 impl CachedChannel {
-    pub fn from(channel: GuildChannel, guild_id: Option<GuildId>) -> Self {
+    pub fn from_guild_channel(channel: &GuildChannel, guild_id: GuildId) -> Self {
         let (
             kind,
             id,
@@ -223,8 +233,8 @@ impl CachedChannel {
                 category.kind,
                 category.id,
                 category.position,
-                category.permission_overwrites,
-                category.name,
+                category.permission_overwrites.clone(),
+                category.name.clone(),
                 None,
                 false,
                 None,
@@ -236,9 +246,9 @@ impl CachedChannel {
                 text.kind,
                 text.id,
                 text.position,
-                text.permission_overwrites,
-                text.name,
-                text.topic,
+                text.permission_overwrites.clone(),
+                text.name.clone(),
+                text.topic.clone(),
                 text.nsfw,
                 text.rate_limit_per_user,
                 text.parent_id,
@@ -249,8 +259,8 @@ impl CachedChannel {
                 voice.kind,
                 voice.id,
                 voice.position,
-                voice.permission_overwrites,
-                voice.name,
+                voice.permission_overwrites.clone(),
+                voice.name.clone(),
                 None,
                 false,
                 None,
@@ -263,7 +273,7 @@ impl CachedChannel {
         match kind {
             ChannelType::GuildText => CachedChannel::TextChannel {
                 id,
-                guild_id: guild_id.unwrap(),
+                guild_id,
                 position,
                 permission_overrides,
                 name,
@@ -272,10 +282,10 @@ impl CachedChannel {
                 slowmode,
                 parent_id,
             },
-            ChannelType::Private => CachedChannel::DM { id },
+            ChannelType::Private => unreachable!(),
             ChannelType::GuildVoice => CachedChannel::VoiceChannel {
                 id,
-                guild_id: guild_id.unwrap(),
+                guild_id,
                 position,
                 permission_overrides,
                 name,
@@ -283,17 +293,17 @@ impl CachedChannel {
                 user_limit,
                 parent_id,
             },
-            ChannelType::Group => CachedChannel::GroupDM { id },
+            ChannelType::Group => unreachable!(),
             ChannelType::GuildCategory => CachedChannel::Category {
                 id,
-                guild_id: guild_id.unwrap(),
+                guild_id,
                 position,
                 permission_overrides,
                 name,
             },
             ChannelType::GuildNews => CachedChannel::AnnouncementsChannel {
                 id,
-                guild_id: guild_id.unwrap(),
+                guild_id,
                 position,
                 permission_overrides,
                 name,
@@ -301,12 +311,26 @@ impl CachedChannel {
             },
             ChannelType::GuildStore => CachedChannel::StoreChannel {
                 id,
-                guild_id: guild_id.unwrap(),
+                guild_id,
                 position,
                 name,
                 parent_id,
                 permission_overrides,
-            },
+            }
+        }
+    }
+
+    pub fn from_private(channel: &PrivateChannel, cache: &Cache) -> Self {
+        if channel.recipients.len() == 1 {
+             CachedChannel::DM {
+                 id: channel.id,
+                 receiver: cache.get_or_insert_user(&channel.recipients[0])
+             }
+        } else {
+            CachedChannel::GroupDM {
+                id: channel.id,
+                receivers: channel.recipients.iter().map(|user| cache.get_or_insert_user(user)).collect()
+            }
         }
     }
 }

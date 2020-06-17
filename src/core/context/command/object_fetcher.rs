@@ -5,7 +5,7 @@ use twilight::model::{
     id::{ChannelId, RoleId, UserId},
 };
 
-use crate::core::cache::CachedChannel;
+use crate::core::cache::{CachedChannel, Cache};
 use crate::core::cache::{CachedMember, CachedRole, CachedUser};
 use crate::utils::CommandError;
 use crate::Error;
@@ -42,6 +42,21 @@ impl CommandContext {
         match &self.guild {
             Some(g) => Ok(self.bot_context.http.ban(g.id, user_id).await?),
             None => Err(Error::CmdError(CommandError::NoDM)),
+        }
+    }
+
+    pub async fn get_dm_for_author(&self) -> Result<Arc<CachedChannel>, Error> {
+        self.get_dm_for_user(self.message.author.id).await
+    }
+
+    pub async fn get_dm_for_user(&self, user_id: UserId) -> Result<Arc<CachedChannel>, Error> {
+        match self.bot_context.cache.get_dm_channel_for(user_id) {
+            Some(channel) => Ok(channel),
+            None => {
+                let channel = self.bot_context.http.create_private_channel(user_id).await?;
+                Ok(self.bot_context.cache.insert_private_channel(&channel))
+
+            }
         }
     }
 }

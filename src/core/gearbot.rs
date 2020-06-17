@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use std::error;
 use std::process;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 use ctrlc;
 use darkredis::ConnectionPool;
@@ -145,6 +145,11 @@ impl GearBot {
         .expect("Failed to register shutdown handler!");
 
         gearbot_info!("The cluster is going online!");
+        // let c = context.cluster.clone();
+        // tokio::spawn(async move {
+        //     tokio::time::delay_for(Duration::new(1, 0)).await;
+        //     c.up().await;
+        // });
         context.cluster.up().await?;
         let mut bot_events = context.cluster.events().await;
         while let Some(event) = bot_events.next().await {

@@ -8,8 +8,9 @@ use twilight::model::id::{RoleId, UserId};
 use crate::core::cache::{Cache, CachedUser};
 
 use super::is_default;
+use twilight::model::gateway::payload::MemberUpdate;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CachedMember {
     pub user: Arc<CachedUser>,
     pub nickname: Option<String>,
@@ -34,17 +35,30 @@ impl CachedMember {
         }
     }
 
-    pub fn from_member(member: Member, cache: &Cache) -> Self {
+    pub fn from_member(member: &Member, cache: &Cache) -> Self {
         CachedMember {
-            user: cache.get_user(member.user.id).unwrap(),
-            nickname: member.nick,
-            roles: member.roles,
-            joined_at: member.joined_at,
-            boosting_since: member.premium_since,
+            user: cache.get_or_insert_user(&member.user),
+            nickname: member.nick.clone(),
+            roles: member.roles.clone(),
+            joined_at: member.joined_at.clone(),
+            boosting_since: member.premium_since.clone(),
             server_deafened: member.deaf,
             server_muted: member.mute,
         }
     }
+
+    pub fn update(&self, member: &MemberUpdate, cache: &Cache) -> Self {
+        CachedMember {
+            user: cache.get_or_insert_user(&member.user),
+            nickname: member.nick.clone(),
+            roles: member.roles.clone(),
+            joined_at: self.joined_at.clone(),
+            boosting_since: member.premium_since.clone(),
+            server_deafened: self.server_deafened,
+            server_muted: self.server_muted,
+        }
+    }
+
 }
 
 impl CachedMember {

@@ -1,11 +1,9 @@
-use std::sync::atomic::{AtomicBool, AtomicU64};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use dashmap::{DashMap, ElementGuard};
 use serde::{Deserialize, Serialize};
-use twilight::model::guild::{
-    DefaultMessageNotificationLevel, Guild, PremiumTier, VerificationLevel,
-};
+use twilight::model::guild::{DefaultMessageNotificationLevel, Guild, PremiumTier, VerificationLevel, PartialGuild};
 use twilight::model::id::{ChannelId, GuildId, RoleId, UserId};
 
 use crate::core::cache::{
@@ -13,6 +11,7 @@ use crate::core::cache::{
 };
 
 use super::is_default;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct CachedGuild {
@@ -87,14 +86,14 @@ impl From<Guild> for CachedGuild {
         for (role_id, role) in guild.roles {
             cached_guild
                 .roles
-                .insert(role_id, Arc::new(CachedRole::from(role)));
+                .insert(role_id, Arc::new(CachedRole::from_role(&role)));
         }
 
         //channels
         for (channel_id, channel) in guild.channels {
             cached_guild.channels.insert(
                 channel_id,
-                Arc::new(CachedChannel::from(channel, Some(guild.id))),
+                Arc::new(CachedChannel::from_guild_channel(&channel, guild.id)),
             );
         }
 
@@ -153,6 +152,52 @@ impl CachedGuild {
         for emoji in cold_guild.emoji {
             guild.emoji.push(Arc::new(emoji));
         }
+        guild
+    }
+
+    pub fn update(&self, other: &PartialGuild) -> Self {
+        let guild = CachedGuild {
+            id: other.id,
+            name: other.name.clone(),
+            icon: other.icon.clone(),
+            splash: other.splash.clone(),
+            discovery_splash: other.discovery_splash.clone(),
+            owner_id: other.owner_id,
+            region: other.region.clone(),
+            afk_channel_id: other.afk_channel_id,
+            afk_timeout: other.afk_timeout,
+            verification_level: other.verification_level,
+            default_message_notifications: other.default_message_notifications,
+            roles: DashMap::new(),
+            emoji: self.emoji.clone(),
+            features: other.features.clone(),
+            unavailable: false,
+            members: DashMap::new(),
+            channels: DashMap::new(),
+            max_presences: other.max_presences,
+            max_members: other.max_members,
+            description: other.description.clone(),
+            banner: other.banner.clone(),
+            premium_tier: other.premium_tier,
+            premium_subscription_count: other.premium_subscription_count.unwrap_or(0),
+            preferred_locale: other.preferred_locale.clone(),
+            complete: AtomicBool::new(self.complete.load(Ordering::SeqCst)),
+            member_count: AtomicU64::new(self.member_count.load(Ordering::SeqCst))
+        };
+
+        for (_, role) in &other.roles {
+            guild.roles.insert(role.id, Arc::new(CachedRole::from_role(role)));
+        }
+
+        //TODO: replace with dashmap clones once that is available
+        for guard in &self.members {
+            guild.members.insert(guard.user.id, guard.value().clone());
+        }
+
+        for guard in &self.channels {
+            guild.channels.insert(guard.get_id(), guard.value().clone());
+        }
+
         guild
     }
 }
@@ -272,7 +317,7 @@ impl From<ElementGuard<GuildId, Arc<CachedGuild>>> for ColdStorageGuild {
                     slowmode: slowmode.clone(),
                     parent_id: parent_id.clone(),
                 },
-                CachedChannel::DM { id } => CachedChannel::DM { id: id.clone() },
+                CachedChannel::DM { id, receiver } => CachedChannel::DM { id: id.clone(), receiver: receiver.clone() },
                 CachedChannel::VoiceChannel {
                     id,
                     guild_id,
@@ -292,7 +337,7 @@ impl From<ElementGuard<GuildId, Arc<CachedGuild>>> for ColdStorageGuild {
                     user_limit: user_limit.clone(),
                     parent_id: parent_id.clone(),
                 },
-                CachedChannel::GroupDM { id } => CachedChannel::GroupDM { id: id.clone() },
+                CachedChannel::GroupDM { id, receivers } => CachedChannel::GroupDM { id: id.clone(), receivers: receivers.clone() },
                 CachedChannel::Category {
                     id,
                     guild_id,

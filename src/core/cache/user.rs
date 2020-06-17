@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use twilight::model::id::UserId;
 use twilight::model::user::{User, UserFlags};
+use std::sync::atomic::AtomicU64;
 
 use super::is_default;
 
@@ -20,18 +21,25 @@ pub struct CachedUser {
     pub system_user: bool,
     #[serde(rename = "f", default, skip_serializing_if = "is_default")]
     pub public_flags: Option<UserFlags>,
+    #[serde(skip_serializing, default)]
+    pub mutual_servers: AtomicU64,
 }
 
-impl From<User> for CachedUser {
-    fn from(user: User) -> Self {
+impl CachedUser {
+    pub(crate) fn from_user(user: &User) -> Self {
         CachedUser {
             id: user.id,
-            username: user.name,
-            discriminator: user.discriminator,
-            avatar: user.avatar,
+            username: user.name.clone(),
+            discriminator: user.discriminator.clone(),
+            avatar: user.avatar.clone(),
             bot_user: user.bot,
             system_user: user.system.unwrap_or(false),
             public_flags: user.public_flags,
+            mutual_servers: AtomicU64::new(0)
         }
+    }
+
+    pub fn is_same_as(&self, user: &User) -> bool {
+        self.id == user.id && self.username == user.name && self.discriminator == user.discriminator && self.avatar == user.avatar && self.bot_user == user.bot && self.system_user == user.system.unwrap_or(false) && self.public_flags == user.public_flags
     }
 }
