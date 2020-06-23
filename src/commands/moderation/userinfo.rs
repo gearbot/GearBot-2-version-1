@@ -23,16 +23,10 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
     let mut content = "".to_string();
 
     let mut builder = EmbedBuilder::new();
-    let mut author_builder = builder
-        .author()
-        .name(format!("{}#{}", user.username, user.discriminator));
+    let mut author_builder = builder.author().name(format!("{}#{}", user.username, user.discriminator));
 
     if let Some(avatar) = user.avatar.as_ref() {
-        let extension = if avatar.starts_with("a_") {
-            "gif"
-        } else {
-            "png"
-        };
+        let extension = if avatar.starts_with("a_") { "gif" } else { "png" };
 
         author_builder = author_builder.icon_url(format!(
             "https://cdn.discordapp.com/avatars/{}/{}.{}",
@@ -104,11 +98,7 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
         content += Emoji::EarlySupporterBadge.for_chat();
     }
 
-    content += if user.bot_user {
-        Emoji::Robot.for_chat()
-    } else {
-        ""
-    };
+    content += if user.bot_user { Emoji::Robot.for_chat() } else { "" };
 
     let created_at = utils::snowflake_timestamp(user.id.0);
 
@@ -131,16 +121,8 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
 
                 let (joined, ago) = match &member.joined_at {
                     Some(joined) => {
-                        let joined = DateTime::from_utc(
-                            DateTime::parse_from_str(joined, "%FT%T%.f%z")
-                                .unwrap()
-                                .naive_utc(),
-                            Utc,
-                        );
-                        (
-                            joined.format("%A %d %B %Y (%T)").to_string(),
-                            utils::age(joined, Utc::now(), 2),
-                        )
+                        let joined = DateTime::from_utc(DateTime::parse_from_str(joined, "%FT%T%.f%z").unwrap().naive_utc(), Utc);
+                        (joined.format("%A %d %B %Y (%T)").to_string(), utils::age(joined, Utc::now(), 2))
                     }
                     None => ("Unknown".to_string(), "Unknown".to_string()),
                 };
@@ -159,17 +141,9 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
                     }
                 }
 
-                content += &format!(
-                    "**Joined on**: {}\n**Been here for**: {}\n**Roles**:{}",
-                    joined, ago, roles
-                );
+                content += &format!("**Joined on**: {}\n**Been here for**: {}\n**Roles**:{}", joined, ago, roles);
                 if let Some(s) = member.boosting_since.as_ref() {
-                    let since: DateTime<Utc> = DateTime::from_utc(
-                        DateTime::parse_from_str(s, "%FT%T%.f%z")
-                            .unwrap()
-                            .naive_utc(),
-                        Utc,
-                    );
+                    let since: DateTime<Utc> = DateTime::from_utc(DateTime::parse_from_str(s, "%FT%T%.f%z").unwrap().naive_utc(), Utc);
                     content += &format!("**Boosting this server since**: {}", since);
                 }
             }
@@ -179,24 +153,17 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
         }
     }
 
-    let bot_has_guild_permissions = ctx.bot_has_guild_permissions(Permissions::BAN_MEMBERS)
-        && ctx.get_ban(user.id).await?.is_some();
+    let bot_has_guild_permissions = ctx.bot_has_guild_permissions(Permissions::BAN_MEMBERS) && ctx.get_ban(user.id).await?.is_some();
 
     if bot_has_guild_permissions {
-        content += &*format!(
-            "{} **This user is currently banned from this server**",
-            Emoji::Bad.for_chat()
-        )
+        content += &*format!("{} **This user is currently banned from this server**", Emoji::Bad.for_chat())
     }
 
     builder = builder.description(content);
 
-    let args = FluArgs::with_capacity(1)
-        .insert("userid", user.id.to_string())
-        .generate();
+    let args = FluArgs::with_capacity(1).insert("userid", user.id.to_string()).generate();
 
-    ctx.reply_with_embed(GearBotString::UserinfoHeader, args, builder.build())
-        .await?;
+    ctx.reply_with_embed(GearBotString::UserinfoHeader, args, builder.build()).await?;
 
     Ok(())
 }

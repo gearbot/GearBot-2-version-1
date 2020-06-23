@@ -8,17 +8,10 @@ use crate::core::BotContext;
 use crate::parser::Parser;
 use crate::utils::Error;
 
-pub async fn handle_event<'a>(
-    shard_id: u64,
-    event: Event,
-    ctx: Arc<BotContext>,
-) -> Result<(), Error> {
+pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>) -> Result<(), Error> {
     match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
-            debug!(
-                "Received a message from {}, saying {}",
-                msg.author.name, msg.content
-            );
+            debug!("Received a message from {}, saying {}", msg.author.name, msg.content);
 
             let p = match msg.guild_id {
                 Some(guild_id) => {
@@ -26,10 +19,7 @@ pub async fn handle_event<'a>(
                     match guild {
                         Some(g) => {
                             if !g.complete.load(Ordering::SeqCst) {
-                                debug!(
-                                    "Command received in {} but the guild isn't fully cached yet!",
-                                    g.id
-                                );
+                                debug!("Command received in {} but the guild isn't fully cached yet!", g.id);
                                 return Ok(()); //not cached yet, just ignore for now
                             }
                         }

@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use std::error;
 use std::process;
 use std::sync::Arc;
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
 use ctrlc;
 use darkredis::ConnectionPool;
@@ -70,15 +70,10 @@ impl GearBot {
         let data = connection.get(&key).await.unwrap();
         match data {
             Some(d) => {
-                let cold_cache: ColdRebootData =
-                    serde_json::from_str(&*String::from_utf8(d).unwrap())?;
+                let cold_cache: ColdRebootData = serde_json::from_str(&*String::from_utf8(d).unwrap())?;
                 debug!("ColdRebootData: {:?}", cold_cache);
-                connection
-                    .del(format!("cb_cluster_data_{}", cluster_id))
-                    .await?;
-                if cold_cache.total_shards == total_shards
-                    && cold_cache.shard_count == shards_per_cluster
-                {
+                connection.del(format!("cb_cluster_data_{}", cluster_id)).await?;
+                if cold_cache.total_shards == total_shards && cold_cache.shard_count == shards_per_cluster {
                     let mut map = HashMap::new();
                     for (id, data) in cold_cache.resume_data {
                         map.insert(
@@ -91,19 +86,12 @@ impl GearBot {
                     }
                     let start = Instant::now();
                     let result = cache
-                        .restore_cold_resume(
-                            &redis_pool,
-                            cold_cache.guild_chunks,
-                            cold_cache.user_chunks,
-                        )
+                        .restore_cold_resume(&redis_pool, cold_cache.guild_chunks, cold_cache.user_chunks)
                         .await;
                     match result {
                         Ok(_) => {
                             let end = std::time::Instant::now();
-                            gearbot_important!(
-                                "Cold resume defrosting completed in {}ms!",
-                                (end - start).as_millis()
-                            );
+                            gearbot_important!("Cold resume defrosting completed in {}ms!", (end - start).as_millis());
                             cb = cb.resume_sessions(map);
                         }
 
@@ -119,7 +107,7 @@ impl GearBot {
         };
         let cluster_config = cb.build();
 
-        let cluster = Cluster::new(cluster_config);
+        let cluster = Cluster::new(cluster_config).await?;
         let context = Arc::new(BotContext::new(
             cache,
             cluster,
@@ -145,12 +133,11 @@ impl GearBot {
         .expect("Failed to register shutdown handler!");
 
         gearbot_info!("The cluster is going online!");
-        // let c = context.cluster.clone();
-        // tokio::spawn(async move {
-        //     tokio::time::delay_for(Duration::new(1, 0)).await;
-        //     c.up().await;
-        // });
-        context.cluster.up().await?;
+        let c = context.cluster.clone();
+        tokio::spawn(async move {
+            tokio::time::delay_for(Duration::new(1, 0)).await;
+            c.up().await;
+        });
         let mut bot_events = context.cluster.events().await;
         while let Some(event) = bot_events.next().await {
             let c = context.clone();

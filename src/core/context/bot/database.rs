@@ -29,10 +29,7 @@ pub struct UserMessage {
 }
 
 impl BotContext {
-    pub async fn get_config(
-        &self,
-        guild_id: GuildId,
-    ) -> Result<ElementGuard<GuildId, GuildConfig>, Error> {
+    pub async fn get_config(&self, guild_id: GuildId) -> Result<ElementGuard<GuildId, GuildConfig>, Error> {
         match self.configs.get(&guild_id) {
             Some(config) => Ok(config),
             None => {
@@ -51,9 +48,7 @@ impl BotContext {
     }
 
     pub async fn fetch_user_message(&self, id: MessageId) -> Result<Option<UserMessage>, Error> {
-        if let Some((encrypted, author_id, channel_id, guild_id, msg_type, pinned)) =
-            get_full_message(&self.pool, id.0).await?
-        {
+        if let Some((encrypted, author_id, channel_id, guild_id, msg_type, pinned)) = get_full_message(&self.pool, id.0).await? {
             let guild_id = GuildId(guild_id);
             let start = std::time::Instant::now();
             let decyrpted = {
@@ -64,10 +59,7 @@ impl BotContext {
 
             let fin = std::time::Instant::now();
 
-            info!(
-                "It took {}us to decrypt a user message!",
-                (fin - start).as_micros()
-            );
+            info!("It took {}us to decrypt a user message!", (fin - start).as_micros());
 
             Ok(Some(UserMessage {
                 content: String::from_utf8_lossy(&decyrpted).to_string(),
@@ -99,10 +91,7 @@ impl BotContext {
 
         let finish_crypto = std::time::Instant::now();
 
-        info!(
-            "It took {}us to encrypt the user message!",
-            (finish_crypto - start).as_micros()
-        );
+        info!("It took {}us to encrypt the user message!", (finish_crypto - start).as_micros());
 
         database::cache::insert_message(&self.pool, ciphertext, &msg).await?;
         for attachment in &msg.attachments {
@@ -118,10 +107,7 @@ impl BotContext {
         let fetch_id = guild_id.0 as i64;
 
         let statement = client
-            .prepare_typed(
-                "SELECT encryption_key from guildconfig where id=$1",
-                &[Type::INT8],
-            )
+            .prepare_typed("SELECT encryption_key from guildconfig where id=$1", &[Type::INT8])
             .await?;
 
         let rows = client.query(&statement, &[&fetch_id]).await?;
@@ -172,8 +158,7 @@ fn encrypt_bytes(plaintext: &[u8], key: &EncryptionKey, id: u64) -> Vec<u8> {
 
     let nonce = GenericArray::from_slice(&nonce_bytes);
 
-    aead.encrypt(&nonce, plaintext)
-        .expect("Failed to encrypt an object!")
+    aead.encrypt(&nonce, plaintext).expect("Failed to encrypt an object!")
 }
 
 fn decrypt_bytes(ciphertext: &[u8], key: &EncryptionKey, id: u64) -> Vec<u8> {
@@ -186,6 +171,5 @@ fn decrypt_bytes(ciphertext: &[u8], key: &EncryptionKey, id: u64) -> Vec<u8> {
 
     let nonce = GenericArray::from_slice(&nonce_bytes);
 
-    aead.decrypt(&nonce, ciphertext)
-        .expect("Failed to decrypt an object!")
+    aead.decrypt(&nonce, ciphertext).expect("Failed to decrypt an object!")
 }

@@ -3,12 +3,10 @@ use std::sync::Arc;
 
 use dashmap::{DashMap, ElementGuard};
 use serde::{Deserialize, Serialize};
-use twilight::model::guild::{DefaultMessageNotificationLevel, Guild, PremiumTier, VerificationLevel, PartialGuild};
+use twilight::model::guild::{DefaultMessageNotificationLevel, Guild, PartialGuild, PremiumTier, VerificationLevel};
 use twilight::model::id::{ChannelId, GuildId, RoleId, UserId};
 
-use crate::core::cache::{
-    Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole, ColdStorageMember,
-};
+use crate::core::cache::{Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole, ColdStorageMember};
 
 use super::is_default;
 use std::collections::HashMap;
@@ -84,17 +82,14 @@ impl From<Guild> for CachedGuild {
 
         //handle roles
         for (role_id, role) in guild.roles {
-            cached_guild
-                .roles
-                .insert(role_id, Arc::new(CachedRole::from_role(&role)));
+            cached_guild.roles.insert(role_id, Arc::new(CachedRole::from_role(&role)));
         }
 
         //channels
         for (channel_id, channel) in guild.channels {
-            cached_guild.channels.insert(
-                channel_id,
-                Arc::new(CachedChannel::from_guild_channel(&channel, guild.id)),
-            );
+            cached_guild
+                .channels
+                .insert(channel_id, Arc::new(CachedChannel::from_guild_channel(&channel, guild.id)));
         }
 
         //emoji
@@ -141,9 +136,7 @@ impl CachedGuild {
         }
 
         for member in cold_guild.members {
-            guild
-                .members
-                .insert(member.id, Arc::new(CachedMember::defrost(member, cache)));
+            guild.members.insert(member.id, Arc::new(CachedMember::defrost(member, cache)));
         }
 
         for channel in cold_guild.channels {
@@ -182,7 +175,7 @@ impl CachedGuild {
             premium_subscription_count: other.premium_subscription_count.unwrap_or(0),
             preferred_locale: other.preferred_locale.clone(),
             complete: AtomicBool::new(self.complete.load(Ordering::SeqCst)),
-            member_count: AtomicU64::new(self.member_count.load(Ordering::SeqCst))
+            member_count: AtomicU64::new(self.member_count.load(Ordering::SeqCst)),
         };
 
         for (_, role) in &other.roles {
@@ -317,7 +310,10 @@ impl From<ElementGuard<GuildId, Arc<CachedGuild>>> for ColdStorageGuild {
                     slowmode: slowmode.clone(),
                     parent_id: parent_id.clone(),
                 },
-                CachedChannel::DM { id, receiver } => CachedChannel::DM { id: id.clone(), receiver: receiver.clone() },
+                CachedChannel::DM { id, receiver } => CachedChannel::DM {
+                    id: id.clone(),
+                    receiver: receiver.clone(),
+                },
                 CachedChannel::VoiceChannel {
                     id,
                     guild_id,
@@ -337,7 +333,10 @@ impl From<ElementGuard<GuildId, Arc<CachedGuild>>> for ColdStorageGuild {
                     user_limit: user_limit.clone(),
                     parent_id: parent_id.clone(),
                 },
-                CachedChannel::GroupDM { id, receivers } => CachedChannel::GroupDM { id: id.clone(), receivers: receivers.clone() },
+                CachedChannel::GroupDM { id, receivers } => CachedChannel::GroupDM {
+                    id: id.clone(),
+                    receivers: receivers.clone(),
+                },
                 CachedChannel::Category {
                     id,
                     guild_id,

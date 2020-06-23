@@ -6,8 +6,37 @@ use twilight::model::channel::Message;
 use git_version::git_version;
 
 use crate::core::BotContext;
+use prometheus::{IntCounter, IntGauge};
 
-#[derive(Debug)]
+// #[derive(Debug)]
+// pub struct BotCounters {
+//     user_messages: IntCounter,
+//     other_bot_messages: IntCounter,
+//     own_messages: IntCounter,
+//     event_counts: IntCounter,
+//     commands: IntCounter,
+//     guilds: IntGauge,
+//     unique_users: IntGauge,
+//     total_users: IntGauge,
+//     cluster_id: u64,
+// }
+//
+// impl BotCounters {
+//     pub fn new(cluster_id: u64) -> Self {
+//         BotCounters {
+//             user_messages: (),
+//             other_bot_messages: (),
+//             own_messages: (),
+//             event_counts: (),
+//             commands: (),
+//             guilds: (),
+//             unique_users: (),
+//             total_users: (),
+//             cluster_id
+//         }
+//     }
+// }
+
 pub struct BotStats {
     pub start_time: DateTime<Utc>,
     pub user_messages: AtomicUsize,

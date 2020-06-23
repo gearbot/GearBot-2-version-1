@@ -5,8 +5,8 @@ use twilight::model::id::{ChannelId, GuildId};
 
 use super::is_default;
 use crate::core::cache::{Cache, CachedUser};
-use std::sync::Arc;
 use log::debug;
+use std::sync::Arc;
 
 const NO_PERMISSIONS: &[PermissionOverwrite] = &[];
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,7 +35,7 @@ pub enum CachedChannel {
     },
     DM {
         id: ChannelId,
-        receiver: Arc<CachedUser>
+        receiver: Arc<CachedUser>,
     },
     VoiceChannel {
         #[serde(rename = "a")]
@@ -58,7 +58,7 @@ pub enum CachedChannel {
     },
     GroupDM {
         id: ChannelId,
-        receivers: Vec<Arc<CachedUser>>
+        receivers: Vec<Arc<CachedUser>>,
     },
     Category {
         #[serde(rename = "a")]
@@ -169,28 +169,13 @@ impl CachedChannel {
     /// will be empty for
     pub fn get_permission_overrides(&self) -> &[PermissionOverwrite] {
         match self {
-            CachedChannel::TextChannel {
-                permission_overrides,
-                ..
-            } => permission_overrides,
+            CachedChannel::TextChannel { permission_overrides, .. } => permission_overrides,
             CachedChannel::DM { .. } => NO_PERMISSIONS,
-            CachedChannel::VoiceChannel {
-                permission_overrides,
-                ..
-            } => permission_overrides,
+            CachedChannel::VoiceChannel { permission_overrides, .. } => permission_overrides,
             CachedChannel::GroupDM { .. } => NO_PERMISSIONS,
-            CachedChannel::Category {
-                permission_overrides,
-                ..
-            } => permission_overrides,
-            CachedChannel::AnnouncementsChannel {
-                permission_overrides,
-                ..
-            } => permission_overrides,
-            CachedChannel::StoreChannel {
-                permission_overrides,
-                ..
-            } => permission_overrides,
+            CachedChannel::Category { permission_overrides, .. } => permission_overrides,
+            CachedChannel::AnnouncementsChannel { permission_overrides, .. } => permission_overrides,
+            CachedChannel::StoreChannel { permission_overrides, .. } => permission_overrides,
         }
     }
 
@@ -206,29 +191,17 @@ impl CachedChannel {
         }
     }
 
-    pub fn is_dm(&self) -> bool{
+    pub fn is_dm(&self) -> bool {
         match self {
-            CachedChannel::DM{..} => true,
-            _ => false
+            CachedChannel::DM { .. } => true,
+            _ => false,
         }
     }
 }
 
 impl CachedChannel {
     pub fn from_guild_channel(channel: &GuildChannel, guild_id: GuildId) -> Self {
-        let (
-            kind,
-            id,
-            position,
-            permission_overrides,
-            name,
-            topic,
-            nsfw,
-            slowmode,
-            parent_id,
-            bitrate,
-            user_limit,
-        ) = match channel {
+        let (kind, id, position, permission_overrides, name, topic, nsfw, slowmode, parent_id, bitrate, user_limit) = match channel {
             GuildChannel::Category(category) => (
                 category.kind,
                 category.id,
@@ -316,20 +289,20 @@ impl CachedChannel {
                 name,
                 parent_id,
                 permission_overrides,
-            }
+            },
         }
     }
 
     pub fn from_private(channel: &PrivateChannel, cache: &Cache) -> Self {
         if channel.recipients.len() == 1 {
-             CachedChannel::DM {
-                 id: channel.id,
-                 receiver: cache.get_or_insert_user(&channel.recipients[0])
-             }
+            CachedChannel::DM {
+                id: channel.id,
+                receiver: cache.get_or_insert_user(&channel.recipients[0]),
+            }
         } else {
             CachedChannel::GroupDM {
                 id: channel.id,
-                receivers: channel.recipients.iter().map(|user| cache.get_or_insert_user(user)).collect()
+                receivers: channel.recipients.iter().map(|user| cache.get_or_insert_user(user)).collect(),
             }
         }
     }

@@ -1,10 +1,7 @@
 use std::io;
 
 use flexi_logger::writers::LogWriter;
-use flexi_logger::{
-    colored_opt_format, Age, Cleanup, Criterion, DeferredNow, Duplicate, Logger, Naming,
-    ReconfigurationHandle,
-};
+use flexi_logger::{colored_opt_format, Age, Cleanup, Criterion, DeferredNow, Duplicate, Logger, Naming, ReconfigurationHandle};
 use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
 use tokio;
@@ -28,13 +25,9 @@ pub fn initialize() -> Result<(), Error> {
     // TODO: validate webhook by doing a get to it
     // If invalid, `return Err(Error::InvalidLoggingWebhook(url))
 
-    let gearbot_important = Box::new(WebhookLogger {
-        cell: &IMPORTANT_WEBHOOK,
-    });
+    let gearbot_important = Box::new(WebhookLogger { cell: &IMPORTANT_WEBHOOK });
 
-    let gearbot_info = Box::new(WebhookLogger {
-        cell: &INFO_WEBHOOK,
-    });
+    let gearbot_info = Box::new(WebhookLogger { cell: &INFO_WEBHOOK });
 
     let log_init_status = LOGGER_HANDLE.set(
         Logger::with_env_or_str("info")
@@ -43,11 +36,7 @@ pub fn initialize() -> Result<(), Error> {
             .directory("logs")
             .format(colored_opt_format)
             .o_timestamp(true)
-            .rotate(
-                Criterion::Age(Age::Day),
-                Naming::Timestamps,
-                Cleanup::KeepLogAndZipFiles(10, 30),
-            )
+            .rotate(Criterion::Age(Age::Day), Naming::Timestamps, Cleanup::KeepLogAndZipFiles(10, 30))
             .add_writer("gearbot_important", gearbot_important)
             .add_writer("gearbot_info", gearbot_info)
             .start_with_specfile("logconfig.toml")
@@ -63,12 +52,8 @@ pub fn initialize() -> Result<(), Error> {
 
 pub fn initialize_discord_webhooks(http: HttpClient, config: &BotConfig, user: CurrentUser) {
     HTTP_CLIENT.set(http).unwrap();
-    IMPORTANT_WEBHOOK
-        .set(config.logging.important_logs.to_owned())
-        .unwrap();
-    INFO_WEBHOOK
-        .set(config.logging.info_logs.to_owned())
-        .unwrap();
+    IMPORTANT_WEBHOOK.set(config.logging.important_logs.to_owned()).unwrap();
+    INFO_WEBHOOK.set(config.logging.info_logs.to_owned()).unwrap();
     BOT_USER.set(user).unwrap();
 }
 
@@ -102,15 +87,10 @@ impl LogWriter for WebhookLogger<'_> {
 
 async fn send_webhook(http: HttpClient, url: &str, message: String) -> Result<(), Error> {
     let user = BOT_USER.get().unwrap();
-    let executor = http
-        .execute_webhook_from_url(url)?
-        .content(message)
-        .username(&user.name);
+    let executor = http.execute_webhook_from_url(url)?.content(message).username(&user.name);
 
     match &user.avatar {
-        Some(avatar) => {
-            executor.avatar_url(format!("{}{}/{}.png", DISCORD_AVATAR_URL, &user.id, avatar))
-        }
+        Some(avatar) => executor.avatar_url(format!("{}{}/{}.png", DISCORD_AVATAR_URL, &user.id, avatar)),
         None => executor,
     }
     .await

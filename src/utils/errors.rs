@@ -76,18 +76,23 @@ impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ParseError::MemberNotFoundById(id) => write!(f, "no member with userid ``{}`` found on this server", id),
-            ParseError::MissingArgument => {
-                write!(f, "You are missing one or more required arguments")
-            }
+            ParseError::MissingArgument => write!(f, "You are missing one or more required arguments"),
             ParseError::MemberNotFoundByName(name) => write!(f, "There is nobody named ``{}`` on this server", name),
-            ParseError::MultipleMembersByName(name) => write!(f, "Multiple members who's name starts with ``{}`` found, please use their full name and discriminator", name),
+            ParseError::MultipleMembersByName(name) => write!(
+                f,
+                "Multiple members who's name starts with ``{}`` found, please use their full name and discriminator",
+                name
+            ),
             ParseError::WrongArgumentType(expected) => write!(f, "The wrong type was provided! Expected a {}, but got something else!", expected),
             ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid discord userid", id),
-            ParseError::UnknownChannel(id) => { write!(f, "Unable to find any channel with id ``{}``", id) }
-            ParseError::NoChannelAccessBot(_) => { write!(f, "I do not have access to that channel!") }
-            ParseError::NoChannelAccessUser(_) => { write!(f, "You do not have access to that channel!") }
-            ParseError::UnknownMessage => { write!(f, "Unable to find that message") }
-            ParseError::NSFW => { write!(f, "That message originates in a nsfw channel while this is not a nsfw channel, unable to comply") }
+            ParseError::UnknownChannel(id) => write!(f, "Unable to find any channel with id ``{}``", id),
+            ParseError::NoChannelAccessBot(_) => write!(f, "I do not have access to that channel!"),
+            ParseError::NoChannelAccessUser(_) => write!(f, "You do not have access to that channel!"),
+            ParseError::UnknownMessage => write!(f, "Unable to find that message"),
+            ParseError::NSFW => write!(
+                f,
+                "That message originates in a nsfw channel while this is not a nsfw channel, unable to comply"
+            ),
         }
     }
 }
@@ -113,9 +118,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::CmdError(e) => write!(f, "{}", e),
-            Error::InvalidSession => {
-                write!(f, "The gateway invalidated our session unrecoverably!")
-            }
+            Error::InvalidSession => write!(f, "The gateway invalidated our session unrecoverably!"),
             // For errors that actually happen during runtime, we can have the logging macros here too
             Error::MissingToken => write!(f, "The bot was missing its token, unable to start!"),
             Error::NoConfig => write!(f, "The config file couldn't be found, unable to start!"),
@@ -123,15 +126,9 @@ impl fmt::Display for Error {
             Error::InvalidLoggingWebhook(wurl) => write!(f, "The webhook URL {} was invalid", wurl),
             Error::NoLoggingSpec => write!(f, "The logging configuration couldn't be found!"),
             Error::IoError(e) => write!(f, "An IO error occurred during a task: {}", e),
-            Error::TwilightHttp(e) => {
-                write!(f, "An error occurred making a Discord request: {}", e)
-            }
+            Error::TwilightHttp(e) => write!(f, "An error occurred making a Discord request: {}", e),
             Error::TwilightCluster(e) => write!(f, "An error occurred on a cluster request: {}", e),
-            Error::Cache(e) => write!(
-                f,
-                "An error occured attempting to fetch an object from the cache: {}",
-                e
-            ),
+            Error::Cache(e) => write!(f, "An error occured attempting to fetch an object from the cache: {}", e),
             Error::Database(e) => write!(f, "A database error occurred: {}", e),
             Error::DatabaseAction(e) => write!(f, "{}", e),
             Error::DatabaseMigration(e) => write!(f, "Failed to migrate the database: {}", e),
@@ -147,9 +144,7 @@ impl fmt::Display for Error {
             Error::CreateMessageError(e) => write!(f, "Error creating message: {}", e),
             Error::UpdateMessageError(e) => write!(f, "Error updating message: {}", e),
             Error::CacheDefrostError(e) => write!(f, "Error defrosting cache: {}", e),
-            Error::DarkRedisError(e) => {
-                write!(f, "Error communicating with the redis cache: {}", e)
-            }
+            Error::DarkRedisError(e) => write!(f, "Error communicating with the redis cache: {}", e),
             Error::CorruptCacheError(e) => write!(f, "CRITICAL CACHE CORRUPTION DETECTED: {}", e),
         }
     }

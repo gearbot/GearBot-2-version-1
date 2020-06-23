@@ -11,15 +11,7 @@ pub async fn insert_message(pool: &Pool, content: Vec<u8>, msg: &Message) -> Res
         .prepare_typed(
             "INSERT INTO message (id, content, author_id, channel_id, guild_id, type, pinned)
             VALUES ($1, $2, $3, $4, $5, $6, $7)",
-            &[
-                Type::INT8,
-                Type::BYTEA,
-                Type::INT8,
-                Type::INT8,
-                Type::INT8,
-                Type::INT2,
-                Type::BOOL,
-            ],
+            &[Type::INT8, Type::BYTEA, Type::INT8, Type::INT8, Type::INT8, Type::INT2, Type::BOOL],
         )
         .await?;
 
@@ -40,11 +32,7 @@ pub async fn insert_message(pool: &Pool, content: Vec<u8>, msg: &Message) -> Res
     Ok(())
 }
 
-pub async fn insert_attachment(
-    pool: &Pool,
-    message_id: u64,
-    attachment: &Attachment,
-) -> Result<(), Error> {
+pub async fn insert_attachment(pool: &Pool, message_id: u64, attachment: &Attachment) -> Result<(), Error> {
     let client = pool.get().await?;
     let statement = client
         .prepare_typed(
@@ -67,15 +55,10 @@ pub async fn insert_attachment(
     Ok(())
 }
 
-pub async fn get_full_message(
-    pool: &Pool,
-    message_id: u64,
-) -> Result<Option<(Vec<u8>, u64, u64, u64, MessageType, bool)>, Error> {
+pub async fn get_full_message(pool: &Pool, message_id: u64) -> Result<Option<(Vec<u8>, u64, u64, u64, MessageType, bool)>, Error> {
     let client = pool.get().await?;
 
-    let statement = client
-        .prepare_typed("SELECT * from message where id=$1", &[Type::INT8])
-        .await?;
+    let statement = client.prepare_typed("SELECT * from message where id=$1", &[Type::INT8]).await?;
 
     let fetch_id = message_id as i64;
 
@@ -125,9 +108,7 @@ pub async fn get_full_message(
 pub async fn get_channel_for_message(pool: &Pool, msg_id: u64) -> Result<Option<u64>, Error> {
     let client = pool.get().await?;
 
-    let statement = client
-        .prepare_typed("SELECT channel_id from message where id=$1", &[Type::INT8])
-        .await?;
+    let statement = client.prepare_typed("SELECT channel_id from message where id=$1", &[Type::INT8]).await?;
 
     let rows = client.query(&statement, &[&(msg_id as i64)]).await?;
     if let Some(stored_msg) = rows.get(0) {

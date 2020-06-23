@@ -5,7 +5,7 @@ use twilight::model::{
     id::{ChannelId, RoleId, UserId},
 };
 
-use crate::core::cache::{CachedChannel, Cache};
+use crate::core::cache::{Cache, CachedChannel};
 use crate::core::cache::{CachedMember, CachedRole, CachedUser};
 use crate::utils::CommandError;
 use crate::Error;
@@ -55,7 +55,6 @@ impl CommandContext {
             None => {
                 let channel = self.bot_context.http.create_private_channel(user_id).await?;
                 Ok(self.bot_context.cache.insert_private_channel(&channel))
-
             }
         }
     }

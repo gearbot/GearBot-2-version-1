@@ -141,24 +141,24 @@ impl fmt::Display for AboutDescription {
 }
 
 pub async fn about(ctx: CommandContext, _: Parser) -> CommandResult {
-    let about_stats = AboutDescription::create(ctx.get_bot_stats()).await;
-
-    let embed = EmbedBuilder::new()
-        .color(ABOUT_EMBED_COLOR)
-        .description(about_stats.to_string())
-        .timestamp(Utc::now().to_rfc3339())
-        .add_field("Support Server", "[Click Here](https://discord.gg/vddW3D9)")
-        .inline()
-        .commit()
-        .add_field("Website", "[Click Here](https://gearbot.rocks)")
-        .inline()
-        .commit()
-        .add_field("GitHub", "[Click Here](https://github.com/gearbot/GearBot)")
-        .inline()
-        .commit()
-        .build();
-
-    ctx.reply_embed(embed).await?;
+    // let about_stats = AboutDescription::create(ctx.get_bot_stats()).await;
+    //
+    // let embed = EmbedBuilder::new()
+    //     .color(ABOUT_EMBED_COLOR)
+    //     .description(about_stats.to_string())
+    //     .timestamp(Utc::now().to_rfc3339())
+    //     .add_field("Support Server", "[Click Here](https://discord.gg/vddW3D9)")
+    //     .inline()
+    //     .commit()
+    //     .add_field("Website", "[Click Here](https://gearbot.rocks)")
+    //     .inline()
+    //     .commit()
+    //     .add_field("GitHub", "[Click Here](https://github.com/gearbot/GearBot)")
+    //     .inline()
+    //     .commit()
+    //     .build();
+    //
+    // ctx.reply_embed(embed).await?;
 
     Ok(())
 }

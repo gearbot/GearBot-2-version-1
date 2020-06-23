@@ -26,10 +26,7 @@ pub struct Parser {
 impl Parser {
     fn new(content: &str, ctx: Arc<BotContext>, shard_id: u64, guild_id: Option<GuildId>) -> Self {
         Parser {
-            parts: content
-                .split_whitespace()
-                .map(String::from)
-                .collect::<Vec<String>>(),
+            parts: content.split_whitespace().map(String::from).collect::<Vec<String>>(),
             index: 0,
             ctx,
             shard_id,
@@ -64,19 +61,9 @@ impl Parser {
         // None
     }
 
-    pub async fn figure_it_out(
-        prefix: &str,
-        message: Box<MessageCreate>,
-        ctx: Arc<BotContext>,
-        shard_id: u64,
-    ) -> Result<(), Error> {
+    pub async fn figure_it_out(prefix: &str, message: Box<MessageCreate>, ctx: Arc<BotContext>, shard_id: u64) -> Result<(), Error> {
         //TODO: verify permissions
-        let mut parser = Parser::new(
-            &message.0.content[prefix.len()..],
-            ctx.clone(),
-            shard_id,
-            message.guild_id,
-        );
+        let mut parser = Parser::new(&message.0.content[prefix.len()..], ctx.clone(), shard_id, message.guild_id);
         debug!("Parser processing message: {:?}", &message.content);
 
         let mut p = parser.clone();
@@ -98,13 +85,19 @@ impl Parser {
 
                 let (member, config, guild) = {
                     match message.guild_id {
-                        Some(guild_id) => {
-                            match ctx.cache.get_member(guild_id, message.author.id) {
-                                Some(m) => (Some(m), Some(ctx.get_config(guild_id).await?), Some(ctx.cache.get_guild(guild_id).unwrap())),
-                                None => return Err(Error::CorruptCacheError(String::from("Got a message with a command from someone who is not cached for this guild!")))
+                        Some(guild_id) => match ctx.cache.get_member(guild_id, message.author.id) {
+                            Some(m) => (
+                                Some(m),
+                                Some(ctx.get_config(guild_id).await?),
+                                Some(ctx.cache.get_guild(guild_id).unwrap()),
+                            ),
+                            None => {
+                                return Err(Error::CorruptCacheError(String::from(
+                                    "Got a message with a command from someone who is not cached for this guild!",
+                                )))
                             }
-                        }
-                        None => (None, None, None)
+                        },
+                        None => (None, None, None),
                     }
                 };
 
@@ -116,13 +109,14 @@ impl Parser {
                 }
                 let channel = channel.unwrap();
 
-                let author =
-                    match ctx.cache.get_user(message.author.id) {
-                        Some(author) => author,
-                        None => return Err(Error::CorruptCacheError(String::from(
+                let author = match ctx.cache.get_user(message.author.id) {
+                    Some(author) => author,
+                    None => {
+                        return Err(Error::CorruptCacheError(String::from(
                             "Got a message with a command from a user that is not in the cache!",
-                        ))),
-                    };
+                        )))
+                    }
+                };
 
                 let cmdm = CommandMessage {
                     id: message.id,
@@ -143,27 +137,28 @@ impl Parser {
                 // debug!("USER channel perms: {:?}", context.get_author_channel_permissions());
                 //check if we can send a reply
                 if !context.bot_has_channel_permissions(Permissions::SEND_MESSAGES) {
-                    info!("{}#{} ({}) tried to run the {} command in #{} ({}) but i lack send message permissions to execute the command", author.username, author.discriminator, author.id, name, channel.get_name(), channel.get_id());
+                    info!(
+                        "{}#{} ({}) tried to run the {} command in #{} ({}) but i lack send message permissions to execute the command",
+                        author.username,
+                        author.discriminator,
+                        author.id,
+                        name,
+                        channel.get_name(),
+                        channel.get_id()
+                    );
 
                     let dm_channel = context.get_dm_for_author().await?;
 
-                    let key =
-                        if context.author_has_channel_permissions(Permissions::MANAGE_CHANNELS) {
-                            GearBotString::UnableToReplyForManager
-                        } else {
-                            GearBotString::UnableToReply
-                        };
+                    let key = if context.author_has_channel_permissions(Permissions::MANAGE_CHANNELS) {
+                        GearBotString::UnableToReplyForManager
+                    } else {
+                        GearBotString::UnableToReply
+                    };
 
-                    let args = FluArgs::with_capacity(1)
-                        .insert("channel", channel.get_name())
-                        .generate();
+                    let args = FluArgs::with_capacity(1).insert("channel", channel.get_name()).generate();
                     let translated = context.translate_with_args(key, &args);
                     // we don't really care if this works or not, nothing we can do if they don't allow DMs from our mutual server(s)
-                    let _ = ctx
-                        .http
-                        .create_message(dm_channel.get_id())
-                        .content(translated)?
-                        .await;
+                    let _ = ctx.http.create_message(dm_channel.get_id()).content(translated)?.await;
                     return Ok(());
                 }
 
@@ -175,11 +170,7 @@ impl Parser {
                         Error::ParseError(e) => {
                             ctx.http
                                 .create_message(channel_id)
-                                .content(format!(
-                                    "{} Something went wrong trying to parse that: {}",
-                                    Emoji::No.for_chat(),
-                                    e
-                                ))
+                                .content(format!("{} Something went wrong trying to parse that: {}", Emoji::No.for_chat(), e))
                                 .unwrap()
                                 .await?;
                             Ok(())
@@ -240,9 +231,7 @@ impl Parser {
                     Ok(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
                     Err(_) => {
                         //nope, must be a partial name
-                        Err(Error::ParseError(ParseError::MemberNotFoundByName(
-                            "not implemented yet".to_string(),
-                        )))
+                        Err(Error::ParseError(ParseError::MemberNotFoundByName("not implemented yet".to_string())))
                     }
                 }
             }
@@ -267,19 +256,14 @@ impl Parser {
                     },
                     Err(_) => {
                         //nope, must be a partial name
-                        Err(Error::ParseError(ParseError::MemberNotFoundByName(
-                            "not implemented yet".to_string(),
-                        )))
+                        Err(Error::ParseError(ParseError::MemberNotFoundByName("not implemented yet".to_string())))
                     }
                 }
             }
         }
     }
 
-    pub async fn get_user_or(
-        &mut self,
-        alternative: Arc<CachedUser>,
-    ) -> Result<Arc<CachedUser>, Error> {
+    pub async fn get_user_or(&mut self, alternative: Arc<CachedUser>) -> Result<Arc<CachedUser>, Error> {
         if self.has_next() {
             Ok(self.get_user().await?)
         } else {
@@ -293,11 +277,7 @@ impl Parser {
         // We got an id, get the info from the database
         let message_id = input.parse::<u64>().map_err(|_| CommandError::NoDM)?;
 
-        let channel_id = self
-            .ctx
-            .get_channel_for_message(message_id)
-            .await?
-            .ok_or(ParseError::UnknownMessage)?;
+        let channel_id = self.ctx.get_channel_for_message(message_id).await?.ok_or(ParseError::UnknownMessage)?;
 
         let channel = self.ctx.cache.get_channel(ChannelId(channel_id));
         if channel.is_none() {

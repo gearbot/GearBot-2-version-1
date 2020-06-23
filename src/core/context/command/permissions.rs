@@ -41,11 +41,7 @@ impl CommandContext {
         }
     }
 
-    pub fn get_channel_permissions_for(
-        &self,
-        user_id: UserId,
-        channel_id: ChannelId,
-    ) -> Permissions {
+    pub fn get_channel_permissions_for(&self, user_id: UserId, channel_id: ChannelId) -> Permissions {
         let mut permissions = Permissions::empty();
 
         if let Some(channel) = self.get_channel(channel_id) {
@@ -104,27 +100,16 @@ impl CommandContext {
         self.get_channel_permissions_for(self.get_bot_user().id, channel_id)
     }
 
-    pub fn has_channel_permissions(
-        &self,
-        user_id: UserId,
-        channel_id: ChannelId,
-        permissions: Permissions,
-    ) -> bool {
-        self.get_channel_permissions_for(user_id, channel_id)
-            .contains(permissions)
+    pub fn has_channel_permissions(&self, user_id: UserId, channel_id: ChannelId, permissions: Permissions) -> bool {
+        self.get_channel_permissions_for(user_id, channel_id).contains(permissions)
     }
 
     pub fn bot_has_channel_permissions(&self, permissions: Permissions) -> bool {
         self.bot_has_permissions_in_channel(self.message.channel.get_id(), permissions)
     }
 
-    pub fn bot_has_permissions_in_channel(
-        &self,
-        channel_id: ChannelId,
-        permissions: Permissions,
-    ) -> bool {
-        self.get_bot_permissions_for_channel(channel_id)
-            .contains(permissions)
+    pub fn bot_has_permissions_in_channel(&self, channel_id: ChannelId, permissions: Permissions) -> bool {
+        self.get_bot_permissions_for_channel(channel_id).contains(permissions)
     }
 
     pub fn get_author_channel_permissions(&self) -> Permissions {

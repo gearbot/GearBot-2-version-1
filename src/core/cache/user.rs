@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::AtomicU64;
 use twilight::model::id::UserId;
 use twilight::model::user::{User, UserFlags};
-use std::sync::atomic::AtomicU64;
 
 use super::is_default;
 
@@ -35,11 +35,17 @@ impl CachedUser {
             bot_user: user.bot,
             system_user: user.system.unwrap_or(false),
             public_flags: user.public_flags,
-            mutual_servers: AtomicU64::new(0)
+            mutual_servers: AtomicU64::new(0),
         }
     }
 
     pub fn is_same_as(&self, user: &User) -> bool {
-        self.id == user.id && self.username == user.name && self.discriminator == user.discriminator && self.avatar == user.avatar && self.bot_user == user.bot && self.system_user == user.system.unwrap_or(false) && self.public_flags == user.public_flags
+        self.id == user.id
+            && self.username == user.name
+            && self.discriminator == user.discriminator
+            && self.avatar == user.avatar
+            && self.bot_user == user.bot
+            && self.system_user == user.system.unwrap_or(false)
+            && self.public_flags == user.public_flags
     }
 }

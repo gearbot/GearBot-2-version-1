@@ -73,10 +73,7 @@ pub fn clean(msg: &str, markdown: bool, links: bool, emotes: bool, lookalikes: b
 }
 
 pub fn snowflake_timestamp(snowflake: u64) -> DateTime<Utc> {
-    DateTime::from_utc(
-        NaiveDateTime::from_timestamp(((snowflake as i64 >> 22) + DISCORD_EPOCH) / 1000, 0),
-        Utc,
-    )
+    DateTime::from_utc(NaiveDateTime::from_timestamp(((snowflake as i64 >> 22) + DISCORD_EPOCH) / 1000, 0), Utc)
 }
 
 pub fn age(old: DateTime<Utc>, new: DateTime<Utc>, max_parts: i8) -> String {

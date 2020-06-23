@@ -58,7 +58,6 @@ impl CachedMember {
             server_muted: self.server_muted,
         }
     }
-
 }
 
 impl CachedMember {

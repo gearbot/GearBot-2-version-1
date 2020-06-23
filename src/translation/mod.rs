@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
 
-use fluent_bundle::{
-    concurrent::FluentBundle, FluentArgs, FluentError, FluentResource, FluentValue,
-};
+use fluent_bundle::{concurrent::FluentBundle, FluentArgs, FluentError, FluentResource, FluentValue};
 use serde_json;
 use unic_langid::{langid, LanguageIdentifier};
 
@@ -13,7 +11,8 @@ use crate::gearbot_warn;
 use log::debug;
 
 const TRANSLATION_DIR: &str = "./lang";
-const FAILED_TRANSLATE_FALLBACK_MSG: &str = "A translation error occured and no fallback could be found! Something may be wrong with the guild configuration!";
+const FAILED_TRANSLATE_FALLBACK_MSG: &str =
+    "A translation error occured and no fallback could be found! Something may be wrong with the guild configuration!";
 
 /// The default language to fall back to if a string can't be translated in the requested language.
 /// This is also the language that new guild configs will default to.
@@ -56,11 +55,7 @@ impl<'a> FluArgs<'a> {
 impl Translations {
     /// Retreives a string key to use when sending a message to chat that *does not* require arguments and can be sent as fetched with no
     /// further modifications.
-    pub fn get_text_plain(
-        &self,
-        lang_key: &LanguageIdentifier,
-        string_key: GearBotString,
-    ) -> Cow<str> {
+    pub fn get_text_plain(&self, lang_key: &LanguageIdentifier, string_key: GearBotString) -> Cow<str> {
         // TODO: See how well this will work out in practice with unwrapping
         let lang_bundle = self.0.get(lang_key).unwrap();
 
@@ -100,12 +95,7 @@ impl Translations {
     /// passed in to have included before it can be sent.
     ///
     /// For example, the ping command.
-    pub fn get_text_with_args<'a>(
-        &'a self,
-        lang_key: &LanguageIdentifier,
-        string_key: GearBotString,
-        args: &'a FluentArgs<'a>,
-    ) -> Cow<'a, str> {
+    pub fn get_text_with_args<'a>(&'a self, lang_key: &LanguageIdentifier, string_key: GearBotString, args: &'a FluentArgs<'a>) -> Cow<'a, str> {
         let lang_bundle = self.0.get(lang_key).unwrap();
 
         if let Some(expected_msg) = lang_bundle.get_message(string_key.as_str()) {
@@ -153,7 +143,10 @@ fn handle_translation_error(errors: &[FluentError], key: GearBotString, is_fallb
     for error in errors {
         if is_fallback {
             gearbot_warn!(
-                "A translation error occured and had to fallback to '{}' while trying to translate the **``{}``** key: ``{:?}``", key.as_str(), DEFAULT_LANG, error
+                "A translation error occured and had to fallback to '{}' while trying to translate the **``{}``** key: ``{:?}``",
+                key.as_str(),
+                DEFAULT_LANG,
+                error
             );
         } else {
             gearbot_warn!(
@@ -200,8 +193,7 @@ impl GearBotString {
 }
 
 pub fn load_translations() -> Translations {
-    let translation_files =
-        fs::read_dir(TRANSLATION_DIR).expect("The translation directory was not found!");
+    let translation_files = fs::read_dir(TRANSLATION_DIR).expect("The translation directory was not found!");
 
     let mut translations = HashMap::new();
 
@@ -229,8 +221,7 @@ pub fn load_translations() -> Translations {
                 fs::File::open(tmp.path()).expect("Failed to read a translation file in!")
             };
 
-            let translation_data: HashMap<String, String> =
-                serde_json::from_reader(&t_file).unwrap();
+            let translation_data: HashMap<String, String> = serde_json::from_reader(&t_file).unwrap();
 
             // Then we add all the actual translations for said language
             for (translation_key, translation_string) in translation_data {

@@ -30,8 +30,7 @@ pub async fn ping(ctx: CommandContext, _: Parser) -> CommandResult {
 
     let edited_msg = ctx.translate_with_args(GearBotString::PingPong, &args);
 
-    ctx.update_message(edited_msg, sent_msg.channel_id, sent_msg.id)
-        .await?;
+    ctx.update_message(edited_msg, sent_msg.channel_id, sent_msg.id).await?;
 
     Ok(())
 }

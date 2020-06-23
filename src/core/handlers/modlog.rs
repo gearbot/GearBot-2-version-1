@@ -10,8 +10,7 @@ use crate::utils::Error;
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
     match &event {
         Event::MemberChunk(_chunk) => {}
-        Event::UserUpdate(update) => {
-        }
+        Event::UserUpdate(update) => {}
         Event::MemberUpdate(update) => {
             // According to the docs, cache commands can never error, but just to be safe and
             // not spam unwraps everywhere, wrap it.
@@ -92,10 +91,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
         Event::MessageCreate(msg) => {
             if let Some(guild_id) = msg.guild_id {
                 let config = &ctx.get_config(guild_id).await?.message_logs;
-                if config.enabled
-                    && !config.ignored_users.contains(&msg.author.id.0)
-                    && !(config.ignore_bots && msg.author.bot)
-                {
+                if config.enabled && !config.ignored_users.contains(&msg.author.id.0) && !(config.ignore_bots && msg.author.bot) {
                     ctx.insert_message(&msg.0, guild_id).await?;
                 }
             }

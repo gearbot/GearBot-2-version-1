@@ -55,10 +55,7 @@ impl BotContext {
             .unwrap();
 
         let end = std::time::Instant::now();
-        info!(
-            "Cold resume preparations completed in {}ms!",
-            (end - start).as_millis()
-        );
+        info!("Cold resume preparations completed in {}ms!", (end - start).as_millis());
 
         Ok(())
     }
