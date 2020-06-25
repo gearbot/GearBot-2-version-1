@@ -7,7 +7,9 @@ use crate::utils::Error;
 
 pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<GuildConfig, Error> {
     let client = ctx.pool.get().await?;
-    let statement = client.prepare_typed("SELECT config from guildconfig where id=$1", &[Type::INT8]).await?;
+    let statement = client
+        .prepare_typed("SELECT config from guildconfig where id=$1", &[Type::INT8])
+        .await?;
 
     let rows = client.query(&statement, &[&(guild_id as i64)]).await?;
 
@@ -40,7 +42,10 @@ pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<GuildCo
 pub async fn set_guild_config(ctx: &BotContext, guild_id: u64, config: Value) -> Result<(), Error> {
     let client = ctx.pool.get().await?;
     let statement = client
-        .prepare_typed("UPDATE guildconfig set config=$1 WHERE id=$2", &[Type::JSON, Type::INT8])
+        .prepare_typed(
+            "UPDATE guildconfig set config=$1 WHERE id=$2",
+            &[Type::JSON, Type::INT8],
+        )
         .await?;
     client.execute(&statement, &[&config, &(guild_id as i64)]).await?;
     Ok(())

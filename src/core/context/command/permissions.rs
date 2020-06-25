@@ -101,7 +101,8 @@ impl CommandContext {
     }
 
     pub fn has_channel_permissions(&self, user_id: UserId, channel_id: ChannelId, permissions: Permissions) -> bool {
-        self.get_channel_permissions_for(user_id, channel_id).contains(permissions)
+        self.get_channel_permissions_for(user_id, channel_id)
+            .contains(permissions)
     }
 
     pub fn bot_has_channel_permissions(&self, permissions: Permissions) -> bool {

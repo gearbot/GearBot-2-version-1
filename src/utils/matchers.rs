@@ -4,7 +4,14 @@ use url::{Host, Url};
 
 use lazy_static::lazy_static;
 
-const KNOWN_INVITE_DOMAINS: [&str; 6] = ["discordapp.com", "discord.com", "discord.gg", "discord.me", "discord.io", "discord.li"];
+const KNOWN_INVITE_DOMAINS: [&str; 6] = [
+    "discordapp.com",
+    "discord.com",
+    "discord.gg",
+    "discord.me",
+    "discord.io",
+    "discord.li",
+];
 
 pub fn contains_id(msg: &str) -> bool {
     ID_MATCHER.is_match(msg)
@@ -27,7 +34,13 @@ pub fn get_mention(msg: &str) -> Option<u64> {
     let captures = MENTION_MATCHER_SOLO.captures(msg);
     debug!("{:?}", captures);
     match captures {
-        Some(c) => Some(c.get(1).map_or(Some(""), |m| Some(m.as_str())).unwrap().parse::<u64>().unwrap()),
+        Some(c) => Some(
+            c.get(1)
+                .map_or(Some(""), |m| Some(m.as_str()))
+                .unwrap()
+                .parse::<u64>()
+                .unwrap(),
+        ),
         None => None,
     }
 }
@@ -153,7 +166,8 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref JUMP_LINK_MATCHER: Regex = { Regex::new(r"https://(?:canary|ptb)?\.?discordapp.com/channels/\d*/(\d*)/(\d*)").unwrap() };
+    static ref JUMP_LINK_MATCHER: Regex =
+        { Regex::new(r"https://(?:canary|ptb)?\.?discordapp.com/channels/\d*/(\d*)/(\d*)").unwrap() };
 }
 
 lazy_static! {

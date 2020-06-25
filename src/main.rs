@@ -72,7 +72,10 @@ async fn real_main() -> Result<(), Error> {
     let http = builder.clone().build()?;
     // Validate token and figure out who we are
     let user = http.current_user().await?;
-    info!("Token validated, connecting to discord as {}#{}", user.name, user.discriminator);
+    info!(
+        "Token validated, connecting to discord as {}#{}",
+        user.name, user.discriminator
+    );
 
     logging::initialize_discord_webhooks(builder.build()?, &config, user.clone());
 
@@ -109,7 +112,11 @@ async fn real_main() -> Result<(), Error> {
     // and handled
 
     let cluster = args.value_of("cluster").unwrap_or("0").parse::<u64>().unwrap_or(0);
-    let shards_per_cluster = args.value_of("shards_per_cluster").unwrap_or("1").parse::<u64>().unwrap_or(1);
+    let shards_per_cluster = args
+        .value_of("shards_per_cluster")
+        .unwrap_or("1")
+        .parse::<u64>()
+        .unwrap_or(1);
     let total_shards = args.value_of("total_shards").unwrap_or("1").parse::<u64>().unwrap_or(1);
 
     if let Err(e) = GearBot::run(

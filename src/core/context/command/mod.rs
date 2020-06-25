@@ -59,13 +59,19 @@ impl CommandContext {
     }
 
     pub fn translate<'a>(&'a self, key: GearBotString) -> String {
-        self.bot_context.translations.get_text_plain(&self.translator.language, key).to_string()
+        self.bot_context
+            .translations
+            .get_text_plain(&self.translator.language, key)
+            .to_string()
     }
 
     pub fn translate_with_args<'a>(&'a self, string_key: GearBotString, args: &'a FluentArgs<'a>) -> String {
         let guild_lang = &self.translator.language;
 
-        self.bot_context.translations.get_text_with_args(guild_lang, string_key, args).to_string()
+        self.bot_context
+            .translations
+            .get_text_with_args(guild_lang, string_key, args)
+            .to_string()
     }
 
     pub async fn set_config(&self, new_config: GuildConfig) -> Result<(), Error> {

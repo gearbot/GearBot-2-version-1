@@ -95,7 +95,12 @@ impl Translations {
     /// passed in to have included before it can be sent.
     ///
     /// For example, the ping command.
-    pub fn get_text_with_args<'a>(&'a self, lang_key: &LanguageIdentifier, string_key: GearBotString, args: &'a FluentArgs<'a>) -> Cow<'a, str> {
+    pub fn get_text_with_args<'a>(
+        &'a self,
+        lang_key: &LanguageIdentifier,
+        string_key: GearBotString,
+        args: &'a FluentArgs<'a>,
+    ) -> Cow<'a, str> {
         let lang_bundle = self.0.get(lang_key).unwrap();
 
         if let Some(expected_msg) = lang_bundle.get_message(string_key.as_str()) {

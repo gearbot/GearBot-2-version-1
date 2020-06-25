@@ -61,9 +61,19 @@ impl Parser {
         // None
     }
 
-    pub async fn figure_it_out(prefix: &str, message: Box<MessageCreate>, ctx: Arc<BotContext>, shard_id: u64) -> Result<(), Error> {
+    pub async fn figure_it_out(
+        prefix: &str,
+        message: Box<MessageCreate>,
+        ctx: Arc<BotContext>,
+        shard_id: u64,
+    ) -> Result<(), Error> {
         //TODO: verify permissions
-        let mut parser = Parser::new(&message.0.content[prefix.len()..], ctx.clone(), shard_id, message.guild_id);
+        let mut parser = Parser::new(
+            &message.0.content[prefix.len()..],
+            ctx.clone(),
+            shard_id,
+            message.guild_id,
+        );
         debug!("Parser processing message: {:?}", &message.content);
 
         let mut p = parser.clone();
@@ -155,7 +165,9 @@ impl Parser {
                         GearBotString::UnableToReply
                     };
 
-                    let args = FluArgs::with_capacity(1).insert("channel", channel.get_name()).generate();
+                    let args = FluArgs::with_capacity(1)
+                        .insert("channel", channel.get_name())
+                        .generate();
                     let translated = context.translate_with_args(key, &args);
                     // we don't really care if this works or not, nothing we can do if they don't allow DMs from our mutual server(s)
                     let _ = ctx.http.create_message(dm_channel.get_id()).content(translated)?.await;
@@ -170,7 +182,11 @@ impl Parser {
                         Error::ParseError(e) => {
                             ctx.http
                                 .create_message(channel_id)
-                                .content(format!("{} Something went wrong trying to parse that: {}", Emoji::No.for_chat(), e))
+                                .content(format!(
+                                    "{} Something went wrong trying to parse that: {}",
+                                    Emoji::No.for_chat(),
+                                    e
+                                ))
                                 .unwrap()
                                 .await?;
                             Ok(())
@@ -231,7 +247,9 @@ impl Parser {
                     Ok(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
                     Err(_) => {
                         //nope, must be a partial name
-                        Err(Error::ParseError(ParseError::MemberNotFoundByName("not implemented yet".to_string())))
+                        Err(Error::ParseError(ParseError::MemberNotFoundByName(
+                            "not implemented yet".to_string(),
+                        )))
                     }
                 }
             }
@@ -256,7 +274,9 @@ impl Parser {
                     },
                     Err(_) => {
                         //nope, must be a partial name
-                        Err(Error::ParseError(ParseError::MemberNotFoundByName("not implemented yet".to_string())))
+                        Err(Error::ParseError(ParseError::MemberNotFoundByName(
+                            "not implemented yet".to_string(),
+                        )))
                     }
                 }
             }
@@ -277,7 +297,11 @@ impl Parser {
         // We got an id, get the info from the database
         let message_id = input.parse::<u64>().map_err(|_| CommandError::NoDM)?;
 
-        let channel_id = self.ctx.get_channel_for_message(message_id).await?.ok_or(ParseError::UnknownMessage)?;
+        let channel_id = self
+            .ctx
+            .get_channel_for_message(message_id)
+            .await?
+            .ok_or(ParseError::UnknownMessage)?;
 
         let channel = self.ctx.cache.get_channel(ChannelId(channel_id));
         if channel.is_none() {

@@ -48,7 +48,9 @@ impl BotContext {
     }
 
     pub async fn fetch_user_message(&self, id: MessageId) -> Result<Option<UserMessage>, Error> {
-        if let Some((encrypted, author_id, channel_id, guild_id, msg_type, pinned)) = get_full_message(&self.pool, id.0).await? {
+        if let Some((encrypted, author_id, channel_id, guild_id, msg_type, pinned)) =
+            get_full_message(&self.pool, id.0).await?
+        {
             let guild_id = GuildId(guild_id);
             let start = std::time::Instant::now();
             let decyrpted = {
@@ -91,7 +93,10 @@ impl BotContext {
 
         let finish_crypto = std::time::Instant::now();
 
-        info!("It took {}us to encrypt the user message!", (finish_crypto - start).as_micros());
+        info!(
+            "It took {}us to encrypt the user message!",
+            (finish_crypto - start).as_micros()
+        );
 
         database::cache::insert_message(&self.pool, ciphertext, &msg).await?;
         for attachment in &msg.attachments {

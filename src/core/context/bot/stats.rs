@@ -89,12 +89,25 @@ impl BotStats {
             &["events"],
         )
         .unwrap();
-        let message_counter = IntCounterVec::new(Opts::new("messages", "Recieved messages").const_label("cluster", cid), &["sender_type"]).unwrap();
-        let channel_count = IntGauge::with_opts(Opts::new("channels", "Channel count").const_label("cluster", cid)).unwrap();
+        let message_counter = IntCounterVec::new(
+            Opts::new("messages", "Recieved messages").const_label("cluster", cid),
+            &["sender_type"],
+        )
+        .unwrap();
+        let channel_count =
+            IntGauge::with_opts(Opts::new("channels", "Channel count").const_label("cluster", cid)).unwrap();
         let emoji_count = IntGauge::with_opts(Opts::new("emoji", "Emoji count").const_label("cluster", cid)).unwrap();
         let role_count = IntGauge::with_opts(Opts::new("roles", "Role count").const_label("cluster", cid)).unwrap();
-        let guild_counter = IntGaugeVec::new(Opts::new("guild_counts", "State of the guilds").const_label("cluster", cid), &["state"]).unwrap();
-        let user_counter = IntGaugeVec::new(Opts::new("user_counts", "User counts").const_label("cluster", cid), &["type"]).unwrap();
+        let guild_counter = IntGaugeVec::new(
+            Opts::new("guild_counts", "State of the guilds").const_label("cluster", cid),
+            &["state"],
+        )
+        .unwrap();
+        let user_counter = IntGaugeVec::new(
+            Opts::new("user_counts", "User counts").const_label("cluster", cid),
+            &["type"],
+        )
+        .unwrap();
         let registry = Registry::new();
         registry.register(Box::new(event_counter.clone())).unwrap();
         registry.register(Box::new(message_counter.clone())).unwrap();
@@ -112,12 +125,20 @@ impl BotStats {
                 ban_remove: event_counter.get_metric_with_label_values(&["BanRemove"]).unwrap(),
                 channel_create: event_counter.get_metric_with_label_values(&["ChannelCreate"]).unwrap(),
                 channel_delete: event_counter.get_metric_with_label_values(&["ChannelDelete"]).unwrap(),
-                gateway_reconnect: event_counter.get_metric_with_label_values(&["GatewayReconnect"]).unwrap(),
-                channel_pins_update: event_counter.get_metric_with_label_values(&["ChannelPinsUpdate"]).unwrap(),
+                gateway_reconnect: event_counter
+                    .get_metric_with_label_values(&["GatewayReconnect"])
+                    .unwrap(),
+                channel_pins_update: event_counter
+                    .get_metric_with_label_values(&["ChannelPinsUpdate"])
+                    .unwrap(),
                 guild_create: event_counter.get_metric_with_label_values(&["GuildCreate"]).unwrap(),
                 guild_delete: event_counter.get_metric_with_label_values(&["GuildDelete"]).unwrap(),
-                guild_emojis_update: event_counter.get_metric_with_label_values(&["GuildEmojisUpdate"]).unwrap(),
-                guild_integrations_update: event_counter.get_metric_with_label_values(&["GuildIntegrationsUpdate"]).unwrap(),
+                guild_emojis_update: event_counter
+                    .get_metric_with_label_values(&["GuildEmojisUpdate"])
+                    .unwrap(),
+                guild_integrations_update: event_counter
+                    .get_metric_with_label_values(&["GuildIntegrationsUpdate"])
+                    .unwrap(),
                 guild_update: event_counter.get_metric_with_label_values(&["GuildUpdate"]).unwrap(),
                 invite_create: event_counter.get_metric_with_label_values(&["InviteCreate"]).unwrap(),
                 invite_delete: event_counter.get_metric_with_label_values(&["InviteDelete"]).unwrap(),
@@ -127,22 +148,36 @@ impl BotStats {
                 member_chunk: event_counter.get_metric_with_label_values(&["MemberChunk"]).unwrap(),
                 message_create: event_counter.get_metric_with_label_values(&["MessageCreate"]).unwrap(),
                 message_delete: event_counter.get_metric_with_label_values(&["MessageDelete"]).unwrap(),
-                message_delete_bulk: event_counter.get_metric_with_label_values(&["MessageDeleteBulk"]).unwrap(),
+                message_delete_bulk: event_counter
+                    .get_metric_with_label_values(&["MessageDeleteBulk"])
+                    .unwrap(),
                 message_update: event_counter.get_metric_with_label_values(&["MessageUpdate"]).unwrap(),
                 presence_update: event_counter.get_metric_with_label_values(&["PresenceUpdate"]).unwrap(),
-                presences_replace: event_counter.get_metric_with_label_values(&["PresencesReplace"]).unwrap(),
+                presences_replace: event_counter
+                    .get_metric_with_label_values(&["PresencesReplace"])
+                    .unwrap(),
                 reaction_add: event_counter.get_metric_with_label_values(&["ReactionAdd"]).unwrap(),
                 reaction_remove: event_counter.get_metric_with_label_values(&["ReactionRemove"]).unwrap(),
-                reaction_remove_all: event_counter.get_metric_with_label_values(&["ReactionRemoveAll"]).unwrap(),
-                reaction_remove_emoji: event_counter.get_metric_with_label_values(&["ReactionRemoveEmoji"]).unwrap(),
+                reaction_remove_all: event_counter
+                    .get_metric_with_label_values(&["ReactionRemoveAll"])
+                    .unwrap(),
+                reaction_remove_emoji: event_counter
+                    .get_metric_with_label_values(&["ReactionRemoveEmoji"])
+                    .unwrap(),
                 role_create: event_counter.get_metric_with_label_values(&["RoleCreate"]).unwrap(),
                 role_delete: event_counter.get_metric_with_label_values(&["RoleDelete"]).unwrap(),
                 role_update: event_counter.get_metric_with_label_values(&["RoleUpdate"]).unwrap(),
                 typing_start: event_counter.get_metric_with_label_values(&["TypingStart"]).unwrap(),
-                unavailable_guild: event_counter.get_metric_with_label_values(&["UnavailableGuild"]).unwrap(),
+                unavailable_guild: event_counter
+                    .get_metric_with_label_values(&["UnavailableGuild"])
+                    .unwrap(),
                 user_update: event_counter.get_metric_with_label_values(&["UserUpdate"]).unwrap(),
-                voice_server_update: event_counter.get_metric_with_label_values(&["VoiceServerUpdate"]).unwrap(),
-                voice_state_update: event_counter.get_metric_with_label_values(&["VoiceStateUpdate"]).unwrap(),
+                voice_server_update: event_counter
+                    .get_metric_with_label_values(&["VoiceServerUpdate"])
+                    .unwrap(),
+                voice_state_update: event_counter
+                    .get_metric_with_label_values(&["VoiceStateUpdate"])
+                    .unwrap(),
                 webhooks_update: event_counter.get_metric_with_label_values(&["WebhooksUpdate"]).unwrap(),
             },
             message_counts: MessageCounters {

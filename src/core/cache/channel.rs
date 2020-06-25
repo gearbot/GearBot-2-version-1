@@ -169,13 +169,23 @@ impl CachedChannel {
     /// will be empty for
     pub fn get_permission_overrides(&self) -> &[PermissionOverwrite] {
         match self {
-            CachedChannel::TextChannel { permission_overrides, .. } => permission_overrides,
+            CachedChannel::TextChannel {
+                permission_overrides, ..
+            } => permission_overrides,
             CachedChannel::DM { .. } => NO_PERMISSIONS,
-            CachedChannel::VoiceChannel { permission_overrides, .. } => permission_overrides,
+            CachedChannel::VoiceChannel {
+                permission_overrides, ..
+            } => permission_overrides,
             CachedChannel::GroupDM { .. } => NO_PERMISSIONS,
-            CachedChannel::Category { permission_overrides, .. } => permission_overrides,
-            CachedChannel::AnnouncementsChannel { permission_overrides, .. } => permission_overrides,
-            CachedChannel::StoreChannel { permission_overrides, .. } => permission_overrides,
+            CachedChannel::Category {
+                permission_overrides, ..
+            } => permission_overrides,
+            CachedChannel::AnnouncementsChannel {
+                permission_overrides, ..
+            } => permission_overrides,
+            CachedChannel::StoreChannel {
+                permission_overrides, ..
+            } => permission_overrides,
         }
     }
 
@@ -201,47 +211,48 @@ impl CachedChannel {
 
 impl CachedChannel {
     pub fn from_guild_channel(channel: &GuildChannel, guild_id: GuildId) -> Self {
-        let (kind, id, position, permission_overrides, name, topic, nsfw, slowmode, parent_id, bitrate, user_limit) = match channel {
-            GuildChannel::Category(category) => (
-                category.kind,
-                category.id,
-                category.position,
-                category.permission_overwrites.clone(),
-                category.name.clone(),
-                None,
-                false,
-                None,
-                None,
-                0,
-                None,
-            ),
-            GuildChannel::Text(text) => (
-                text.kind,
-                text.id,
-                text.position,
-                text.permission_overwrites.clone(),
-                text.name.clone(),
-                text.topic.clone(),
-                text.nsfw,
-                text.rate_limit_per_user,
-                text.parent_id,
-                0,
-                None,
-            ),
-            GuildChannel::Voice(voice) => (
-                voice.kind,
-                voice.id,
-                voice.position,
-                voice.permission_overwrites.clone(),
-                voice.name.clone(),
-                None,
-                false,
-                None,
-                voice.parent_id,
-                voice.bitrate,
-                voice.user_limit,
-            ),
-        };
+        let (kind, id, position, permission_overrides, name, topic, nsfw, slowmode, parent_id, bitrate, user_limit) =
+            match channel {
+                GuildChannel::Category(category) => (
+                    category.kind,
+                    category.id,
+                    category.position,
+                    category.permission_overwrites.clone(),
+                    category.name.clone(),
+                    None,
+                    false,
+                    None,
+                    None,
+                    0,
+                    None,
+                ),
+                GuildChannel::Text(text) => (
+                    text.kind,
+                    text.id,
+                    text.position,
+                    text.permission_overwrites.clone(),
+                    text.name.clone(),
+                    text.topic.clone(),
+                    text.nsfw,
+                    text.rate_limit_per_user,
+                    text.parent_id,
+                    0,
+                    None,
+                ),
+                GuildChannel::Voice(voice) => (
+                    voice.kind,
+                    voice.id,
+                    voice.position,
+                    voice.permission_overwrites.clone(),
+                    voice.name.clone(),
+                    None,
+                    false,
+                    None,
+                    voice.parent_id,
+                    voice.bitrate,
+                    voice.user_limit,
+                ),
+            };
 
         match kind {
             ChannelType::GuildText => CachedChannel::TextChannel {
@@ -302,7 +313,11 @@ impl CachedChannel {
         } else {
             CachedChannel::GroupDM {
                 id: channel.id,
-                receivers: channel.recipients.iter().map(|user| cache.get_or_insert_user(user)).collect(),
+                receivers: channel
+                    .recipients
+                    .iter()
+                    .map(|user| cache.get_or_insert_user(user))
+                    .collect(),
             }
         }
     }

@@ -162,14 +162,19 @@ impl Cache {
                             self.stats.guild_counts.partial.dec();
                             self.stats.guild_counts.loaded.inc();
                             // if we where at 1 we are now at 0
-                            if self.stats.guild_counts.partial.get() == 0 && self.filling.fetch_and(true, Ordering::Relaxed) {
+                            if self.stats.guild_counts.partial.get() == 0
+                                && self.filling.fetch_and(true, Ordering::Relaxed)
+                            {
                                 gearbot_important!("Initial cache filling completed for cluster {}!", self.cluster_id);
                                 self.filling.fetch_or(false, Ordering::SeqCst);
                             }
                         }
                     }
                     None => {
-                        gearbot_error!("Received member chunks for guild {} before it's creation!", chunk.guild_id);
+                        gearbot_error!(
+                            "Received member chunks for guild {} before it's creation!",
+                            chunk.guild_id
+                        );
                     }
                 }
             }
@@ -203,7 +208,9 @@ impl Cache {
                                     ),
                                 }
                             }
-                            None => gearbot_warn!("We got a channel create event for a guild type channel without guild id!"),
+                            None => gearbot_warn!(
+                                "We got a channel create event for a guild type channel without guild id!"
+                            ),
                         }
                     }
                     Channel::Private(private_channel) => {
@@ -228,9 +235,14 @@ impl Cache {
                                     guild.channels.insert(arced.get_id(), arced.clone());
                                     self.guild_channels.insert(arced.get_id(), arced);
                                 }
-                                None => gearbot_warn!("Got a channel update for guild ``{}`` but we do not have this guild cached!", guild_id),
+                                None => gearbot_warn!(
+                                    "Got a channel update for guild ``{}`` but we do not have this guild cached!",
+                                    guild_id
+                                ),
                             },
-                            None => gearbot_warn!("Got a channel update for  of a guild type channel but it did not have a guild id!"),
+                            None => gearbot_warn!(
+                                "Got a channel update for  of a guild type channel but it did not have a guild id!"
+                            ),
                         }
                     }
                     Channel::Private(private) => {
@@ -251,17 +263,15 @@ impl Cache {
                             GuildChannel::Category(category) => (category.guild_id, category.id),
                         };
                         match guild_id {
-                            Some(guild_id) => {
-                                match self.get_guild(guild_id) {
-                                    Some(guild) => {
-                                        guild.channels.remove(&channel_id);
-                                        self.stats.channel_count.dec();
-                                    }
-                                    None => {
-                                        gearbot_warn!("Got a channel delete for channel ``{}`` event for guild ``{}`` but we do not have this guild in the cache", channel_id, guild_id);
-                                    }
+                            Some(guild_id) => match self.get_guild(guild_id) {
+                                Some(guild) => {
+                                    guild.channels.remove(&channel_id);
+                                    self.stats.channel_count.dec();
                                 }
-                            }
+                                None => {
+                                    gearbot_warn!("Got a channel delete for channel ``{}`` event for guild ``{}`` but we do not have this guild in the cache", channel_id, guild_id);
+                                }
+                            },
                             None => {
                                 gearbot_warn!("Got a channel delete for channel ``{}`` that is supposed to belong to a guild but does not have a guild id attached", channel_id);
                             }
@@ -281,11 +291,16 @@ impl Cache {
                 //TODO: remove unwrap once we update twilight
                 match self.get_guild(event.guild_id) {
                     Some(guild) => {
-                        guild.members.insert(event.user.id, Arc::new(CachedMember::from_member(&event.0, &self)));
+                        guild
+                            .members
+                            .insert(event.user.id, Arc::new(CachedMember::from_member(&event.0, &self)));
                         guild.member_count.fetch_add(1, Ordering::Relaxed);
                         self.stats.user_counts.total.inc();
                     }
-                    None => gearbot_warn!("Got a member add event for guild {} before guild create", event.guild_id),
+                    None => gearbot_warn!(
+                        "Got a member add event for guild {} before guild create",
+                        event.guild_id
+                    ),
                 }
             }
 
@@ -297,16 +312,22 @@ impl Cache {
                             Some(user) => {
                                 if !user.is_same_as(&event.user) {
                                     //just update the global cache if it's different, we will receive an event for all mutual servers if the inner user changed
-                                    self.users.insert(event.user.id, Arc::new(CachedUser::from_user(&event.user)));
+                                    self.users
+                                        .insert(event.user.id, Arc::new(CachedUser::from_user(&event.user)));
                                 }
                             }
                             None => gearbot_warn!("Received a member update with an uncached inner user!"),
                         }
                         match guild.members.get(&event.user.id) {
                             Some(member) => {
-                                guild.members.insert(member.user.id, Arc::new(member.update(&*event, &self)));
+                                guild
+                                    .members
+                                    .insert(member.user.id, Arc::new(member.update(&*event, &self)));
                             }
-                            None => gearbot_warn!("Received a member update for an unknown member in guild {}", event.guild_id),
+                            None => gearbot_warn!(
+                                "Received a member update for an unknown member in guild {}",
+                                event.guild_id
+                            ),
                         }
                     }
                     None => {
@@ -327,12 +348,17 @@ impl Cache {
                     }
                     None => gearbot_warn!("Received a member remove event for a member that is not in that guild"),
                 },
-                None => gearbot_warn!("Received a member remove for guild {} but no such guild exists in cache", event.guild_id),
+                None => gearbot_warn!(
+                    "Received a member remove for guild {} but no such guild exists in cache",
+                    event.guild_id
+                ),
             },
 
             Event::RoleCreate(event) => match self.get_guild(event.guild_id) {
                 Some(guild) => {
-                    guild.roles.insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
+                    guild
+                        .roles
+                        .insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
                     self.stats.role_count.inc();
                 }
                 None => gearbot_warn!(
@@ -343,7 +369,9 @@ impl Cache {
 
             Event::RoleUpdate(event) => match self.get_guild(event.guild_id) {
                 Some(guild) => {
-                    guild.roles.insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
+                    guild
+                        .roles
+                        .insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
                 }
                 None => gearbot_warn!(
                     "Received a role update event for guild {} but no such guild exists in cache",
@@ -367,7 +395,11 @@ impl Cache {
     }
 
     fn guild_unavailable(&self, guild: &Arc<CachedGuild>) {
-        gearbot_warn!("Guild \"{}\", ``{}`` became unavailable due to an outage", guild.name, guild.id);
+        gearbot_warn!(
+            "Guild \"{}\", ``{}`` became unavailable due to an outage",
+            guild.name,
+            guild.id
+        );
         self.stats.guild_counts.outage.inc();
         let mut list = self.unavailable_guilds.write().unwrap();
         list.push(guild.id);
@@ -469,7 +501,9 @@ impl Cache {
                 let user = Arc::new(updated);
                 for guard in &self.guilds {
                     if let Some(member) = guard.members.get(&user.id) {
-                        guard.members.insert(user.id, Arc::new(member.replace_user(user.clone())));
+                        guard
+                            .members
+                            .insert(user.id, Arc::new(member.replace_user(user.clone())));
                     }
                 }
                 self.users.insert(user.id, user);
@@ -537,7 +571,12 @@ impl Cache {
         (guild_chunks, user_chunks)
     }
 
-    async fn _prepare_cold_resume_guild(&self, redis_pool: &ConnectionPool, todo: Vec<GuildId>, index: usize) -> Result<(), Error> {
+    async fn _prepare_cold_resume_guild(
+        &self,
+        redis_pool: &ConnectionPool,
+        todo: Vec<GuildId>,
+        index: usize,
+    ) -> Result<(), Error> {
         debug!("Guild dumper {} started freezing {} guilds", index, todo.len());
         let mut connection = redis_pool.get().await;
         let mut to_dump = Vec::with_capacity(todo.len());
@@ -548,12 +587,21 @@ impl Cache {
         }
         let serialized = serde_json::to_string(&to_dump).unwrap();
         connection
-            .set_and_expire_seconds(format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index), serialized, 180)
+            .set_and_expire_seconds(
+                format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index),
+                serialized,
+                180,
+            )
             .await?;
         Ok(())
     }
 
-    async fn _prepare_cold_resume_user(&self, redis_pool: &ConnectionPool, todo: Vec<UserId>, index: usize) -> Result<(), Error> {
+    async fn _prepare_cold_resume_user(
+        &self,
+        redis_pool: &ConnectionPool,
+        todo: Vec<UserId>,
+        index: usize,
+    ) -> Result<(), Error> {
         debug!("Worker {} freezing {} users", index, todo.len());
         let mut connection = redis_pool.get().await;
         let mut chunk = Vec::with_capacity(todo.len());
@@ -572,13 +620,22 @@ impl Cache {
         }
         let serialized = serde_json::to_string(&chunk).unwrap();
         connection
-            .set_and_expire_seconds(format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index), serialized, 180)
+            .set_and_expire_seconds(
+                format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index),
+                serialized,
+                180,
+            )
             .await?;
 
         Ok(())
     }
 
-    pub async fn restore_cold_resume(&self, redis_pool: &ConnectionPool, guild_chunks: usize, user_chunks: usize) -> Result<(), Error> {
+    pub async fn restore_cold_resume(
+        &self,
+        redis_pool: &ConnectionPool,
+        guild_chunks: usize,
+        user_chunks: usize,
+    ) -> Result<(), Error> {
         let mut user_defrosters = Vec::with_capacity(user_chunks);
 
         for i in 0..user_chunks {
@@ -626,7 +683,8 @@ impl Cache {
     async fn defrost_users(&self, redis_pool: &ConnectionPool, index: usize) -> Result<(), Error> {
         let key = format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index);
         let mut connection = redis_pool.get().await;
-        let mut users: Vec<CachedUser> = serde_json::from_str(&*String::from_utf8(connection.get(&key).await?.unwrap()).unwrap())?;
+        let mut users: Vec<CachedUser> =
+            serde_json::from_str(&*String::from_utf8(connection.get(&key).await?.unwrap()).unwrap())?;
         connection.del(key).await?;
         debug!("Worker {} found {} users to defrost", index, users.len());
         for user in users.drain(..) {
@@ -640,7 +698,8 @@ impl Cache {
     async fn defrost_guilds(&self, redis_pool: &ConnectionPool, index: usize) -> Result<(), Error> {
         let key = format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index);
         let mut connection = redis_pool.get().await;
-        let mut guilds: Vec<ColdStorageGuild> = serde_json::from_str(&*String::from_utf8(connection.get(&key).await?.unwrap()).unwrap())?;
+        let mut guilds: Vec<ColdStorageGuild> =
+            serde_json::from_str(&*String::from_utf8(connection.get(&key).await?.unwrap()).unwrap())?;
         connection.del(key).await?;
         debug!("Worker {} found {} guilds to defrost", index, guilds.len());
         for cold_guild in guilds.drain(..) {

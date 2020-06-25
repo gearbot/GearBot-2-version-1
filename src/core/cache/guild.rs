@@ -82,14 +82,17 @@ impl From<Guild> for CachedGuild {
 
         //handle roles
         for (role_id, role) in guild.roles {
-            cached_guild.roles.insert(role_id, Arc::new(CachedRole::from_role(&role)));
+            cached_guild
+                .roles
+                .insert(role_id, Arc::new(CachedRole::from_role(&role)));
         }
 
         //channels
         for (channel_id, channel) in guild.channels {
-            cached_guild
-                .channels
-                .insert(channel_id, Arc::new(CachedChannel::from_guild_channel(&channel, guild.id)));
+            cached_guild.channels.insert(
+                channel_id,
+                Arc::new(CachedChannel::from_guild_channel(&channel, guild.id)),
+            );
         }
 
         //emoji
@@ -136,7 +139,9 @@ impl CachedGuild {
         }
 
         for member in cold_guild.members {
-            guild.members.insert(member.id, Arc::new(CachedMember::defrost(member, cache)));
+            guild
+                .members
+                .insert(member.id, Arc::new(CachedMember::defrost(member, cache)));
         }
 
         for channel in cold_guild.channels {

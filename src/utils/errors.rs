@@ -83,7 +83,11 @@ impl fmt::Display for ParseError {
                 "Multiple members who's name starts with ``{}`` found, please use their full name and discriminator",
                 name
             ),
-            ParseError::WrongArgumentType(expected) => write!(f, "The wrong type was provided! Expected a {}, but got something else!", expected),
+            ParseError::WrongArgumentType(expected) => write!(
+                f,
+                "The wrong type was provided! Expected a {}, but got something else!",
+                expected
+            ),
             ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid discord userid", id),
             ParseError::UnknownChannel(id) => write!(f, "Unable to find any channel with id ``{}``", id),
             ParseError::NoChannelAccessBot(_) => write!(f, "I do not have access to that channel!"),
@@ -128,7 +132,11 @@ impl fmt::Display for Error {
             Error::IoError(e) => write!(f, "An IO error occurred during a task: {}", e),
             Error::TwilightHttp(e) => write!(f, "An error occurred making a Discord request: {}", e),
             Error::TwilightCluster(e) => write!(f, "An error occurred on a cluster request: {}", e),
-            Error::Cache(e) => write!(f, "An error occured attempting to fetch an object from the cache: {}", e),
+            Error::Cache(e) => write!(
+                f,
+                "An error occured attempting to fetch an object from the cache: {}",
+                e
+            ),
             Error::Database(e) => write!(f, "A database error occurred: {}", e),
             Error::DatabaseAction(e) => write!(f, "{}", e),
             Error::DatabaseMigration(e) => write!(f, "Failed to migrate the database: {}", e),

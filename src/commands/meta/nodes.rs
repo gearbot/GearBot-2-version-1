@@ -42,7 +42,11 @@ impl CommandNode {
     }
 
     pub fn create_node(name: String, handler: Option<CommandHandler>, sub_nodes: HashMap<String, CommandNode>) -> Self {
-        GroupNode { name, handler, sub_nodes }
+        GroupNode {
+            name,
+            handler,
+            sub_nodes,
+        }
     }
 
     pub fn get_name(&self) -> &str {
@@ -66,7 +70,11 @@ impl CommandNode {
                 command(ctx, parser).await?;
                 Ok(())
             }
-            CommandNode::GroupNode { name, handler, sub_nodes } => match handler {
+            CommandNode::GroupNode {
+                name,
+                handler,
+                sub_nodes,
+            } => match handler {
                 Some(handler) => {
                     let command = handler;
                     command(ctx, parser).await?;
@@ -82,7 +90,11 @@ impl fmt::Display for CommandNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CommandNode::CommandNodeInner { command } => write!(f, "{}", command.name),
-            CommandNode::GroupNode { name, handler, sub_nodes } => write!(f, "{}", name),
+            CommandNode::GroupNode {
+                name,
+                handler,
+                sub_nodes,
+            } => write!(f, "{}", name),
         }
     }
 }
