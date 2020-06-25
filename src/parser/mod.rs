@@ -127,7 +127,7 @@ impl Parser {
                     attachments: message.attachments.clone(),
                     embeds: message.embeds.clone(),
                     flags: message.flags,
-                    kind: message.kind,
+                    kind: message.kind.clone(),
                     mention_everyone: message.mention_everyone,
                     tts: message.tts,
                 };
@@ -191,7 +191,7 @@ impl Parser {
                         }
                     },
                 }?;
-                ctx.stats.command_used(false).await;
+                // ctx.stats.command_used(false).await;
 
                 Ok(())
             }

@@ -22,7 +22,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
             // };
             //
             // // These cover the possible modlog options
-            // // that a MemberUpdate could trigger.
+            // // that a member_update could trigger.
             // let old_roles = &old_member.roles;
             // let old_nickname = old_member.nick.as_ref();
             // let old_member = &old_member.user;
@@ -104,7 +104,6 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
 
     match &event {
         Event::GuildCreate(guild) => {
-            ctx.stats.new_guild().await;
             let c = ctx.cluster.clone();
             let data = RequestGuildMembers::new_all(guild.id, None);
             debug!("Requesting members for guild {}", guild.id);

@@ -19,10 +19,12 @@ use twilight::model::user::CurrentUser;
 
 use crate::core::cache::Cache;
 use crate::core::handlers::{commands, general, modlog};
-use crate::core::{BotConfig, BotContext, ColdRebootData};
+use crate::core::{BotConfig, BotContext, BotStats, ColdRebootData};
 use crate::translation::Translations;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info};
+use prometheus::{Encoder, TextEncoder};
+use warp::Filter;
 
 pub struct GearBot;
 
@@ -57,7 +59,21 @@ impl GearBot {
                 | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
         );
 
-        let cache = Cache::new(cluster_id);
+        let stats = Arc::new(BotStats::new(cluster_id));
+        let s = stats.clone();
+        tokio::spawn(async move {
+            let hello = warp::path!("stats").map(move || {
+                let mut buffer = vec![];
+                let encoder = TextEncoder::new();
+                let metric_families = s.registry.gather();
+                encoder.encode(&metric_families, &mut buffer).unwrap();
+                String::from_utf8(buffer).unwrap()
+            });
+            let port = 9090 + cluster_id as u16;
+            warp::serve(hello).run(([127, 0, 0, 1], port)).await;
+        });
+
+        let cache = Cache::new(cluster_id, stats.clone());
 
         let mut cb = ClusterConfig::builder(&config.tokens.discord)
             .shard_scheme(sharding_scheme)
@@ -120,6 +136,7 @@ impl GearBot {
             cluster_id,
             shards_per_cluster,
             total_shards,
+            stats.clone(),
         ));
 
         let shutdown_ctx = context.clone();
@@ -164,9 +181,9 @@ async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), E
     // Bot stat handling "hooks"
     match &event.1 {
         Event::MessageCreate(msg) => ctx.stats.new_message(&ctx, msg).await,
-        Event::GuildDelete(_) => ctx.stats.left_guild().await,
         _ => {}
     }
+    ctx.stats.receive_event(&event.1);
 
     commands::handle_event(event.0, event.1, ctx.clone()).await?;
 

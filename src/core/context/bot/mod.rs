@@ -15,12 +15,13 @@ use crate::core::GuildConfig;
 use crate::translation::Translations;
 use crate::utils::LogType;
 use crate::EncryptionKey;
+use std::sync::Arc;
 
 pub struct BotContext {
     pub cache: Cache,
     pub cluster: Cluster,
     pub http: HttpClient,
-    pub stats: BotStats,
+    pub stats: Arc<BotStats>,
     pub status_type: RwLock<u16>,
     pub status_text: RwLock<String>,
     pub bot_user: CurrentUser,
@@ -48,12 +49,13 @@ impl BotContext {
         cluster_id: u64,
         shards_per_cluster: u64,
         total_shards: u64,
+        stats: Arc<BotStats>,
     ) -> Self {
         BotContext {
             cache,
             cluster,
             http,
-            stats: BotStats::default(),
+            stats,
             status_type: RwLock::new(3),
             status_text: RwLock::new(String::from("the commands turn")),
             bot_user,

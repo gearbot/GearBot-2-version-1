@@ -24,7 +24,7 @@ pub async fn insert_message(pool: &Pool, content: Vec<u8>, msg: &Message) -> Res
                 &(msg.author.id.0 as i64),
                 &(msg.channel_id.0 as i64),
                 &(msg.guild_id.unwrap().0 as i64),
-                &(msg.kind as i16),
+                &(msg.kind.clone() as i16),
                 &msg.pinned,
             ],
         )

@@ -9,7 +9,7 @@ use crate::core::{BotStats, CommandContext};
 use crate::parser::Parser;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
-
+/*
 struct AboutUptime {
     days: u64,
     hours: u64,
@@ -139,7 +139,7 @@ impl fmt::Display for AboutDescription {
         )
     }
 }
-
+*/
 pub async fn about(ctx: CommandContext, _: Parser) -> CommandResult {
     // let about_stats = AboutDescription::create(ctx.get_bot_stats()).await;
     //

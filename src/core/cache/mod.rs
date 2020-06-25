@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 use darkredis::ConnectionPool;
 use dashmap::{DashMap, ElementGuard};
@@ -16,6 +16,7 @@ pub use member::{CachedMember, ColdStorageMember};
 pub use role::CachedRole;
 pub use user::CachedUser;
 
+use crate::core::BotStats;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
 use std::borrow::Borrow;
@@ -33,26 +34,17 @@ pub struct Cache {
     dm_channels_by_user: DashMap<UserId, Arc<CachedChannel>>,
     users: DashMap<UserId, Arc<CachedUser>>,
     emoji: DashMap<EmojiId, Arc<CachedEmoji>>,
-    //TODO: handle guild on outage
-
-    //counters
-    guild_count: AtomicU64,
-    unique_users: AtomicU64,
-    total_users: AtomicU64,
     //is this even possible to get accurate across multiple clusters?
-    partial_guilds: AtomicU64,
     filling: AtomicBool,
 
-    //not really required but i like number counters
-    role_count: AtomicU64,
-    channel_count: AtomicU64,
-    emoji_count: AtomicU64,
-    unavailable_guild_count: AtomicU64,
-    unavailable_guilds: Mutex<Vec<GuildId>>,
+    unavailable_guilds: RwLock<Vec<GuildId>>,
+    expected: RwLock<Vec<GuildId>>,
+
+    stats: Arc<BotStats>,
 }
 
 impl Cache {
-    pub fn new(cluster_id: u64) -> Self {
+    pub fn new(cluster_id: u64, stats: Arc<BotStats>) -> Self {
         Cache {
             cluster_id,
             guilds: DashMap::new(),
@@ -61,16 +53,10 @@ impl Cache {
             dm_channels_by_user: DashMap::new(),
             users: DashMap::new(),
             emoji: DashMap::new(),
-            guild_count: AtomicU64::new(0),
-            unique_users: AtomicU64::new(0),
-            total_users: AtomicU64::new(0),
-            partial_guilds: AtomicU64::new(0),
             filling: AtomicBool::new(true),
-            role_count: AtomicU64::new(0),
-            channel_count: AtomicU64::new(0),
-            emoji_count: AtomicU64::new(0),
-            unavailable_guild_count: AtomicU64::new(0),
-            unavailable_guilds: Mutex::new(vec![]),
+            unavailable_guilds: RwLock::new(vec![]),
+            expected: RwLock::new(vec![]),
+            stats,
         }
     }
 
@@ -79,13 +65,6 @@ impl Cache {
         self.guild_channels.clear();
         self.users.clear();
         self.emoji.clear();
-        self.guild_count.store(0, Ordering::SeqCst);
-        self.unique_users.store(0, Ordering::SeqCst);
-        self.total_users.store(0, Ordering::SeqCst);
-        self.partial_guilds.store(0, Ordering::SeqCst);
-        self.role_count.store(0, Ordering::SeqCst);
-        self.channel_count.store(0, Ordering::SeqCst);
-        self.emoji_count.store(0, Ordering::SeqCst);
         self.filling.store(true, Ordering::SeqCst);
         self.private_channels.clear();
     }
@@ -99,15 +78,17 @@ impl Cache {
                 for channel in &guild.channels {
                     self.guild_channels.insert(channel.get_id(), channel.value().clone());
                 }
-                self.channel_count.fetch_add(guild.channels.len() as u64, Ordering::Relaxed);
+                self.stats.channel_count.add(guild.channels.len() as i64);
 
                 for emoji in &guild.emoji {
                     self.emoji.insert(emoji.id, emoji.clone());
                 }
-                self.emoji_count.fetch_add(guild.emoji.len() as u64, Ordering::Relaxed);
+                self.stats.emoji_count.add(guild.emoji.len() as i64);
+
+                self.stats.role_count.add(guild.roles.len() as i64);
 
                 //we usually don't need this mutable but acquire a write lock regardless to prevent potential deadlocks
-                let mut list = self.unavailable_guilds.lock().unwrap();
+                let mut list = self.unavailable_guilds.write().unwrap();
                 match list.iter().position(|id| id.0 == guild.id.0) {
                     Some(index) => {
                         list.remove(index);
@@ -116,8 +97,7 @@ impl Cache {
                     None => {}
                 }
                 self.guilds.insert(e.id, Arc::new(guild));
-                self.guild_count.fetch_add(1, Ordering::Relaxed);
-                self.partial_guilds.fetch_add(1, Ordering::Relaxed);
+                self.stats.guild_counts.partial.inc();
             }
             Event::GuildUpdate(update) => {
                 trace!("Receive guild update for {} ({})", update.name, update.id);
@@ -126,9 +106,8 @@ impl Cache {
                 match self.get_guild(update.id) {
                     Some(old_guild) => {
                         let guild = old_guild.update(&update.0);
-
-                        self.role_count.fetch_sub(old_guild.roles.len() as u64, Ordering::Relaxed);
-                        self.role_count.fetch_add(guild.roles.len() as u64, Ordering::Relaxed);
+                        self.stats.role_count.sub(old_guild.roles.len() as i64);
+                        self.stats.role_count.add(guild.roles.len() as i64);
                     }
                     None => {
                         gearbot_warn!(
@@ -142,13 +121,14 @@ impl Cache {
             Event::GuildEmojisUpdate(event) => {}
             Event::GuildDelete(guild) => match self.get_guild(guild.id) {
                 Some(cached_guild) => {
-                    if guild.unavailable.unwrap_or(false) {
-                        self.guild_unavailable(&cached_guild);
+                    if !cached_guild.complete.load(Ordering::SeqCst) {
+                        self.stats.guild_counts.partial.dec();
                     } else {
-                        if !cached_guild.complete.load(Ordering::SeqCst) {
-                            self.partial_guilds.fetch_sub(1, Ordering::Relaxed);
-                        }
-                        self.guild_count.fetch_sub(1, Ordering::Relaxed);
+                        self.stats.guild_counts.loaded.dec();
+                    }
+
+                    if guild.unavailable {
+                        self.guild_unavailable(&cached_guild);
                     }
                     self.nuke_guild_cache(&cached_guild)
                 }
@@ -170,15 +150,19 @@ impl Cache {
                             member.user.mutual_servers.fetch_add(1, Ordering::SeqCst);
                             guild.members.insert(user_id, member);
                         }
+                        self.stats.user_counts.total.add(chunk.members.len() as i64);
                         if (chunk.chunk_count - 1) == chunk.chunk_index {
                             debug!(
                                 "Finished processing all chunks for {} ({}). {:?} guilds to go!",
-                                guild.name, guild.id.0, self.partial_guilds
+                                guild.name,
+                                guild.id.0,
+                                self.stats.guild_counts.partial.get()
                             );
                             guild.complete.store(true, Ordering::SeqCst);
-                            let old = self.partial_guilds.fetch_sub(1, Ordering::SeqCst);
+                            self.stats.guild_counts.partial.dec();
+                            self.stats.guild_counts.loaded.inc();
                             // if we where at 1 we are now at 0
-                            if old == 1 && self.filling.fetch_and(true, Ordering::Relaxed) {
+                            if self.stats.guild_counts.partial.get() == 0 && self.filling.fetch_and(true, Ordering::Relaxed) {
                                 gearbot_important!("Initial cache filling completed for cluster {}!", self.cluster_id);
                                 self.filling.fetch_or(false, Ordering::SeqCst);
                             }
@@ -209,7 +193,7 @@ impl Cache {
                                         let arced = Arc::new(channel);
                                         guild.channels.insert(arced.get_id(), arced.clone());
                                         self.guild_channels.insert(arced.get_id(), arced);
-                                        self.channel_count.fetch_add(1, Ordering::Relaxed);
+                                        self.stats.channel_count.inc();
                                     }
                                     None => gearbot_error!(
                                         "Channel create received for #{} **``{}``** in guild **``{}``** but this guild does not exist in cache!",
@@ -271,7 +255,7 @@ impl Cache {
                                 match self.get_guild(guild_id) {
                                     Some(guild) => {
                                         guild.channels.remove(&channel_id);
-                                        self.channel_count.fetch_sub(1, Ordering::Relaxed);
+                                        self.stats.channel_count.dec();
                                     }
                                     None => {
                                         gearbot_warn!("Got a channel delete for channel ``{}`` event for guild ``{}`` but we do not have this guild in the cache", channel_id, guild_id);
@@ -299,7 +283,7 @@ impl Cache {
                     Some(guild) => {
                         guild.members.insert(event.user.id, Arc::new(CachedMember::from_member(&event.0, &self)));
                         guild.member_count.fetch_add(1, Ordering::Relaxed);
-                        self.total_users.fetch_add(1, Ordering::Relaxed);
+                        self.stats.user_counts.total.inc();
                     }
                     None => gearbot_warn!("Got a member add event for guild {} before guild create", event.guild_id),
                 }
@@ -337,9 +321,9 @@ impl Cache {
                         let servers = member.user.mutual_servers.fetch_sub(1, Ordering::SeqCst);
                         if servers == 1 {
                             self.users.remove(&member.user.id);
-                            self.unique_users.fetch_sub(1, Ordering::Relaxed);
+                            self.stats.user_counts.unique.dec();
                         }
-                        self.total_users.fetch_sub(1, Ordering::Relaxed);
+                        self.stats.user_counts.total.dec();
                     }
                     None => gearbot_warn!("Received a member remove event for a member that is not in that guild"),
                 },
@@ -349,7 +333,7 @@ impl Cache {
             Event::RoleCreate(event) => match self.get_guild(event.guild_id) {
                 Some(guild) => {
                     guild.roles.insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
-                    self.role_count.fetch_add(1, Ordering::Relaxed);
+                    self.stats.role_count.inc();
                 }
                 None => gearbot_warn!(
                     "Received a role create event for guild {} but no such guild exists in cache",
@@ -370,7 +354,7 @@ impl Cache {
             Event::RoleDelete(event) => match self.get_guild(event.guild_id) {
                 Some(guild) => {
                     guild.roles.remove(&event.role_id);
-                    self.role_count.fetch_sub(1, Ordering::Relaxed);
+                    self.stats.role_count.dec();
                 }
                 None => gearbot_warn!(
                     "Received a role delete event for guild {} but no such guild exists in cache",
@@ -384,8 +368,8 @@ impl Cache {
 
     fn guild_unavailable(&self, guild: &Arc<CachedGuild>) {
         gearbot_warn!("Guild \"{}\", ``{}`` became unavailable due to an outage", guild.name, guild.id);
-        self.unavailable_guild_count.fetch_add(1, Ordering::Relaxed);
-        let mut list = self.unavailable_guilds.lock().unwrap();
+        self.stats.guild_counts.outage.inc();
+        let mut list = self.unavailable_guilds.write().unwrap();
         list.push(guild.id);
     }
 
@@ -393,23 +377,22 @@ impl Cache {
         for channel in &guild.channels {
             self.guild_channels.remove(channel.key());
         }
-        self.channel_count.fetch_sub(guild.channels.len() as u64, Ordering::Relaxed);
+        self.stats.channel_count.sub(guild.channels.len() as i64);
 
         for member in &guild.members {
             let remaining = member.user.mutual_servers.fetch_sub(1, Ordering::SeqCst);
             if remaining == 1 {
                 self.users.remove(&member.user.id);
-                self.unique_users.fetch_sub(1, Ordering::Relaxed);
+                self.stats.user_counts.unique.dec();
             }
         }
-        self.total_users.fetch_sub(guild.members.len() as u64, Ordering::Relaxed);
+        self.stats.user_counts.total.sub(guild.members.len() as i64);
 
         for emoji in &guild.emoji {
             self.emoji.remove(&emoji.id);
         }
-        self.emoji_count.fetch_sub(guild.emoji.len() as u64, Ordering::Relaxed);
-
-        self.role_count.fetch_sub(guild.roles.len() as u64, Ordering::Relaxed);
+        self.stats.emoji_count.sub(guild.emoji.len() as i64);
+        self.stats.role_count.sub(guild.roles.len() as i64);
     }
 
     pub fn insert_private_channel(&self, private_channel: &PrivateChannel) -> Arc<CachedChannel> {
@@ -431,7 +414,7 @@ impl Cache {
             None => {
                 let arc = Arc::new(CachedUser::from_user(user));
                 self.users.insert(arc.id, arc.clone());
-                self.unique_users.fetch_add(1, Ordering::Relaxed);
+                self.stats.user_counts.unique.inc();
                 arc
             }
         }
@@ -529,7 +512,7 @@ impl Cache {
         if list.len() > 0 {
             work_orders.push(list)
         }
-        debug!("Freezing {:?} guilds", self.guild_count);
+        debug!("Freezing {:?} guilds", self.stats.guild_counts.loaded.get());
         for i in 0..work_orders.len() {
             tasks.push(self._prepare_cold_resume_guild(redis_pool, work_orders[i].clone(), i));
         }
@@ -538,13 +521,13 @@ impl Cache {
         future::join_all(tasks).await;
 
         count = 0;
-        let user_chunks = (self.unique_users.load(Ordering::Relaxed) / 100000 + 1) as usize;
+        let user_chunks = (self.users.len() / 100000 + 1) as usize;
         let mut user_work_orders: Vec<Vec<UserId>> = vec![vec![]; user_chunks];
         for guard in self.users.iter() {
             user_work_orders[count % user_chunks].push(guard.key().clone());
             count += 1;
         }
-        debug!("Freezing {:?} users", self.unique_users);
+        debug!("Freezing {:?} users", self.users.len());
         for i in 0..user_chunks {
             user_tasks.push(self._prepare_cold_resume_user(redis_pool, user_work_orders[i].clone(), i));
         }
@@ -625,15 +608,16 @@ impl Cache {
                 Ok(_) => {}
             }
         }
+
         self.filling.store(false, Ordering::SeqCst);
         info!(
             "Cache defrosting complete! Now holding {} users ({} unique) from {} guilds, good for a total of {} roles, {} channels and {} emoji.",
-            self.total_users.load(Ordering::Relaxed),
-            self.unique_users.load(Ordering::Relaxed),
-            self.guild_count.load(Ordering::Relaxed),
-            self.role_count.load(Ordering::Relaxed),
-            self.channel_count.load(Ordering::Relaxed),
-            self.emoji_count.load(Ordering::Relaxed)
+            self.stats.user_counts.total.get(),
+            self.stats.user_counts.unique.get(),
+            self.stats.guild_counts.loaded.get(),
+            self.stats.role_count.get(),
+            self.stats.channel_count.get(),
+            self.stats.emoji_count.get()
         );
 
         Ok(())
@@ -647,7 +631,7 @@ impl Cache {
         debug!("Worker {} found {} users to defrost", index, users.len());
         for user in users.drain(..) {
             self.users.insert(user.id, Arc::new(user));
-            self.unique_users.fetch_add(1, Ordering::Relaxed);
+            self.stats.user_counts.unique.inc();
         }
 
         Ok(())
@@ -665,17 +649,17 @@ impl Cache {
             for channel in &guild.channels {
                 self.guild_channels.insert(channel.get_id(), channel.value().clone());
             }
-            self.channel_count.fetch_add(guild.channels.len() as u64, Ordering::Relaxed);
+            self.stats.channel_count.add(guild.channels.len() as i64);
 
             for emoji in &guild.emoji {
                 self.emoji.insert(emoji.id, emoji.clone());
             }
-            self.emoji_count.fetch_add(guild.emoji.len() as u64, Ordering::Relaxed);
+            self.stats.emoji_count.add(guild.emoji.len() as i64);
 
-            self.total_users.fetch_add(guild.members.len() as u64, Ordering::Relaxed);
+            self.stats.user_counts.total.add(guild.members.len() as i64);
 
             self.guilds.insert(guild.id, Arc::new(guild));
-            self.guild_count.fetch_add(1, Ordering::Relaxed);
+            self.stats.guild_counts.loaded.inc();
         }
 
         Ok(())
