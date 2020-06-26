@@ -73,7 +73,7 @@ impl GearBot {
                 encoder.encode(&metric_families, &mut buffer).unwrap();
                 String::from_utf8(buffer).unwrap()
             });
-            let port = 9090 + cluster_id as u16;
+            let port = 9091 + cluster_id as u16;
             warp::serve(hello).run(([127, 0, 0, 1], port)).await;
         });
 
