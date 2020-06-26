@@ -1401,9 +1401,9 @@ checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
 name = "openssl"
-version = "0.10.29"
+version = "0.10.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cee6d85f4cb4c4f59a6a85d5b68a233d280c82e29e822913b9c8b129fbf20bdd"
+checksum = "8d575eff3665419f9b83678ff2815858ad9d11567e082f5ac1814baba4e2bcb4"
 dependencies = [
  "bitflags",
  "cfg-if",
@@ -2498,7 +2498,7 @@ dependencies = [
 [[package]]
 name = "twilight"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "twilight-builders",
  "twilight-cache",
@@ -2512,7 +2512,7 @@ dependencies = [
 [[package]]
 name = "twilight-builders"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "twilight-model",
 ]
@@ -2520,7 +2520,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "twilight-cache-inmemory",
  "twilight-cache-trait",
@@ -2529,7 +2529,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-inmemory"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -2542,7 +2542,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-trait"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "async-trait",
  "twilight-model",
@@ -2551,7 +2551,7 @@ dependencies = [
 [[package]]
 name = "twilight-command-parser"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "unicase 2.6.0",
 ]
@@ -2559,7 +2559,7 @@ dependencies = [
 [[package]]
 name = "twilight-gateway"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -2581,7 +2581,7 @@ dependencies = [
 [[package]]
 name = "twilight-http"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -2600,7 +2600,7 @@ dependencies = [
 [[package]]
 name = "twilight-model"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "bitflags",
  "log 0.4.8",
@@ -2613,7 +2613,7 @@ dependencies = [
 [[package]]
 name = "twilight-standby"
 version = "0.1.0"
-source = "git+https://github.com/vivianhellyer/twilight?branch=model-request-guild-members-untagged#747fd91f3d394ea6c03e38593fd4dbbdb471dfb9"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#6121748fd1061b129e033371a93c691cc5c9a07c"
 dependencies = [
  "dashmap 3.11.4",
  "futures-channel",

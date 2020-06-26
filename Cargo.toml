@@ -31,7 +31,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1"
 tokio = { version = "0.2", default_features = false, features = ["macros", "sync", "rt-core"] }
 toml = "0.5"
-twilight = { git="https://github.com/vivianhellyer/twilight", branch="model-request-guild-members-untagged"}
+twilight = { git="https://github.com/twilight-rs/twilight", branch="trunk" }
 tokio-postgres = { version = "0.5", default_features = false }
 url = "2.1"
 unic-langid = { version = "0.9", features = ["macros", "serde"] }

@@ -17,6 +17,18 @@ use crate::utils::LogType;
 use crate::EncryptionKey;
 use std::sync::Arc;
 
+#[derive(PartialEq, Debug)]
+pub enum ShardState {
+    PendingCreation,
+    Connecting,
+    Identifying,
+    Connected,
+    Ready,
+    Resuming,
+    Reconnecting,
+    Disconnected,
+}
+
 pub struct BotContext {
     pub cache: Cache,
     pub cluster: Cluster,
@@ -34,6 +46,7 @@ pub struct BotContext {
     pub cluster_id: u64,
     pub shards_per_cluster: u64,
     pub total_shards: u64,
+    pub shard_states: DashMap<u64, ShardState>,
 }
 
 impl BotContext {
@@ -51,6 +64,11 @@ impl BotContext {
         total_shards: u64,
         stats: Arc<BotStats>,
     ) -> Self {
+        let shard_states = DashMap::with_capacity(shards_per_cluster as usize);
+        for i in cluster_id * shards_per_cluster..cluster_id * shards_per_cluster + shards_per_cluster {
+            shard_states.insert(i, ShardState::PendingCreation);
+        }
+        stats.shard_counts.pending.set(shards_per_cluster as i64);
         BotContext {
             cache,
             cluster,
@@ -68,6 +86,7 @@ impl BotContext {
             cluster_id,
             shards_per_cluster,
             total_shards,
+            shard_states,
         }
     }
 
@@ -93,4 +112,4 @@ mod logpump;
 
 mod cold_resume;
 mod stats;
-mod status;
+pub(crate) mod status;

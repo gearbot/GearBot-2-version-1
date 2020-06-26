@@ -12,7 +12,7 @@ use twilight::model::id::GuildId;
 #[derive(Debug)]
 pub enum Error {
     CmdError(CommandError),
-    InvalidSession,
+    InvalidSession(u64),
     MissingToken,
     NoConfig,
     InvalidConfig,
@@ -122,7 +122,11 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::CmdError(e) => write!(f, "{}", e),
-            Error::InvalidSession => write!(f, "The gateway invalidated our session unrecoverably!"),
+            Error::InvalidSession(shard) => write!(
+                f,
+                "The gateway invalidated our session unrecoverably for shard {}!",
+                shard
+            ),
             // For errors that actually happen during runtime, we can have the logging macros here too
             Error::MissingToken => write!(f, "The bot was missing its token, unable to start!"),
             Error::NoConfig => write!(f, "The config file couldn't be found, unable to start!"),

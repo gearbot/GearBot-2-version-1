@@ -37,7 +37,7 @@ impl BotContext {
     }
 }
 
-fn generate_activity(activity_type: ActivityType, message: String) -> Activity {
+pub fn generate_activity(activity_type: ActivityType, message: String) -> Activity {
     Activity {
         assets: None,
         application_id: None,

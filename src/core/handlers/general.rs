@@ -14,41 +14,23 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
         Event::ShardResuming(_) => gearbot_info!("Shard {} is resuming", shard_id),
         Event::Ready(_) => {
             gearbot_info!("Shard {} ready to go!", shard_id);
-            ctx.set_shard_activity(
-                shard_id,
-                Status::Online,
-                ActivityType::Watching,
-                String::from("the gears turn"),
-            )
-            .await?
         }
         Event::GatewayInvalidateSession(recon) => {
             if *recon {
-                gearbot_warn!("The gateway has invalidated our session, but it is reconnectable!");
+                gearbot_warn!(
+                    "The gateway has invalidated our session for shard {}, but it is reconnectable!",
+                    shard_id
+                );
             } else {
-                return Err(Error::InvalidSession);
+                return Err(Error::InvalidSession(shard_id));
             }
         }
         Event::GatewayReconnect => gearbot_info!("Gateway requested shard {} to reconnect!", shard_id),
         Event::GatewayHello(u) => {
             debug!("Registered with gateway {} on shard {}", u, shard_id);
-            ctx.set_shard_activity(
-                shard_id,
-                Status::Idle,
-                ActivityType::Listening,
-                String::from("to the modem screeking as i connect to the gateway"),
-            )
-            .await?
         }
         Event::Resumed => {
             gearbot_info!("Shard {} successfully resumed", shard_id);
-            ctx.set_shard_activity(
-                shard_id,
-                Status::Online,
-                ActivityType::Watching,
-                String::from("the gears turn"),
-            )
-            .await?
         }
         Event::MemberChunk(_chunk) => {
             // debug!("got a chunk with nonce {:?}", &chunk.nonce);

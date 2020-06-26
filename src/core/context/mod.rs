@@ -3,5 +3,5 @@ pub use bot::BotStats;
 pub use command::CommandContext;
 pub use command::CommandMessage;
 
-mod bot;
+pub(crate) mod bot;
 mod command;

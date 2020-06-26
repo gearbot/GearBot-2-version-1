@@ -6,6 +6,7 @@ use twilight::model::gateway::payload::RequestGuildMembers;
 
 use crate::core::BotContext;
 use crate::utils::Error;
+use twilight::model::gateway::presence::{ActivityType, Status};
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
     match &event {
@@ -103,7 +104,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
         _ => (),
     }
 
-    ctx.cache.update(event);
+    ctx.cache.update(shard_id, event, ctx.clone()).await?;
 
     match &event {
         Event::GuildCreate(guild) => {

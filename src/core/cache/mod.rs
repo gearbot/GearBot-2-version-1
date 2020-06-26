@@ -16,12 +16,15 @@ pub use member::{CachedMember, ColdStorageMember};
 pub use role::CachedRole;
 pub use user::CachedUser;
 
-use crate::core::BotStats;
+use crate::core::context::bot::ShardState;
+use crate::core::{BotContext, BotStats};
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
 use std::borrow::Borrow;
+use std::collections::HashMap;
 use twilight::model::channel::{Channel, GuildChannel, PrivateChannel};
 use twilight::model::gateway::payload::ChannelDelete;
+use twilight::model::gateway::presence::{ActivityType, Status};
 
 pub struct Cache {
     //cluster info
@@ -41,6 +44,7 @@ pub struct Cache {
     expected: RwLock<Vec<GuildId>>,
 
     stats: Arc<BotStats>,
+    missing_per_shard: DashMap<u64, AtomicU64>,
 }
 
 impl Cache {
@@ -57,6 +61,7 @@ impl Cache {
             unavailable_guilds: RwLock::new(vec![]),
             expected: RwLock::new(vec![]),
             stats,
+            missing_per_shard: DashMap::new(),
         }
     }
 
@@ -69,8 +74,12 @@ impl Cache {
         self.private_channels.clear();
     }
 
-    pub fn update(&self, event: &Event) {
+    pub async fn update(&self, shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
         match event {
+            Event::Ready(ready) => {
+                self.missing_per_shard
+                    .insert(shard_id, AtomicU64::new(ready.guilds.len() as u64));
+            }
             Event::GuildCreate(e) => {
                 trace!("Received guild create event for {} ({})", e.name, e.id);
                 let guild = CachedGuild::from(e.0.clone());
@@ -159,14 +168,37 @@ impl Cache {
                                 self.stats.guild_counts.partial.get()
                             );
                             guild.complete.store(true, Ordering::SeqCst);
+                            let shard_missing = self
+                                .missing_per_shard
+                                .get(&shard_id)
+                                .unwrap()
+                                .fetch_sub(1, Ordering::Relaxed);
+                            debug!("missing for this shard: {}", shard_missing);
+                            if shard_missing == 1 {
+                                //this shard is ready
+                                info!("All guilds cached for shard {}", shard_id);
+                                if chunk.nonce.is_none() && self.shard_cached(shard_id) {
+                                    ctx.set_shard_activity(
+                                        shard_id,
+                                        Status::Online,
+                                        ActivityType::Watching,
+                                        String::from("the gears turn"),
+                                    )
+                                    .await?
+                                }
+                            }
                             self.stats.guild_counts.partial.dec();
                             self.stats.guild_counts.loaded.inc();
                             // if we where at 1 we are now at 0
                             if self.stats.guild_counts.partial.get() == 0
-                                && self.filling.fetch_and(true, Ordering::Relaxed)
+                                && self.filling.load(Ordering::Relaxed)
+                                && ctx.shard_states.iter().all(|state| match state.value() {
+                                    ShardState::Ready => true,
+                                    _ => false,
+                                })
                             {
                                 gearbot_important!("Initial cache filling completed for cluster {}!", self.cluster_id);
-                                self.filling.fetch_or(false, Ordering::SeqCst);
+                                self.filling.store(false, Ordering::SeqCst);
                             }
                         }
                     }
@@ -391,7 +423,8 @@ impl Cache {
             },
 
             _ => {}
-        }
+        };
+        Ok(())
     }
 
     fn guild_unavailable(&self, guild: &Arc<CachedGuild>) {
@@ -722,6 +755,13 @@ impl Cache {
         }
 
         Ok(())
+    }
+
+    pub fn shard_cached(&self, shard_id: u64) -> bool {
+        match self.missing_per_shard.get(&shard_id) {
+            Some(atomic) => atomic.value().load(Ordering::Relaxed) == 0,
+            None => true, //we cold resumed so have everything
+        }
     }
 }
 

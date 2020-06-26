@@ -18,12 +18,16 @@ use twilight::model::gateway::GatewayIntents;
 use twilight::model::user::CurrentUser;
 
 use crate::core::cache::Cache;
+use crate::core::context::bot::status::generate_activity;
 use crate::core::handlers::{commands, general, modlog};
 use crate::core::{BotConfig, BotContext, BotStats, ColdRebootData};
 use crate::translation::Translations;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info};
 use prometheus::{Encoder, TextEncoder};
+use twilight::model::gateway::payload::update_status::UpdateStatusInfo;
+use twilight::model::gateway::payload::UpdateStatus;
+use twilight::model::gateway::presence::{ActivityType, Status};
 use warp::Filter;
 
 pub struct GearBot;
@@ -77,7 +81,16 @@ impl GearBot {
 
         let mut cb = ClusterConfig::builder(&config.tokens.discord)
             .shard_scheme(sharding_scheme)
-            .intents(intents);
+            .intents(intents)
+            .presence(UpdateStatusInfo::new(
+                true,
+                generate_activity(
+                    ActivityType::Listening,
+                    String::from("to the modem screeching as i connect to the gateway"),
+                ),
+                None,
+                Status::Idle,
+            ));
 
         //check for resume data, pass to builder if present
         let mut connection = redis_pool.get().await;
@@ -183,7 +196,7 @@ async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), E
         Event::MessageCreate(msg) => ctx.stats.new_message(&ctx, msg).await,
         _ => {}
     }
-    ctx.stats.receive_event(&event.1);
+    ctx.update_stats(event.0, &event.1);
 
     commands::handle_event(event.0, event.1, ctx.clone()).await?;
 
