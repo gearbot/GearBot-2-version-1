@@ -66,7 +66,7 @@ impl GearBot {
         let stats = Arc::new(BotStats::new(cluster_id));
         let s = stats.clone();
         tokio::spawn(async move {
-            let hello = warp::path!("stats").map(move || {
+            let hello = warp::path!("metrics").map(move || {
                 let mut buffer = vec![];
                 let encoder = TextEncoder::new();
                 let metric_families = s.registry.gather();
