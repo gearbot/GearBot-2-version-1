@@ -9,6 +9,7 @@ use crate::core::BotContext;
 use prometheus::{Encoder, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry, TextEncoder};
 
 use crate::core::context::bot::ShardState;
+use std::collections::HashMap;
 use twilight::model::gateway::event::Event;
 use warp::Filter;
 
@@ -98,16 +99,18 @@ impl BotStats {
     #[rustfmt::skip]
     pub fn new(cluster_id: u64) -> Self {
         let cid = &*cluster_id.to_string();
-        let event_counter = IntCounterVec::new(Opts::new("gateway_events", "Events received from the gateway").const_label("cluster", cid), &["events"]).unwrap();
-        let message_counter = IntCounterVec::new(Opts::new("messages", "Recieved messages").const_label("cluster", cid), &["sender_type"]).unwrap();
-        let channel_count = IntGauge::with_opts(Opts::new("channels", "Channel count").const_label("cluster", cid)).unwrap();
-        let emoji_count = IntGauge::with_opts(Opts::new("emoji", "Emoji count").const_label("cluster", cid)).unwrap();
-        let role_count = IntGauge::with_opts(Opts::new("roles", "Role count").const_label("cluster", cid)).unwrap();
-        let guild_counter = IntGaugeVec::new(Opts::new("guild_counts", "State of the guilds").const_label("cluster", cid), &["state"]).unwrap();
-        let user_counter = IntGaugeVec::new(Opts::new("user_counts", "User counts").const_label("cluster", cid), &["type"]).unwrap();
-        let shard_counter = IntGaugeVec::new(Opts::new("shard_counts", "State counts for our shards").const_label("cluster", cid), &["state"]).unwrap();
+        let event_counter = IntCounterVec::new(Opts::new("gateway_events", "Events received from the gateway"), &["events"]).unwrap();
+        let message_counter = IntCounterVec::new(Opts::new("messages", "Recieved messages"), &["sender_type"]).unwrap();
+        let channel_count = IntGauge::with_opts(Opts::new("channels", "Channel count")).unwrap();
+        let emoji_count = IntGauge::with_opts(Opts::new("emoji", "Emoji count")).unwrap();
+        let role_count = IntGauge::with_opts(Opts::new("roles", "Role count")).unwrap();
+        let guild_counter = IntGaugeVec::new(Opts::new("guild_counts", "State of the guilds"), &["state"]).unwrap();
+        let user_counter = IntGaugeVec::new(Opts::new("user_counts", "User counts"), &["type"]).unwrap();
+        let shard_counter = IntGaugeVec::new(Opts::new("shard_counts", "State counts for our shards"), &["state"]).unwrap();
 
-        let registry = Registry::new();
+        let mut static_labels = HashMap::new();
+        static_labels.insert(String::from("cluster"), cluster_id.to_string());
+        let registry = Registry::new_custom(Some(String::from("gearbot")), Some(static_labels)).unwrap();
         registry.register(Box::new(event_counter.clone())).unwrap();
         registry.register(Box::new(message_counter.clone())).unwrap();
         registry.register(Box::new(channel_count.clone())).unwrap();
