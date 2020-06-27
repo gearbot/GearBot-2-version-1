@@ -84,6 +84,5 @@ create table guildConfig
 (
     id bigint primary key not null,
     config json not null,
-    encryption_key bytea not null,
-    prefix varchar generated always as ( config->'general'->>'prefix' ) STORED
+    encryption_key bytea not null
 );
