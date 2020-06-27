@@ -173,7 +173,6 @@ impl Cache {
                                 .get(&shard_id)
                                 .unwrap()
                                 .fetch_sub(1, Ordering::Relaxed);
-                            debug!("missing for this shard: {}", shard_missing);
                             if shard_missing == 1 {
                                 //this shard is ready
                                 info!("All guilds cached for shard {}", shard_id);

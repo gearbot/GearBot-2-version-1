@@ -207,7 +207,12 @@ impl Parser {
                         }
                     },
                 }?;
-                // ctx.stats.command_used(false).await;
+                match ctx.stats.command_counts.get_metric_with_label_values(&[&name]) {
+                    Ok(metric) => {
+                        metric.inc();
+                    }
+                    Err(e) => return Err(Error::PrometheusError(e)),
+                }
 
                 Ok(())
             }

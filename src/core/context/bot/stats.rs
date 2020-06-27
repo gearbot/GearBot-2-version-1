@@ -93,6 +93,7 @@ pub struct BotStats {
     pub guild_counts: GuildCounters,
     pub emoji_count: IntGauge,
     pub role_count: IntGauge,
+    pub command_counts: IntCounterVec,
 }
 
 impl BotStats {
@@ -107,6 +108,7 @@ impl BotStats {
         let guild_counter = IntGaugeVec::new(Opts::new("guild_counts", "State of the guilds"), &["state"]).unwrap();
         let user_counter = IntGaugeVec::new(Opts::new("user_counts", "User counts"), &["type"]).unwrap();
         let shard_counter = IntGaugeVec::new(Opts::new("shard_counts", "State counts for our shards"), &["state"]).unwrap();
+        let command_counts = IntCounterVec::new(Opts::new("commands", "Executed commands"), &["name"]).unwrap();
 
         let mut static_labels = HashMap::new();
         static_labels.insert(String::from("cluster"), cluster_id.to_string());
@@ -119,6 +121,7 @@ impl BotStats {
         registry.register(Box::new(guild_counter.clone())).unwrap();
         registry.register(Box::new(user_counter.clone())).unwrap();
         registry.register(Box::new(shard_counter.clone())).unwrap();
+        registry.register(Box::new(command_counts.clone())).unwrap();
         BotStats {
             registry,
             start_time: Utc::now(),
@@ -189,6 +192,7 @@ impl BotStats {
                 reconnecting: shard_counter.get_metric_with_label_values(&["reconnecting"]).unwrap(),
                 disconnected: shard_counter.get_metric_with_label_values(&["disconnected"]).unwrap()
             },
+            command_counts
         }
     }
 

@@ -37,6 +37,7 @@ pub enum Error {
     CacheDefrostError(String),
     DarkRedisError(darkredis::Error),
     CorruptCacheError(String),
+    PrometheusError(prometheus::Error),
 }
 
 #[derive(Debug)]
@@ -158,6 +159,7 @@ impl fmt::Display for Error {
             Error::CacheDefrostError(e) => write!(f, "Error defrosting cache: {}", e),
             Error::DarkRedisError(e) => write!(f, "Error communicating with the redis cache: {}", e),
             Error::CorruptCacheError(e) => write!(f, "CRITICAL CACHE CORRUPTION DETECTED: {}", e),
+            Error::PrometheusError(e) => write!(f, "Prometheus stat tracking failed: {}", e),
         }
     }
 }

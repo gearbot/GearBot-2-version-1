@@ -114,14 +114,10 @@ async fn real_main() -> Result<(), Error> {
     let cluster = args.value_of("cluster").unwrap_or("0").parse::<u64>().unwrap_or(0);
     let shards_per_cluster = args
         .value_of("shards_per_cluster")
-        .unwrap_or("10")
+        .unwrap_or("1")
         .parse::<u64>()
         .unwrap_or(1);
-    let total_shards = args
-        .value_of("total_shards")
-        .unwrap_or("10")
-        .parse::<u64>()
-        .unwrap_or(1);
+    let total_shards = args.value_of("total_shards").unwrap_or("1").parse::<u64>().unwrap_or(1);
 
     if let Err(e) = GearBot::run(
         cluster,
