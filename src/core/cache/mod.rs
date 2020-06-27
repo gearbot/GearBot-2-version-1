@@ -340,28 +340,30 @@ impl Cache {
                 //TODO: remove unwrap once we update twilight
                 match self.get_guild(event.guild_id) {
                     Some(guild) => {
-                        if guild.complete.load(Ordering::SeqCst) {
-                            match self.get_user(event.user.id) {
-                                Some(user) => {
-                                    if !user.is_same_as(&event.user) {
-                                        //just update the global cache if it's different, we will receive an event for all mutual servers if the inner user changed
-                                        self.users
-                                            .insert(event.user.id, Arc::new(CachedUser::from_user(&event.user)));
-                                    }
+                        match self.get_user(event.user.id) {
+                            Some(user) => {
+                                if !user.is_same_as(&event.user) {
+                                    //just update the global cache if it's different, we will receive an event for all mutual servers if the inner user changed
+                                    self.users
+                                        .insert(event.user.id, Arc::new(CachedUser::from_user(&event.user)));
                                 }
-                                None => gearbot_warn!("Received a member update with an uncached inner user!"),
                             }
-                            match guild.members.get(&event.user.id) {
-                                Some(member) => {
-                                    guild
-                                        .members
-                                        .insert(member.user.id, Arc::new(member.update(&*event, &self)));
+                            None => {
+                                if guild.complete.load(Ordering::SeqCst) {
+                                    gearbot_warn!("Received a member update with an uncached inner user!")
                                 }
-                                None => gearbot_warn!(
-                                    "Received a member update for an unknown member in guild {}",
-                                    event.guild_id
-                                ),
                             }
+                        }
+                        match guild.members.get(&event.user.id) {
+                            Some(member) => {
+                                guild
+                                    .members
+                                    .insert(member.user.id, Arc::new(member.update(&*event, &self)));
+                            }
+                            None => gearbot_warn!(
+                                "Received a member update for an unknown member in guild {}",
+                                event.guild_id
+                            ),
                         }
                     }
                     None => {
@@ -380,7 +382,11 @@ impl Cache {
                         }
                         self.stats.user_counts.total.dec();
                     }
-                    None => gearbot_warn!("Received a member remove event for a member that is not in that guild"),
+                    None => {
+                        if guild.complete.load(Ordering::SeqCst) {
+                            gearbot_warn!("Received a member remove event for a member that is not in that guild");
+                        }
+                    }
                 },
                 None => gearbot_warn!(
                     "Received a member remove for guild {} but no such guild exists in cache",
