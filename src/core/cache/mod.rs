@@ -361,7 +361,10 @@ impl Cache {
                             }
                             None => {
                                 if guild.complete.load(Ordering::SeqCst) {
-                                    gearbot_warn!("Received a member update for an unknown member in guild {}",)
+                                    gearbot_warn!(
+                                        "Received a member update for an unknown member in guild {}",
+                                        guild.id
+                                    )
                                 }
                             }
                         }
