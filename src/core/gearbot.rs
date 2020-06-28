@@ -171,6 +171,8 @@ impl GearBot {
         let mut bot_events = context.cluster.events().await;
         while let Some(event) = bot_events.next().await {
             let c = context.clone();
+            context.update_stats(event.0, &event.1);
+            context.cache.update(event.0, &event.1, context.clone());
             tokio::spawn(async {
                 let result = handle_event(event, c).await;
                 if result.is_err() {
@@ -196,7 +198,6 @@ async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), E
         Event::MessageCreate(msg) => ctx.stats.new_message(&ctx, msg).await,
         _ => {}
     }
-    ctx.update_stats(event.0, &event.1);
 
     commands::handle_event(event.0, event.1, ctx.clone()).await?;
 

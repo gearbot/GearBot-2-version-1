@@ -100,23 +100,14 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
                 }
             }
         }
-
-        _ => (),
-    }
-
-    ctx.cache.update(shard_id, event, ctx.clone()).await?;
-
-    match &event {
         Event::GuildCreate(guild) => {
             let c = ctx.cluster.clone();
             let data = RequestGuildMembers::new_all(guild.id, None);
             debug!("Requesting members for guild {}", guild.id);
-            let res = tokio::spawn(async move { c.command(shard_id, &data).await }).await;
+            let res = c.command(shard_id, &data).await;
 
-            if let Ok(handle) = res {
-                if let Err(e) = handle {
-                    return Err(Error::TwilightCluster(e));
-                }
+            if let Err(e) = res {
+                return Err(Error::TwilightCluster(e));
             }
         }
         _ => {}

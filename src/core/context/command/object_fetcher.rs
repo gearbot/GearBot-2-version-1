@@ -13,7 +13,7 @@ use crate::Error;
 use super::CommandContext;
 
 impl CommandContext {
-    pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, Error> {
+    pub async fn get_user(&self, user_id: &UserId) -> Result<Arc<CachedUser>, Error> {
         self.bot_context.get_user(user_id).await
     }
 
@@ -30,8 +30,8 @@ impl CommandContext {
 
     pub fn get_role(&self, role_id: RoleId) -> Option<Arc<CachedRole>> {
         match &self.guild {
-            Some(g) => match g.roles.get(&role_id) {
-                Some(guard) => Some(guard.value().clone()),
+            Some(g) => match g.roles.read().expect("Global role cache got poisoned!").get(&role_id) {
+                Some(guard) => Some(guard.clone()),
                 None => None,
             },
             None => None,

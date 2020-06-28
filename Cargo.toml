@@ -14,7 +14,7 @@ clap = "2.33"
 darkredis = "0.7"
 ctrlc = { version = "3", features = ["termination"] }
 deadpool-postgres={version = "0.5", features=["config"]}
-dashmap = {version = "4.0.0-rc5", features=["serde"]}
+dashmap = {version = "4.0.0-rc6", features=["serde"]}
 flexi_logger = { version = "0.15", default_features = false, features = ["colors", "specfile", "ziplogs"] }
 futures = "0.3"
 fluent-bundle = "0.12"

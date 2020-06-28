@@ -308,7 +308,9 @@ impl CachedChannel {
         if channel.recipients.len() == 1 {
             CachedChannel::DM {
                 id: channel.id,
-                receiver: cache.get_or_insert_user(&channel.recipients[0]),
+                receiver: cache
+                    .get_user(&channel.recipients[0].id)
+                    .unwrap_or_else(|| Arc::new(CachedUser::from_user(&channel.recipients[0]))),
             }
         } else {
             CachedChannel::GroupDM {
@@ -316,7 +318,11 @@ impl CachedChannel {
                 receivers: channel
                     .recipients
                     .iter()
-                    .map(|user| cache.get_or_insert_user(user))
+                    .map(|user| {
+                        cache
+                            .get_user(&channel.recipients[0].id)
+                            .unwrap_or_else(|| Arc::new(CachedUser::from_user(user)))
+                    })
                     .collect(),
             }
         }

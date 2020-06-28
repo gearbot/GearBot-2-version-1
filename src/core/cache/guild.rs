@@ -1,12 +1,12 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use dashmap::{DashMap, ElementGuard};
 use serde::{Deserialize, Serialize};
 use twilight::model::guild::{DefaultMessageNotificationLevel, Guild, PartialGuild, PremiumTier, VerificationLevel};
 use twilight::model::id::{ChannelId, GuildId, RoleId, UserId};
 
-use crate::core::cache::{Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole, ColdStorageMember};
+use crate::core::cache::{Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole};
 
 use super::is_default;
 use std::collections::HashMap;
@@ -26,13 +26,13 @@ pub struct CachedGuild {
     pub afk_timeout: u64,
     pub verification_level: VerificationLevel,
     pub default_message_notifications: DefaultMessageNotificationLevel,
-    pub roles: DashMap<RoleId, Arc<CachedRole>>,
+    pub roles: RwLock<HashMap<RoleId, Arc<CachedRole>>>,
     pub emoji: Vec<Arc<CachedEmoji>>,
     pub features: Vec<String>,
     //same as region, will cause issues when they add one
     pub unavailable: bool,
-    pub members: DashMap<UserId, Arc<CachedMember>>,
-    pub channels: DashMap<ChannelId, Arc<CachedChannel>>,
+    pub members: RwLock<HashMap<UserId, Arc<CachedMember>>>,
+    pub channels: RwLock<HashMap<ChannelId, Arc<CachedChannel>>>,
     //use our own version, easier to work with then twilight's enum
     pub max_presences: Option<u64>,
     //defaults to 25000 if null in the guild create
@@ -63,12 +63,12 @@ impl From<Guild> for CachedGuild {
             afk_timeout: guild.afk_timeout,
             verification_level: guild.verification_level,
             default_message_notifications: guild.default_message_notifications,
-            roles: DashMap::new(),
+            roles: RwLock::new(HashMap::new()),
             emoji: vec![],
             features: guild.features,
             unavailable: false,
-            members: DashMap::new(),
-            channels: DashMap::new(),
+            members: RwLock::new(HashMap::new()),
+            channels: RwLock::new(HashMap::new()),
             max_presences: guild.max_presences,
             max_members: guild.max_members,
             description: guild.description,
@@ -81,18 +81,28 @@ impl From<Guild> for CachedGuild {
         };
 
         //handle roles
-        for (role_id, role) in guild.roles {
-            cached_guild
+        {
+            let mut roles = cached_guild
                 .roles
-                .insert(role_id, Arc::new(CachedRole::from_role(&role)));
+                .write()
+                .expect("Guild inner roles cache got poisoned!");
+            for (role_id, role) in guild.roles {
+                roles.insert(role_id, Arc::new(CachedRole::from_role(&role)));
+            }
         }
 
         //channels
-        for (channel_id, channel) in guild.channels {
-            cached_guild.channels.insert(
-                channel_id,
-                Arc::new(CachedChannel::from_guild_channel(&channel, guild.id)),
-            );
+        {
+            let mut channels = cached_guild
+                .channels
+                .write()
+                .expect("Guild inner channels cache got poisoned!");
+            for (channel_id, channel) in guild.channels {
+                channels.insert(
+                    channel_id,
+                    Arc::new(CachedChannel::from_guild_channel(&channel, guild.id)),
+                );
+            }
         }
 
         //emoji
@@ -117,12 +127,12 @@ impl CachedGuild {
             afk_timeout: cold_guild.afk_timeout,
             verification_level: cold_guild.verification_level,
             default_message_notifications: cold_guild.default_message_notifications,
-            roles: DashMap::new(),
+            roles: RwLock::new(HashMap::new()),
             emoji: vec![],
             features: vec![],
             unavailable: false,
-            members: DashMap::new(),
-            channels: DashMap::new(),
+            members: RwLock::new(HashMap::new()),
+            channels: RwLock::new(HashMap::new()),
             max_presences: cold_guild.max_presences,
             max_members: cold_guild.max_members,
             description: cold_guild.description,
@@ -134,18 +144,30 @@ impl CachedGuild {
             member_count: AtomicU64::new(cold_guild.members.len() as u64),
         };
 
-        for role in cold_guild.roles {
-            guild.roles.insert(role.id, Arc::new(role));
+        {
+            let mut roles = guild.roles.write().expect("Guild inner roles cache got poisoned!");
+            for role in cold_guild.roles {
+                roles.insert(role.id, Arc::new(role));
+            }
         }
 
-        for member in cold_guild.members {
-            guild
-                .members
-                .insert(member.id, Arc::new(CachedMember::defrost(member, cache)));
+        {
+            let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
+            for member in cold_guild.members {
+                let user = cache.get_user(&member.user_id).unwrap();
+                user.mutual_servers.fetch_add(1, Ordering::SeqCst);
+                members.insert(member.user_id, Arc::new(member));
+            }
         }
 
-        for channel in cold_guild.channels {
-            guild.channels.insert(channel.get_id(), Arc::new(channel));
+        {
+            let mut channels = guild
+                .channels
+                .write()
+                .expect("Guild inner channels cache got poisoned!");
+            for channel in cold_guild.channels {
+                channels.insert(channel.get_id(), Arc::new(channel));
+            }
         }
         for emoji in cold_guild.emoji {
             guild.emoji.push(Arc::new(emoji));
@@ -166,12 +188,12 @@ impl CachedGuild {
             afk_timeout: other.afk_timeout,
             verification_level: other.verification_level,
             default_message_notifications: other.default_message_notifications,
-            roles: DashMap::new(),
+            roles: RwLock::new(HashMap::new()),
             emoji: self.emoji.clone(),
             features: other.features.clone(),
             unavailable: false,
-            members: DashMap::new(),
-            channels: DashMap::new(),
+            members: RwLock::new(HashMap::new()),
+            channels: RwLock::new(HashMap::new()),
             max_presences: other.max_presences,
             max_members: other.max_members,
             description: other.description.clone(),
@@ -183,17 +205,39 @@ impl CachedGuild {
             member_count: AtomicU64::new(self.member_count.load(Ordering::SeqCst)),
         };
 
-        for (_, role) in &other.roles {
-            guild.roles.insert(role.id, Arc::new(CachedRole::from_role(role)));
+        {
+            let mut roles = guild.roles.write().expect("Guild inner roles cache got poisoned!");
+            for (_, role) in &other.roles {
+                roles.insert(role.id, Arc::new(CachedRole::from_role(role)));
+            }
         }
 
         //TODO: replace with dashmap clones once that is available
-        for guard in &self.members {
-            guild.members.insert(guard.user.id, guard.value().clone());
+        {
+            let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
+            for guard in self
+                .members
+                .read()
+                .expect("Guild inner members cache got poisoned!")
+                .values()
+            {
+                members.insert(guard.user_id, guard.clone());
+            }
         }
 
-        for guard in &self.channels {
-            guild.channels.insert(guard.get_id(), guard.value().clone());
+        {
+            let mut channels = guild
+                .channels
+                .write()
+                .expect("Guild inner channels cache got poisoned!");
+            for guard in self
+                .channels
+                .read()
+                .expect("Guild inner channels cache got poisoned!")
+                .values()
+            {
+                channels.insert(guard.get_id(), guard.clone());
+            }
         }
 
         guild
@@ -232,7 +276,7 @@ pub struct ColdStorageGuild {
     #[serde(rename = "n", default, skip_serializing_if = "is_default")]
     pub features: Vec<String>,
     #[serde(rename = "o")]
-    pub members: Vec<ColdStorageMember>,
+    pub members: Vec<CachedMember>,
     #[serde(rename = "p")]
     pub channels: Vec<CachedChannel>,
     #[serde(rename = "q", default, skip_serializing_if = "is_default")]
@@ -251,9 +295,9 @@ pub struct ColdStorageGuild {
     pub preferred_locale: String,
 }
 
-impl From<ElementGuard<GuildId, Arc<CachedGuild>>> for ColdStorageGuild {
-    fn from(guard: ElementGuard<GuildId, Arc<CachedGuild>>) -> Self {
-        let guild = guard.value();
+impl From<Arc<CachedGuild>> for ColdStorageGuild {
+    fn from(cached_guild: Arc<CachedGuild>) -> Self {
+        let guild = cached_guild;
         let mut csg = ColdStorageGuild {
             id: guild.id,
             name: guild.name.clone(),
@@ -279,20 +323,32 @@ impl From<ElementGuard<GuildId, Arc<CachedGuild>>> for ColdStorageGuild {
             premium_subscription_count: guild.premium_subscription_count,
             preferred_locale: guild.preferred_locale.clone(),
         };
-        for role in &guild.roles {
-            csg.roles.push(CachedRole::from(role));
+        {
+            let mut roles = guild.roles.write().expect("Guild inner roles cache got poisoned!");
+            for role in roles.values() {
+                csg.roles.push(CachedRole::from(role));
+            }
+            roles.clear();
         }
-        guild.roles.clear();
 
         for emoji in &guild.emoji {
             csg.emoji.push(emoji.as_ref().clone());
         }
-        for member in &guild.members {
-            csg.members.push(ColdStorageMember::from(member));
-        }
-        guild.members.clear();
 
-        for channel in &guild.channels {
+        {
+            let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
+            for member in members.values() {
+                csg.members.push(member.duplicate());
+            }
+            members.clear();
+        }
+
+        for channel in guild
+            .channels
+            .read()
+            .expect("Guild inner channels cache got poisoned!")
+            .values()
+        {
             csg.channels.push(match channel.as_ref() {
                 CachedChannel::TextChannel {
                     id,

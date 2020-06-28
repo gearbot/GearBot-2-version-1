@@ -24,6 +24,7 @@ pub struct CommandContext {
     config: Option<ElementGuard<GuildId, GuildConfig>>,
     pub message: CommandMessage,
     pub guild: Option<Arc<CachedGuild>>,
+    pub shard: u64,
 }
 
 impl CommandContext {
@@ -32,6 +33,7 @@ impl CommandContext {
         config: Option<ElementGuard<GuildId, GuildConfig>>,
         message: CommandMessage,
         guild: Option<Arc<CachedGuild>>,
+        shard: u64,
     ) -> Self {
         let translator = match &config {
             Some(guard) => ctx.translations.get_translator(&guard.value().language),
@@ -43,6 +45,7 @@ impl CommandContext {
             config,
             message,
             guild,
+            shard,
         }
     }
 
@@ -71,7 +74,7 @@ impl CommandContext {
         self.bot_context
             .translations
             .get_text_with_args(guild_lang, string_key, args)
-            .to_string()
+            .replace("\\n", "\n")
     }
 
     pub async fn set_config(&self, new_config: GuildConfig) -> Result<(), Error> {

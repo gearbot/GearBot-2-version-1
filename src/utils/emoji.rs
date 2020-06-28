@@ -15,6 +15,11 @@ define_emoji!(
     Robot => "🤖",
     Bug => "🐛",
     Bad => "😶",
+    GearDiamond => "⚙️",
+    GearGold => "⚙️",
+    GearIron => "⚙️",
+    GearStone => "⚙️",
+    GearWood => "⚙️",
 
     StaffBadge => "",
     PartnerBadge => "",

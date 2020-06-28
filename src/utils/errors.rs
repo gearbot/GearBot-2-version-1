@@ -3,7 +3,7 @@ use std::{error, fmt, io};
 use deadpool_postgres::PoolError;
 use serde::export::Formatter;
 use twilight::cache::twilight_cache_inmemory;
-use twilight::gateway::cluster;
+use twilight::gateway::{cluster, shard};
 use twilight::http;
 use twilight::http::request::channel::message::create_message::CreateMessageError;
 use twilight::http::request::channel::message::update_message::UpdateMessageError;
@@ -38,6 +38,7 @@ pub enum Error {
     DarkRedisError(darkredis::Error),
     CorruptCacheError(String),
     PrometheusError(prometheus::Error),
+    GatewayError(shard::Error),
 }
 
 #[derive(Debug)]
@@ -160,6 +161,7 @@ impl fmt::Display for Error {
             Error::DarkRedisError(e) => write!(f, "Error communicating with the redis cache: {}", e),
             Error::CorruptCacheError(e) => write!(f, "CRITICAL CACHE CORRUPTION DETECTED: {}", e),
             Error::PrometheusError(e) => write!(f, "Prometheus stat tracking failed: {}", e),
+            Error::GatewayError(e) => write!(f, "Gateway error: {}", e),
         }
     }
 }
@@ -239,5 +241,11 @@ impl From<UpdateMessageError> for Error {
 impl From<darkredis::Error> for Error {
     fn from(e: darkredis::Error) -> Self {
         Error::DarkRedisError(e)
+    }
+}
+
+impl From<shard::Error> for Error {
+    fn from(e: shard::Error) -> Self {
+        Error::GatewayError(e)
     }
 }

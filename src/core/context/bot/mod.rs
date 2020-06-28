@@ -15,6 +15,7 @@ use crate::core::GuildConfig;
 use crate::translation::Translations;
 use crate::utils::LogType;
 use crate::EncryptionKey;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 #[derive(PartialEq, Debug)]
@@ -47,6 +48,7 @@ pub struct BotContext {
     pub shards_per_cluster: u64,
     pub total_shards: u64,
     pub shard_states: DashMap<u64, ShardState>,
+    pub start_time: DateTime<Utc>,
 }
 
 impl BotContext {
@@ -67,6 +69,11 @@ impl BotContext {
         let shard_states = DashMap::with_capacity(shards_per_cluster as usize);
         for i in cluster_id * shards_per_cluster..cluster_id * shards_per_cluster + shards_per_cluster {
             shard_states.insert(i, ShardState::PendingCreation);
+            cache
+                .missing_per_shard
+                .write()
+                .expect("Global shard state tracking got poisoned!")
+                .insert(i, AtomicU64::new(0));
         }
         stats.shard_counts.pending.set(shards_per_cluster as i64);
         BotContext {
@@ -87,6 +94,7 @@ impl BotContext {
             shards_per_cluster,
             total_shards,
             shard_states,
+            start_time: Utc::now(),
         }
     }
 

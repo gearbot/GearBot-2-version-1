@@ -7,6 +7,11 @@ use twilight::builders::embed::EmbedBuilder;
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::{BotStats, CommandContext};
 use crate::parser::Parser;
+use crate::translation::{FluArgs, GearBotString};
+use crate::utils::{age, Emoji};
+use futures::{FutureExt, TryFutureExt};
+use prometheus::core::Collector;
+use std::time::Duration;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
 /*
@@ -141,24 +146,71 @@ impl fmt::Display for AboutDescription {
 }
 */
 pub async fn about(ctx: CommandContext, _: Parser) -> CommandResult {
-    // let about_stats = AboutDescription::create(ctx.get_bot_stats()).await;
-    //
-    // let embed = EmbedBuilder::new()
-    //     .color(ABOUT_EMBED_COLOR)
-    //     .description(about_stats.to_string())
-    //     .timestamp(Utc::now().to_rfc3339())
-    //     .add_field("Support Server", "[Click Here](https://discord.gg/vddW3D9)")
-    //     .inline()
-    //     .commit()
-    //     .add_field("Website", "[Click Here](https://gearbot.rocks)")
-    //     .inline()
-    //     .commit()
-    //     .add_field("GitHub", "[Click Here](https://github.com/gearbot/GearBot)")
-    //     .inline()
-    //     .commit()
-    //     .build();
-    //
-    // ctx.reply_embed(embed).await?;
+    let stats = &ctx.bot_context.stats;
+    let args = FluArgs::with_capacity(14)
+        .insert("gearDiamond", Emoji::GearDiamond.for_chat())
+        .insert("gearGold", Emoji::GearGold.for_chat())
+        .insert("gearIron", Emoji::GearIron.for_chat())
+        .insert("cluster_id", ctx.bot_context.cluster_id)
+        .insert("uptime", age(ctx.bot_context.start_time, Utc::now(), 4))
+        .insert("start_time", ctx.bot_context.start_time.to_rfc2822())
+        .insert("version", stats.version)
+        .insert("shards", ctx.bot_context.shards_per_cluster)
+        .insert(
+            "average_latency",
+            ctx.bot_context
+                .cluster
+                .info()
+                .await
+                .values()
+                .map(|info| {
+                    info.latency()
+                        .average()
+                        .unwrap_or_else(|| Duration::new(0, 0))
+                        .as_millis()
+                })
+                .sum::<u128>()
+                / ctx.bot_context.shards_per_cluster as u128,
+        )
+        .insert("guilds", stats.guild_counts.loaded.get())
+        .insert("total_users", stats.user_counts.total.get())
+        .insert("unique_users", stats.user_counts.unique.get())
+        .insert("shard", ctx.shard)
+        .insert(
+            "latency",
+            ctx.bot_context
+                .cluster
+                .shard(ctx.shard)
+                .await
+                .unwrap()
+                .info()
+                .await?
+                .latency()
+                .average()
+                .unwrap_or_else(|| Duration::new(0, 0))
+                .as_millis(),
+        )
+        .insert("user_messages", stats.message_counts.user_messages.get())
+        .insert("messages_send", stats.message_counts.own_messages.get())
+        .insert("commands_executed", stats.total_command_counts.load(Ordering::Relaxed))
+        .generate();
+    let description = ctx.translate_with_args(GearBotString::AboutDescription, &args);
+
+    let embed = EmbedBuilder::new()
+        .description(description)
+        .color(ABOUT_EMBED_COLOR)
+        .timestamp(Utc::now().to_rfc3339())
+        .add_field("Support Server", "[Click Here](https://discord.gg/PfwZmgU)")
+        .inline()
+        .commit()
+        .add_field("Website", "[Click Here](https://gearbot.rocks)")
+        .inline()
+        .commit()
+        .add_field("GitHub", "[Click Here](https://github.com/gearbot/GearBot)")
+        .inline()
+        .commit()
+        .build();
+    ctx.reply_embed(embed).await?;
 
     Ok(())
 }

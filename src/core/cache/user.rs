@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicU64;
-use twilight::model::id::UserId;
+use twilight::model::id::{GuildId, UserId};
 use twilight::model::user::{User, UserFlags};
 
 use super::is_default;
+use std::collections::HashSet;
+use std::sync::RwLock;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CachedUser {

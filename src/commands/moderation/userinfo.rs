@@ -45,7 +45,7 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
         Some(flags) => flags.clone(),
         None => {
             // we already know for sure the user will exist
-            let user = ctx.get_user(user.id).await?;
+            let user = ctx.get_user(&user.id).await?;
             ctx.bot_context.cache.update_user(user.clone());
             user.public_flags.unwrap_or(UserFlags::empty())
         }

@@ -173,6 +173,7 @@ pub enum GearBotString {
     CoinflipYes,
     CoinflipNo,
     UserinfoHeader,
+    AboutDescription,
 
     //DM error strings
     UnableToReply,
@@ -189,6 +190,7 @@ impl GearBotString {
             GearBotString::UserinfoHeader => "basic__userinfo_header",
             GearBotString::UnableToReply => "errors_unable_to_reply",
             GearBotString::UnableToReplyForManager => "errors_unable_to_reply_manager",
+            GearBotString::AboutDescription => "basic__about",
         }
     }
 
@@ -252,7 +254,7 @@ mod tests {
     use std::fs;
 
     lazy_static! {
-        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 7] = [
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 8] = [
             GearBotString::PingPong.as_str(),
             GearBotString::CoinflipDefault.as_str(),
             GearBotString::CoinflipYes.as_str(),
@@ -260,6 +262,7 @@ mod tests {
             GearBotString::UserinfoHeader.as_str(),
             GearBotString::UnableToReply.as_str(),
             GearBotString::UnableToReplyForManager.as_str(),
+            GearBotString::AboutDescription.as_str(),
         ];
     }
 

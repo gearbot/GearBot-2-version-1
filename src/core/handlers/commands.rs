@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use log::debug;
+use log::{debug, trace};
 use twilight::gateway::Event;
 
 use crate::core::BotContext;
@@ -11,15 +11,15 @@ use crate::utils::Error;
 pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>) -> Result<(), Error> {
     match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
-            debug!("Received a message from {}, saying {}", msg.author.name, msg.content);
+            trace!("Received a message from {}, saying {}", msg.author.name, msg.content);
 
             let p = match msg.guild_id {
                 Some(guild_id) => {
-                    let guild = ctx.cache.get_guild(guild_id);
+                    let guild = ctx.cache.get_guild(&guild_id);
                     match guild {
                         Some(g) => {
                             if !g.complete.load(Ordering::SeqCst) {
-                                debug!("Command received in {} but the guild isn't fully cached yet!", g.id);
+                                debug!("Message received in {} but the guild isn't fully cached yet!", g.id);
                                 return Ok(()); //not cached yet, just ignore for now
                             }
                         }
@@ -51,7 +51,7 @@ pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>)
             }
         }
         Event::MessageUpdate(update) => {
-            debug!("Message updated to {:?}", update.content);
+            trace!("Message updated to {:?}", update.content);
         }
         _ => (),
     }

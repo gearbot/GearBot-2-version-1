@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 use chrono::{DateTime, Utc};
 use twilight::model::channel::Message;
@@ -9,6 +9,7 @@ use crate::core::BotContext;
 use prometheus::{Encoder, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry, TextEncoder};
 
 use crate::core::context::bot::ShardState;
+use log::info;
 use std::collections::HashMap;
 use twilight::model::gateway::event::Event;
 use warp::Filter;
@@ -94,6 +95,7 @@ pub struct BotStats {
     pub emoji_count: IntGauge,
     pub role_count: IntGauge,
     pub command_counts: IntCounterVec,
+    pub total_command_counts: AtomicU64,
 }
 
 impl BotStats {
@@ -192,7 +194,8 @@ impl BotStats {
                 reconnecting: shard_counter.get_metric_with_label_values(&["reconnecting"]).unwrap(),
                 disconnected: shard_counter.get_metric_with_label_values(&["disconnected"]).unwrap()
             },
-            command_counts
+            command_counts,
+            total_command_counts: AtomicU64::new(0),
         }
     }
 
@@ -271,6 +274,7 @@ impl BotContext {
             Some(guard) => self.get_state_metric(guard.value()).dec(),
             None => {}
         }
+        info!("Shard {} is now {:?}", shard, new_state);
         self.get_state_metric(&new_state).inc();
         self.shard_states.insert(shard, new_state);
     }

@@ -128,4 +128,16 @@ impl CommandContext {
 
         Ok(sent_handle)
     }
+
+    pub async fn reply_raw_with_embed(&self, message: impl Into<String>, embed: Embed) -> Result<Message, Error> {
+        let sent_handle = self
+            .bot_context
+            .http
+            .create_message(self.message.channel.get_id())
+            .content(message)?
+            .embed(embed)?
+            .await?;
+
+        Ok(sent_handle)
+    }
 }

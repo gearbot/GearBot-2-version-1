@@ -28,7 +28,8 @@ pub fn get_root() -> &'static CommandNode {
                     command!("set_config", debug::set_config),
                     command!("quote", basic::quote),
                     command!("uid", basic::uid),
-                    command!("redis_test", admin::restart)
+                    command!("redis_test", admin::restart),
+                    command!("check_cache", admin::check_cache)
                 ))
                 .ok()
                 .unwrap();

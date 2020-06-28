@@ -7,7 +7,7 @@ use crate::core::BotContext;
 use crate::utils::{Error, ParseError};
 
 impl BotContext {
-    pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, Error> {
+    pub async fn get_user(&self, user_id: &UserId) -> Result<Arc<CachedUser>, Error> {
         match self.cache.get_user(user_id) {
             Some(user) => Ok(user),
             None => {

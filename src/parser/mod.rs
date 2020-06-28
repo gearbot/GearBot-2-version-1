@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use log::{debug, info};
+use log::{debug, info, trace};
 use twilight::model::channel::Message;
 use twilight::model::gateway::payload::MessageCreate;
 use twilight::model::id::{ChannelId, GuildId, UserId};
@@ -12,6 +12,7 @@ use crate::core::{BotContext, CommandContext, CommandMessage};
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
+use std::sync::atomic::Ordering;
 use twilight::model::guild::Permissions;
 
 #[derive(Clone)]
@@ -47,11 +48,9 @@ impl Parser {
                     to_search = node;
                     debug!("Found a command node: {}", node.get_name());
                     self.index += 1;
-                    debug!("{}", self.index);
                     nodes.push(node);
                 }
                 None => {
-                    debug!("No more command nodes found");
                     done = true;
                 }
             }
@@ -74,7 +73,7 @@ impl Parser {
             shard_id,
             message.guild_id,
         );
-        debug!("Parser processing message: {:?}", &message.content);
+        trace!("Parser processing message: {:?}", &message.content);
 
         let mut p = parser.clone();
 
@@ -99,7 +98,7 @@ impl Parser {
                             Some(m) => (
                                 Some(m),
                                 Some(ctx.get_config(guild_id).await?),
-                                Some(ctx.cache.get_guild(guild_id).unwrap()),
+                                Some(ctx.cache.get_guild(&guild_id).unwrap()),
                             ),
                             None => {
                                 return Err(Error::CorruptCacheError(String::from(
@@ -119,7 +118,7 @@ impl Parser {
                 }
                 let channel = channel.unwrap();
 
-                let author = match ctx.cache.get_user(message.author.id) {
+                let author = match ctx.cache.get_user(&message.author.id) {
                     Some(author) => author,
                     None => {
                         return Err(Error::CorruptCacheError(String::from(
@@ -142,7 +141,7 @@ impl Parser {
                     tts: message.tts,
                 };
 
-                let context = CommandContext::new(ctx.clone(), config, cmdm, guild);
+                let context = CommandContext::new(ctx.clone(), config, cmdm, guild, shard_id);
                 // debug!("Bot channel perms: {:?}", context.get_bot_channel_permissions());
                 // debug!("USER channel perms: {:?}", context.get_author_channel_permissions());
                 //check if we can send a reply
@@ -177,7 +176,10 @@ impl Parser {
                 let result = node.execute(context, p).await;
 
                 match result {
-                    Ok(_) => Ok(()),
+                    Ok(_) => {
+                        ctx.stats.total_command_counts.fetch_add(1, Ordering::Relaxed);
+                        Ok(())
+                    }
                     Err(error) => match error {
                         Error::ParseError(e) => {
                             ctx.http
@@ -245,11 +247,11 @@ impl Parser {
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
-            Some(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
+            Some(uid) => Ok(self.ctx.get_user(&UserId(uid)).await?),
             None => {
                 // is it a userid?
                 match input.parse::<u64>() {
-                    Ok(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
+                    Ok(uid) => Ok(self.ctx.get_user(&UserId(uid)).await?),
                     Err(_) => {
                         //nope, must be a partial name
                         Err(Error::ParseError(ParseError::MemberNotFoundByName(
