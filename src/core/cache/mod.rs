@@ -359,10 +359,11 @@ impl Cache {
                                     .members
                                     .insert(member.user.id, Arc::new(member.update(&*event, &self)));
                             }
-                            None => gearbot_warn!(
-                                "Received a member update for an unknown member in guild {}",
-                                event.guild_id
-                            ),
+                            None => {
+                                if guild.complete.load(Ordering::SeqCst) {
+                                    gearbot_warn!("Received a member update for an unknown member in guild {}",)
+                                }
+                            }
                         }
                     }
                     None => {
