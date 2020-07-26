@@ -26,7 +26,6 @@ use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info};
 use prometheus::{Encoder, TextEncoder};
 use twilight::model::gateway::payload::update_status::UpdateStatusInfo;
-use twilight::model::gateway::payload::UpdateStatus;
 use twilight::model::gateway::presence::{ActivityType, Status};
 use warp::Filter;
 

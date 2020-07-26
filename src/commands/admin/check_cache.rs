@@ -1,14 +1,11 @@
 use crate::core::CommandContext;
-use crate::gearbot_important;
 use crate::parser::Parser;
 use crate::CommandResult;
-use futures::SinkExt;
 use log::info;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use twilight::builders::embed::EmbedBuilder;
 use twilight::model::id::{GuildId, UserId};
-use warp::filters::header::value;
 
 pub async fn check_cache(ctx: CommandContext, _: Parser) -> CommandResult {
     if ctx.message.author.id.0 == 106354106196570112 {

@@ -2,13 +2,12 @@ use std::sync::Arc;
 
 use log::debug;
 use twilight::gateway::Event;
-use twilight::model::gateway::presence::{Activity, ActivityType, Status};
 
 use crate::core::BotContext;
 use crate::utils::Error;
 use crate::{gearbot_info, gearbot_warn};
 
-pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
+pub async fn handle_event(shard_id: u64, event: &Event, _: Arc<BotContext>) -> Result<(), Error> {
     match &event {
         Event::ShardReconnecting(_) => gearbot_info!("Shard {} is attempting to reconnect", shard_id),
         Event::ShardResuming(_) => gearbot_info!("Shard {} is resuming", shard_id),

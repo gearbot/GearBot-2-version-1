@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::AtomicU64;
 
 use chrono::{DateTime, Utc};
 use twilight::model::channel::Message;
@@ -6,13 +6,12 @@ use twilight::model::channel::Message;
 use git_version::git_version;
 
 use crate::core::BotContext;
-use prometheus::{Encoder, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry, TextEncoder};
+use prometheus::{IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry};
 
 use crate::core::context::bot::ShardState;
 use log::info;
 use std::collections::HashMap;
 use twilight::model::gateway::event::Event;
-use warp::Filter;
 
 pub struct EventStats {
     pub ban_add: IntCounter,
@@ -101,7 +100,6 @@ pub struct BotStats {
 impl BotStats {
     #[rustfmt::skip]
     pub fn new(cluster_id: u64) -> Self {
-        let cid = &*cluster_id.to_string();
         let event_counter = IntCounterVec::new(Opts::new("gateway_events", "Events received from the gateway"), &["events"]).unwrap();
         let message_counter = IntCounterVec::new(Opts::new("messages", "Recieved messages"), &["sender_type"]).unwrap();
         let channel_count = IntGauge::with_opts(Opts::new("channels", "Channel count")).unwrap();
@@ -258,7 +256,6 @@ impl BotContext {
 
             Event::ShardConnecting(_) => self.shard_state_change(shard_id, ShardState::Connecting),
             Event::ShardIdentifying(_) => self.shard_state_change(shard_id, ShardState::Identifying),
-            Event::ShardConnecting(_) => self.shard_state_change(shard_id, ShardState::Connecting),
             Event::ShardConnected(_) => self.shard_state_change(shard_id, ShardState::Connected),
             Event::Ready(_) => self.shard_state_change(shard_id, ShardState::Ready),
             Event::Resumed => self.shard_state_change(shard_id, ShardState::Ready),

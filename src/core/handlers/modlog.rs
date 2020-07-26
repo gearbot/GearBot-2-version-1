@@ -6,13 +6,12 @@ use twilight::model::gateway::payload::RequestGuildMembers;
 
 use crate::core::BotContext;
 use crate::utils::Error;
-use twilight::model::gateway::presence::{ActivityType, Status};
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
     match &event {
         Event::MemberChunk(_chunk) => {}
-        Event::UserUpdate(update) => {}
-        Event::MemberUpdate(update) => {
+        Event::UserUpdate(_) => {}
+        Event::MemberUpdate(_) => {
             // According to the docs, cache commands can never error, but just to be safe and
             // not spam unwraps everywhere, wrap it.
             // let old_member = ctx.cache.member(update.guild_id, update.user.id).await?;

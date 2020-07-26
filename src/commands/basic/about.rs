@@ -1,16 +1,13 @@
-use std::fmt;
 use std::sync::atomic::Ordering;
 
 use chrono::Utc;
 use twilight::builders::embed::EmbedBuilder;
 
 use crate::commands::meta::nodes::CommandResult;
-use crate::core::{BotStats, CommandContext};
+use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{age, Emoji};
-use futures::{FutureExt, TryFutureExt};
-use prometheus::core::Collector;
 use std::time::Duration;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;

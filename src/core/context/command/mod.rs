@@ -14,7 +14,6 @@ use crate::core::{BotContext, GuildConfig};
 use crate::translation::{GearBotString, GuildTranslator, DEFAULT_LANG};
 use crate::utils::CommandError;
 use crate::Error;
-use std::borrow::Cow;
 
 /// The guild context that is returned inside commands that is specific to each guild, with things like the config,
 /// language, etc, set and usable behind wrapper methods for simplicity.

@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use dashmap::ElementGuard;
 use serde::{Deserialize, Serialize};
 use twilight::model::guild::{Permissions, Role};
 use twilight::model::id::RoleId;

@@ -5,7 +5,6 @@ use twilight::model::id::{ChannelId, GuildId};
 
 use super::is_default;
 use crate::core::cache::{Cache, CachedUser};
-use log::debug;
 use std::sync::Arc;
 
 const NO_PERMISSIONS: &[PermissionOverwrite] = &[];

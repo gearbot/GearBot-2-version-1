@@ -8,7 +8,6 @@ use serde_json;
 use unic_langid::{langid, LanguageIdentifier};
 
 use crate::gearbot_warn;
-use log::debug;
 
 const TRANSLATION_DIR: &str = "./lang";
 const FAILED_TRANSLATE_FALLBACK_MSG: &str =

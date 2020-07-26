@@ -167,7 +167,7 @@ lazy_static! {
 
 lazy_static! {
     static ref JUMP_LINK_MATCHER: Regex =
-        { Regex::new(r"https://(?:canary|ptb)?\.?discordapp.com/channels/\d*/(\d*)/(\d*)").unwrap() };
+        Regex::new(r"https://(?:canary|ptb)?\.?discordapp.com/channels/\d*/(\d*)/(\d*)").unwrap();
 }
 
 lazy_static! {

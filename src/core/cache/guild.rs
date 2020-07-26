@@ -1,7 +1,6 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
-use dashmap::{DashMap, ElementGuard};
 use serde::{Deserialize, Serialize};
 use twilight::model::guild::{DefaultMessageNotificationLevel, Guild, PartialGuild, PremiumTier, VerificationLevel};
 use twilight::model::id::{ChannelId, GuildId, RoleId, UserId};

@@ -5,7 +5,7 @@ use twilight::model::{
     id::{ChannelId, RoleId, UserId},
 };
 
-use crate::core::cache::{Cache, CachedChannel};
+use crate::core::cache::CachedChannel;
 use crate::core::cache::{CachedMember, CachedRole, CachedUser};
 use crate::utils::CommandError;
 use crate::Error;

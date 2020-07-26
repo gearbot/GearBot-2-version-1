@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
-use dashmap::ElementGuard;
 use serde::{Deserialize, Serialize};
 use twilight::model::guild::Member;
-use twilight::model::id::{GuildId, RoleId, UserId};
+use twilight::model::id::{RoleId, UserId};
 
 use crate::core::cache::{Cache, CachedUser};
 
 use super::is_default;
-use std::sync::atomic::Ordering;
 use twilight::model::gateway::payload::MemberUpdate;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

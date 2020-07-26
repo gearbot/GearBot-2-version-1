@@ -298,7 +298,7 @@ impl Parser {
         }
     }
 
-    pub async fn get_message(&mut self, requester: UserId) -> Result<Message, Error> {
+    pub async fn get_message(&mut self, _: UserId) -> Result<Message, Error> {
         let input = self.get_next()?;
 
         // We got an id, get the info from the database

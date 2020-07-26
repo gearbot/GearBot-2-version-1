@@ -7,7 +7,7 @@ use crate::Error;
 
 use super::CommandContext;
 use crate::translation::GearBotString;
-use fluent_bundle::{FluentArgs, FluentValue};
+use fluent_bundle::FluentArgs;
 
 impl CommandContext {
     pub async fn send_message(

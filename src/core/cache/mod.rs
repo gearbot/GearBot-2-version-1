@@ -1,8 +1,7 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 use darkredis::ConnectionPool;
-use dashmap::{DashMap, ElementGuard};
 use futures::future;
 use log::{debug, info, trace, warn};
 use twilight::gateway::Event;
@@ -20,12 +19,9 @@ use crate::core::context::bot::ShardState;
 use crate::core::{BotContext, BotStats};
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
-use std::borrow::Borrow;
-use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
-use std::time::Duration;
+use std::collections::HashMap;
 use twilight::model::channel::{Channel, GuildChannel, PrivateChannel};
-use twilight::model::gateway::payload::{ChannelDelete, MemberUpdate, RequestGuildMembers};
+use twilight::model::gateway::payload::RequestGuildMembers;
 use twilight::model::gateway::presence::{ActivityType, Status};
 
 pub struct Cache {
@@ -175,7 +171,7 @@ impl Cache {
                     }
                 }
             }
-            Event::GuildEmojisUpdate(event) => {}
+            Event::GuildEmojisUpdate(_) => {}
             Event::GuildDelete(guild) => match self.get_guild(&guild.id) {
                 Some(cached_guild) => {
                     if guild.unavailable {
@@ -281,7 +277,7 @@ impl Cache {
                 //todo: add more details
                 trace!("Received channel create event for channel a channel");
                 match &event.0 {
-                    Channel::Group(group) => {} //we do not care about groups in the slightest
+                    Channel::Group(_) => {} //we do not care about groups in the slightest
                     Channel::Guild(guild_channel) => {
                         let guild_id = match guild_channel {
                             GuildChannel::Category(category) => category.guild_id,
