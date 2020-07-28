@@ -70,6 +70,19 @@ lazy_static! {
                 GearBotPermission::UserInfoCommand,
                 CommandGroup::Moderation
             ),
+            command_with_subcommands!(
+                "check",
+                Permissions::empty(),
+                GearBotPermission::AdminGroup,
+                CommandGroup::Admin,
+                command!(
+                    "cache",
+                    admin::check_cache,
+                    Permissions::EMBED_LINKS,
+                    GearBotPermission::AdminGroup,
+                    CommandGroup::Admin
+                )
+            ),
         ];
 
         let mut commands = HashMap::new();
