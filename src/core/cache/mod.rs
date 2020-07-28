@@ -604,10 +604,15 @@ impl Cache {
             let mut users = self.users.write().expect("Global user cache got poisoned!");
             let members = guild.members.read().expect("Guild inner members cache got poisoned!");
             for member in members.values() {
-                let count = member.user(self).mutual_servers.fetch_sub(1, Ordering::SeqCst) - 1;
-                if count == 0 {
-                    users.remove(&member.user_id);
-                    self.stats.user_counts.unique.dec();
+                match users.get(&member.user_id) {
+                    Some(user) => {
+                        let count = user.mutual_servers.fetch_sub(1, Ordering::SeqCst) - 1;
+                        if count == 0 {
+                            users.remove(&member.user_id);
+                            self.stats.user_counts.unique.dec();
+                        }
+                    }
+                    None => gearbot_warn!("{} vanished from the user cache!", member.user_id),
                 }
             }
             self.stats.user_counts.total.sub(members.len() as i64);
