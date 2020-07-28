@@ -1,7 +1,10 @@
 use once_cell::sync::OnceCell;
 
-use crate::commands::meta::nodes::CommandNode;
-use crate::{command, subcommands};
+use crate::commands::meta::nodes::{CommandGroup, CommandNode, GearBotPermission, RootNode};
+use crate::{command, command_with_subcommands, command_with_subcommands_and_handler};
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+use twilight::model::guild::Permissions;
 
 mod admin;
 mod basic;
@@ -9,32 +12,72 @@ mod debug;
 pub mod meta;
 mod moderation;
 
-static ROOT_NODE: OnceCell<CommandNode> = OnceCell::new();
+lazy_static! {
+    pub static ref ROOT_NODE: RootNode = {
+        let commandlist = vec![
+            command!(
+                "about",
+                basic::about,
+                Permissions::EMBED_LINKS,
+                GearBotPermission::AboutCommand,
+                CommandGroup::Basic
+            ),
+            command!(
+                "coinflip",
+                basic::coinflip,
+                Permissions::empty(),
+                GearBotPermission::CoinflipCommand,
+                CommandGroup::Basic
+            ),
+            command!(
+                "ping",
+                basic::ping,
+                Permissions::empty(),
+                GearBotPermission::PingCommand,
+                CommandGroup::Basic
+            ),
+            command_with_subcommands!(
+                "config",
+                Permissions::empty(),
+                GearBotPermission::ConfigCommand,
+                CommandGroup::Admin,
+                command_with_subcommands_and_handler!(
+                    "get",
+                    debug::get_config,
+                    Permissions::empty(),
+                    GearBotPermission::GetConfigCommand,
+                    CommandGroup::Admin,
+                    command!(
+                        "pretty",
+                        debug::get_config_pretty,
+                        Permissions::empty(),
+                        GearBotPermission::GetConfigCommand,
+                        CommandGroup::Admin
+                    )
+                ),
+                command!(
+                    "set",
+                    debug::set_config,
+                    Permissions::empty(),
+                    GearBotPermission::SetConfigCommand,
+                    CommandGroup::Admin
+                )
+            ),
+            command!(
+                "userinfo",
+                moderation::userinfo,
+                Permissions::EMBED_LINKS,
+                GearBotPermission::UserInfoCommand,
+                CommandGroup::Moderation
+            ),
+        ];
 
-pub fn get_root() -> &'static CommandNode {
-    match ROOT_NODE.get() {
-        Some(node) => node,
-        None => {
-            ROOT_NODE
-                .set(subcommands!(
-                    "ROOT",
-                    None,
-                    command!("coinflip", basic::coinflip),
-                    command!("ping", basic::ping),
-                    command!("echo", basic::echo),
-                    command!("about", basic::about),
-                    command!("userinfo", moderation::userinfo),
-                    command!("get_config", debug::get_config),
-                    command!("set_config", debug::set_config),
-                    command!("quote", basic::quote),
-                    command!("uid", basic::uid),
-                    command!("redis_test", admin::restart),
-                    command!("check_cache", admin::check_cache)
-                ))
-                .ok()
-                .unwrap();
+        let mut commands = HashMap::new();
 
-            ROOT_NODE.get().unwrap()
+        for command in commandlist {
+            commands.insert(command.name.clone(), command);
         }
-    }
+
+        RootNode { all_commands: commands }
+    };
 }

@@ -3,100 +3,66 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::commands::meta::nodes::CommandNode::{CommandNodeInner, GroupNode};
 use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::utils::Error;
+use once_cell::sync::OnceCell;
+use std::sync::Arc;
+use twilight::model::guild::Permissions;
 
 pub type CommandResult = Result<(), Error>;
 pub type CommandResultOuter = Pin<Box<dyn Future<Output = CommandResult> + Send>>;
 pub type CommandHandler = Box<dyn Fn(CommandContext, Parser) -> CommandResultOuter + Send + Sync>;
 
-pub struct Command {
-    name: String,
-    handler: CommandHandler,
+pub struct RootNode {
+    pub all_commands: HashMap<String, CommandNode>,
 }
 
-impl Command {
-    pub fn new(name: String, handler: CommandHandler) -> Self {
-        Command { name, handler }
-    }
-}
-
-pub enum CommandNode {
-    CommandNodeInner {
-        command: Command,
-    },
-    GroupNode {
-        name: String,
-        handler: Option<CommandHandler>,
-        sub_nodes: HashMap<String, CommandNode>,
-    },
-}
-
-impl CommandNode {
-    pub fn create_command(name: String, handler: CommandHandler) -> Self {
-        CommandNodeInner {
-            command: Command { name, handler },
+impl RootNode {
+    pub fn by_group(&self) -> HashMap<CommandGroup, Vec<&CommandNode>> {
+        let mut out = HashMap::new();
+        for node in self.all_commands.values() {
+            let mut vec = match out.remove(&node.group) {
+                Some(vec) => vec,
+                None => vec![],
+            };
+            vec.push(node);
+            out.insert(node.group.clone(), vec);
         }
-    }
-
-    pub fn create_node(name: String, handler: Option<CommandHandler>, sub_nodes: HashMap<String, CommandNode>) -> Self {
-        GroupNode {
-            name,
-            handler,
-            sub_nodes,
-        }
-    }
-
-    pub fn get_name(&self) -> &str {
-        match &self {
-            CommandNode::CommandNodeInner { command } => &command.name,
-            CommandNode::GroupNode { name, .. } => &name,
-        }
-    }
-
-    pub fn get(&self, target: &str) -> Option<&CommandNode> {
-        match &self {
-            CommandNode::CommandNodeInner { command } => None,
-            CommandNode::GroupNode { sub_nodes, .. } => sub_nodes.get(target),
-        }
-    }
-
-    pub async fn execute(&self, ctx: CommandContext, parser: Parser) -> CommandResult {
-        match &self {
-            CommandNode::CommandNodeInner { command } => {
-                let command = &command.handler;
-                command(ctx, parser).await?;
-                Ok(())
-            }
-            CommandNode::GroupNode {
-                name,
-                handler,
-                sub_nodes,
-            } => match handler {
-                Some(handler) => {
-                    let command = handler;
-                    command(ctx, parser).await?;
-                    Ok(())
-                }
-                None => Ok(()),
-            },
-        }
+        out
     }
 }
 
-impl fmt::Display for CommandNode {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CommandNode::CommandNodeInner { command } => write!(f, "{}", command.name),
-            CommandNode::GroupNode {
-                name,
-                handler,
-                sub_nodes,
-            } => write!(f, "{}", name),
-        }
-    }
+#[derive(Clone, Hash, Eq, PartialEq)]
+pub enum CommandGroup {
+    Basic,
+    Admin,
+    Moderation,
+}
+
+#[derive(Clone, Hash, Eq, PartialEq)]
+pub enum GearBotPermission {
+    BasicGroup,
+    AboutCommand,
+    CoinflipCommand,
+    PingCommand,
+    QuoteCommand,
+    UidCommand,
+    AdminGroup,
+    ConfigCommand,
+    GetConfigCommand,
+    SetConfigCommand,
+    ModerationGroup,
+    UserInfoCommand,
+}
+
+pub struct CommandNode {
+    pub name: String,
+    pub handler: Option<CommandHandler>,
+    pub sub_nodes: HashMap<String, CommandNode>,
+    pub bot_permissions: Permissions,
+    pub command_permission: GearBotPermission,
+    pub group: CommandGroup,
 }
 
 pub enum PermMode {

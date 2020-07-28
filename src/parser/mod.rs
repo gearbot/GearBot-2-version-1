@@ -6,13 +6,15 @@ use twilight::model::gateway::payload::MessageCreate;
 use twilight::model::id::{ChannelId, GuildId, UserId};
 
 use crate::commands;
-use crate::commands::meta::nodes::CommandNode;
+use crate::commands::meta::nodes::{CommandNode, RootNode};
 use crate::core::cache::{CachedMember, CachedUser};
 use crate::core::{BotContext, CommandContext, CommandMessage};
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
+use futures::Future;
 use std::sync::atomic::Ordering;
+use tokio::macros::support::Pin;
 use twilight::model::guild::Permissions;
 
 #[derive(Clone)]
@@ -38,15 +40,15 @@ impl Parser {
     pub fn get_command(&mut self) -> Vec<&CommandNode> {
         let mut done = false;
         let mut nodes: Vec<&CommandNode> = vec![];
-        let mut to_search: &CommandNode = commands::get_root();
+        let mut to_search = &commands::ROOT_NODE.all_commands;
         while self.index < self.parts.len() && !done {
             let target = &self.parts[self.index];
 
             let node = to_search.get(target);
             match node {
                 Some(node) => {
-                    to_search = node;
-                    debug!("Found a command node: {}", node.get_name());
+                    to_search = &node.sub_nodes;
+                    debug!("Found a command node: {}", node.name);
                     self.index += 1;
                     nodes.push(node);
                 }
@@ -85,7 +87,7 @@ impl Parser {
                     if i > 0 {
                         name += "__"
                     }
-                    name += node.get_name()
+                    name += &node.name
                 }
                 debug!("Executing command: {}", name);
 
@@ -173,50 +175,58 @@ impl Parser {
                     return Ok(());
                 }
 
-                let result = node.execute(context, p).await;
+                match &node.handler {
+                    Some(handler) => {
+                        let result = handler(context, p).await;
 
-                match result {
-                    Ok(_) => {
-                        ctx.stats.total_command_counts.fetch_add(1, Ordering::Relaxed);
+                        match result {
+                            Ok(_) => {
+                                ctx.stats.total_command_counts.fetch_add(1, Ordering::Relaxed);
+                                Ok(())
+                            }
+                            Err(error) => match error {
+                                Error::ParseError(e) => {
+                                    ctx.http
+                                        .create_message(channel_id)
+                                        .content(format!(
+                                            "{} Something went wrong trying to parse that: {}",
+                                            Emoji::No.for_chat(),
+                                            e
+                                        ))
+                                        .unwrap()
+                                        .await?;
+                                    Ok(())
+                                }
+                                Error::CmdError(e) => {
+                                    ctx.http
+                                        .create_message(channel_id)
+                                        .content(format!("{} {}", Emoji::No.for_chat(), e))
+                                        .unwrap()
+                                        .await?;
+                                    Ok(())
+                                }
+                                e => {
+                                    ctx.http.create_message(channel_id)
+                                        .content(format!("{} Something went very wrong trying to execute that command, please try again later or report this on the support server {}", Emoji::Bug.for_chat(), Emoji::Bug.for_chat())).unwrap()
+                                        .await?;
+                                    Err(e)
+                                }
+                            },
+                        }?;
+                        match ctx.stats.command_counts.get_metric_with_label_values(&[&name]) {
+                            Ok(metric) => {
+                                metric.inc();
+                            }
+                            Err(e) => return Err(Error::PrometheusError(e)),
+                        }
+
                         Ok(())
                     }
-                    Err(error) => match error {
-                        Error::ParseError(e) => {
-                            ctx.http
-                                .create_message(channel_id)
-                                .content(format!(
-                                    "{} Something went wrong trying to parse that: {}",
-                                    Emoji::No.for_chat(),
-                                    e
-                                ))
-                                .unwrap()
-                                .await?;
-                            Ok(())
-                        }
-                        Error::CmdError(e) => {
-                            ctx.http
-                                .create_message(channel_id)
-                                .content(format!("{} {}", Emoji::No.for_chat(), e))
-                                .unwrap()
-                                .await?;
-                            Ok(())
-                        }
-                        e => {
-                            ctx.http.create_message(channel_id)
-                                .content(format!("{} Something went very wrong trying to execute that command, please try again later or report this on the support server {}", Emoji::Bug.for_chat(), Emoji::Bug.for_chat())).unwrap()
-                                .await?;
-                            Err(e)
-                        }
-                    },
-                }?;
-                match ctx.stats.command_counts.get_metric_with_label_values(&[&name]) {
-                    Ok(metric) => {
-                        metric.inc();
+                    None => {
+                        //TODO: execute help to show subcommands
+                        Ok(())
                     }
-                    Err(e) => return Err(Error::PrometheusError(e)),
                 }
-
-                Ok(())
             }
             None => Ok(()),
         }
