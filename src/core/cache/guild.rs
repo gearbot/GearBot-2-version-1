@@ -211,7 +211,6 @@ impl CachedGuild {
             }
         }
 
-        //TODO: replace with dashmap clones once that is available
         {
             let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
             for guard in self

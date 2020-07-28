@@ -856,15 +856,12 @@ impl Cache {
         debug!("Guild dumper {} started freezing {} guilds", index, todo.len());
         let mut connection = redis_pool.get().await;
         let mut to_dump = Vec::with_capacity(todo.len());
-        for key in todo {
-            let g = self
-                .guilds
-                .write()
-                .expect("Global guilds cache got poisoned!")
-                .remove(&key)
-                .unwrap();
-
-            to_dump.push(ColdStorageGuild::from(g));
+        {
+            let mut guilds = self.guilds.write().expect("Global guilds cache got poisoned!");
+            for key in todo {
+                let g = guilds.remove(&key).unwrap();
+                to_dump.push(ColdStorageGuild::from(g));
+            }
         }
         let serialized = serde_json::to_string(&to_dump).unwrap();
         connection
@@ -995,6 +992,9 @@ impl Cache {
         for cold_guild in guilds.drain(..) {
             let guild = CachedGuild::defrost(&self, cold_guild);
 
+            self.stats
+                .role_count
+                .add(guild.roles.read().expect("Guild role cache got poisoned!").len() as i64);
             {
                 let mut guild_channels = self.guild_channels.write().expect("Guild channels cache got poisoned!");
                 for channel in guild
