@@ -134,7 +134,7 @@ impl BotContext {
     }
 
     pub async fn get_channel_for_message(&self, message_id: u64) -> Result<Option<u64>, Error> {
-        Ok(get_channel_for_message(&self.pool, message_id).await?)
+        get_channel_for_message(&self.pool, message_id).await
     }
 }
 

@@ -4,7 +4,6 @@ use std::fs;
 use std::sync::Arc;
 
 use fluent_bundle::{concurrent::FluentBundle, FluentArgs, FluentError, FluentResource, FluentValue};
-use serde_json;
 use unic_langid::{langid, LanguageIdentifier};
 
 use crate::gearbot_warn;
@@ -30,10 +29,6 @@ pub struct GuildTranslator {
 pub struct FluArgs<'a>(FluentArgs<'a>);
 
 impl<'a> FluArgs<'a> {
-    pub fn new() -> Self {
-        Self(FluentArgs::new())
-    }
-
     pub fn with_capacity(cap: usize) -> Self {
         Self(FluentArgs::with_capacity(cap))
     }

@@ -67,7 +67,7 @@ impl CommandContext {
             .to_string()
     }
 
-    pub fn translate_with_args<'a>(&'a self, string_key: GearBotString, args: &'a FluentArgs<'a>) -> String {
+    pub fn translate_with_args(&self, string_key: GearBotString, args: &FluentArgs<'_>) -> String {
         let guild_lang = &self.translator.language;
 
         self.bot_context

@@ -6,7 +6,6 @@ use flexi_logger::{
 };
 use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
-use tokio;
 use twilight::http::Client as HttpClient;
 use twilight::model::user::CurrentUser;
 
@@ -109,21 +108,17 @@ pub fn run(http: HttpClient, queue: &'static RwLock<Vec<String>>, url: String) {
 
                 let mut out = vec![];
                 let count = 0;
-                loop {
-                    match todo.first() {
-                        Some(s) => {
-                            if count + s.len() < 2000 {
-                                out.push(todo.remove(0));
-                            } else {
-                                break;
-                            }
-                        }
-                        None => break,
+                while let Some(s) = todo.first() {
+                    if count + s.len() < 2000 {
+                        out.push(todo.remove(0));
+                    } else {
+                        break;
                     }
                 }
                 out
             };
-            if out.len() > 0 {
+
+            if !out.is_empty() {
                 let message = out.join("\n");
                 out.clear();
                 match send_webhook(&http, &url, message.clone()).await {

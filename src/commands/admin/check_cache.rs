@@ -51,7 +51,7 @@ pub async fn check_cache(ctx: CommandContext, _: Parser) -> CommandResult {
             if tracked == 0 {
                 think_no_servers += 1;
             }
-            if real.len() == 0 {
+            if real.is_empty() {
                 no_servers += 1;
             }
             if tracked != real.len() {

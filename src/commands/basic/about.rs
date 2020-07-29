@@ -144,6 +144,20 @@ impl fmt::Display for AboutDescription {
 */
 pub async fn about(ctx: CommandContext, _: Parser) -> CommandResult {
     let stats = &ctx.bot_context.stats;
+
+    let shard_latency = ctx
+        .bot_context
+        .cluster
+        .shard(ctx.shard)
+        .await
+        .unwrap()
+        .info()
+        .await?
+        .latency()
+        .average()
+        .unwrap_or_else(|| Duration::from_secs(0))
+        .as_millis();
+
     let args = FluArgs::with_capacity(14)
         .insert("gearDiamond", Emoji::GearDiamond.for_chat())
         .insert("gearGold", Emoji::GearGold.for_chat())
@@ -173,24 +187,12 @@ pub async fn about(ctx: CommandContext, _: Parser) -> CommandResult {
         .insert("total_users", stats.user_counts.total.get())
         .insert("unique_users", stats.user_counts.unique.get())
         .insert("shard", ctx.shard)
-        .insert(
-            "latency",
-            ctx.bot_context
-                .cluster
-                .shard(ctx.shard)
-                .await
-                .unwrap()
-                .info()
-                .await?
-                .latency()
-                .average()
-                .unwrap_or_else(|| Duration::new(0, 0))
-                .as_millis(),
-        )
+        .insert("latency", shard_latency)
         .insert("user_messages", stats.message_counts.user_messages.get())
         .insert("messages_send", stats.message_counts.own_messages.get())
         .insert("commands_executed", stats.total_command_counts.load(Ordering::Relaxed))
         .generate();
+
     let description = ctx.translate_with_args(GearBotString::AboutDescription, &args);
 
     let embed = EmbedBuilder::new()

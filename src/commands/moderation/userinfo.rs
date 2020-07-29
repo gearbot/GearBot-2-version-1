@@ -41,13 +41,13 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
     builder = author_builder.commit();
 
     //add badges
-    let flags = match &user.public_flags {
-        Some(flags) => flags.clone(),
+    let flags = match user.public_flags {
+        Some(flags) => flags,
         None => {
             // we already know for sure the user will exist
             let user = ctx.get_user(&user.id).await?;
             ctx.bot_context.cache.update_user(user.clone());
-            user.public_flags.unwrap_or(UserFlags::empty())
+            user.public_flags.unwrap_or_else(|| UserFlags::empty())
         }
     };
 

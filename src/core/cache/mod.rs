@@ -87,10 +87,9 @@ impl Cache {
                     .insert(shard_id, AtomicU64::new(ready.guilds.len() as u64));
                 // just in case somehow got here without getting any re-identifying event
                 // shouldn't happen but memory leaks are very bad
-                for (gid, _) in &ready.guilds {
-                    match self.get_guild(gid) {
-                        Some(guild) => self.nuke_guild_cache(&guild),
-                        None => {}
+                for gid in ready.guilds.keys() {
+                    if let Some(guild) = self.get_guild(gid) {
+                        self.nuke_guild_cache(&guild)
                     }
                 }
             }
@@ -132,13 +131,11 @@ impl Cache {
 
                 //we usually don't need this mutable but acquire a write lock regardless to prevent potential deadlocks
                 let mut list = self.unavailable_guilds.write().unwrap();
-                match list.iter().position(|id| id.0 == guild.id.0) {
-                    Some(index) => {
-                        list.remove(index);
-                        gearbot_info!("Guild {}, ``{}`` is available again!", guild.name, guild.id);
-                    }
-                    None => {}
+                if let Some(index) = list.iter().position(|id| id.0 == guild.id.0) {
+                    list.remove(index);
+                    gearbot_info!("Guild {}, ``{}`` is available again!", guild.name, guild.id);
                 }
+
                 self.guilds
                     .write()
                     .expect("Global guild cache got poisoned!")
@@ -172,15 +169,14 @@ impl Cache {
                 }
             }
             Event::GuildEmojisUpdate(_) => {}
-            Event::GuildDelete(guild) => match self.get_guild(&guild.id) {
-                Some(cached_guild) => {
+            Event::GuildDelete(guild) => {
+                if let Some(cached_guild) = self.get_guild(&guild.id) {
                     if guild.unavailable {
                         self.guild_unavailable(&cached_guild);
                     }
                     self.nuke_guild_cache(&cached_guild)
                 }
-                None => {}
-            },
+            }
             Event::MemberChunk(chunk) => {
                 trace!(
                     "Received member chunk {}/{} (nonce: {:?}) for guild {}",
@@ -206,7 +202,7 @@ impl Cache {
                                     guild.id,
                                     count,
                                 );
-                                members.insert(user_id.clone(), member);
+                                members.insert(*user_id, member);
                             }
                         }
                         self.stats.user_counts.total.add(count);
@@ -461,24 +457,22 @@ impl Cache {
                                 Arc::new(member.update(&*event))
                             };
                             members.insert(event.user.id, g);
-                        } else {
-                            if guild.complete.load(Ordering::SeqCst) {
-                                warn!(
-                                    "Received a member update for an unknown member {} in guild {}",
-                                    event.user.id, guild.id
+                        } else if guild.complete.load(Ordering::SeqCst) {
+                            warn!(
+                                "Received a member update for an unknown member {} in guild {}",
+                                event.user.id, guild.id
+                            );
+                            let id = event.user.id;
+                            let gid = guild.id;
+                            tokio::spawn(async move {
+                                let data = RequestGuildMembers::new_single_user_with_nonce(
+                                    gid,
+                                    id,
+                                    None,
+                                    Some(String::from("missing_user")),
                                 );
-                                let id = event.user.id;
-                                let gid = guild.id.clone();
-                                tokio::spawn(async move {
-                                    let data = RequestGuildMembers::new_single_user_with_nonce(
-                                        gid,
-                                        id,
-                                        None,
-                                        Some(String::from("missing_user")),
-                                    );
-                                    let _ = ctx.cluster.command(shard_id, &data).await;
-                                });
-                            }
+                                let _ = ctx.cluster.command(shard_id, &data).await;
+                            });
                         }
                     }
                     None => {
@@ -644,15 +638,13 @@ impl Cache {
     pub fn insert_private_channel(&self, private_channel: &PrivateChannel) -> Arc<CachedChannel> {
         let channel = CachedChannel::from_private(private_channel, self);
         let arced = Arc::new(channel);
-        match arced.as_ref() {
-            CachedChannel::DM { receiver, .. } => {
-                self.dm_channels_by_user
-                    .write()
-                    .expect("Global DM channels cache got poisoned!")
-                    .insert(receiver.id, arced.clone());
-            }
-            _ => {}
-        };
+        if let CachedChannel::DM { receiver, .. } = arced.as_ref() {
+            self.dm_channels_by_user
+                .write()
+                .expect("Global DM channels cache got poisoned!")
+                .insert(receiver.id, arced.clone());
+        }
+
         self.private_channels
             .write()
             .expect("Global private channels cache got poisoned!")
@@ -815,12 +807,13 @@ impl Cache {
                 count = 0;
             }
         }
-        if list.len() > 0 {
+        if !list.is_empty() {
             work_orders.push(list)
         }
         debug!("Freezing {:?} guilds", self.stats.guild_counts.loaded.get());
-        for i in 0..work_orders.len() {
-            tasks.push(self._prepare_cold_resume_guild(redis_pool, work_orders[i].clone(), i));
+
+        for (i, order) in work_orders.into_iter().enumerate() {
+            tasks.push(self._prepare_cold_resume_guild(redis_pool, order, i));
         }
         let guild_chunks = tasks.len();
 
@@ -835,9 +828,11 @@ impl Cache {
                 user_work_orders[count % chunks].push(user.id);
                 count += 1;
             }
+
             debug!("Freezing {:?} users", users.len());
-            for i in 0..chunks {
-                user_tasks.push(self._prepare_cold_resume_user(redis_pool, user_work_orders[i].clone(), i));
+
+            for (i, order) in user_work_orders.into_iter().enumerate().take(chunks) {
+                user_tasks.push(self._prepare_cold_resume_user(redis_pool, order, i));
             }
             chunks
         };
@@ -890,14 +885,15 @@ impl Cache {
                 .expect("Global user cache got poisoned!")
                 .remove(&key)
                 .unwrap();
+
             chunk.push(CachedUser {
-                id: user.id.clone(),
+                id: user.id,
                 username: user.username.clone(),
                 discriminator: user.discriminator.clone(),
                 avatar: user.avatar.clone(),
                 bot_user: user.bot_user,
                 system_user: user.system_user,
-                public_flags: user.public_flags.clone(),
+                public_flags: user.public_flags,
                 mutual_servers: AtomicU64::new(0),
             });
         }
@@ -926,11 +922,8 @@ impl Cache {
         }
 
         for result in future::join_all(user_defrosters).await {
-            match result {
-                Err(e) => {
-                    return Err(Error::CacheDefrostError(format!("Failed to defrost users: {}", e)));
-                }
-                Ok(_) => {}
+            if let Err(e) = result {
+                return Err(Error::CacheDefrostError(format!("Failed to defrost users: {}", e)));
             }
         }
         self.stats
@@ -945,11 +938,8 @@ impl Cache {
         }
 
         for result in future::join_all(guild_defrosters).await {
-            match result {
-                Err(e) => {
-                    return Err(Error::CacheDefrostError(format!("Failed to defrost guilds: {}", e)));
-                }
-                Ok(_) => {}
+            if let Err(e) = result {
+                return Err(Error::CacheDefrostError(format!("Failed to defrost guilds: {}", e)));
             }
         }
 

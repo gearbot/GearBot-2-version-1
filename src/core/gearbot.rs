@@ -5,7 +5,6 @@ use std::process;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use ctrlc;
 use log::debug;
 use tokio::{self, stream::StreamExt};
 use twilight::gateway::cluster::config::ShardScheme;
@@ -93,43 +92,38 @@ impl GearBot {
         let mut connection = redis_pool.get().await;
 
         let key = format!("cb_cluster_data_{}", cluster_id);
-        let data = connection.get(&key).await.unwrap();
-        match data {
-            Some(d) => {
-                let cold_cache: ColdRebootData = serde_json::from_str(&*String::from_utf8(d).unwrap())?;
-                debug!("ColdRebootData: {:?}", cold_cache);
-                connection.del(format!("cb_cluster_data_{}", cluster_id)).await?;
-                if cold_cache.total_shards == total_shards && cold_cache.shard_count == shards_per_cluster {
-                    let mut map = HashMap::new();
-                    for (id, data) in cold_cache.resume_data {
-                        map.insert(
-                            id,
-                            ResumeSession {
-                                session_id: data.0,
-                                sequence: data.1,
-                            },
-                        );
+        if let Some(d) = connection.get(&key).await.unwrap() {
+            let cold_cache: ColdRebootData = serde_json::from_str(&*String::from_utf8(d).unwrap())?;
+            debug!("ColdRebootData: {:?}", cold_cache);
+            connection.del(format!("cb_cluster_data_{}", cluster_id)).await?;
+            if cold_cache.total_shards == total_shards && cold_cache.shard_count == shards_per_cluster {
+                let mut map = HashMap::new();
+                for (id, data) in cold_cache.resume_data {
+                    map.insert(
+                        id,
+                        ResumeSession {
+                            session_id: data.0,
+                            sequence: data.1,
+                        },
+                    );
+                }
+                let start = Instant::now();
+                let result = cache
+                    .restore_cold_resume(&redis_pool, cold_cache.guild_chunks, cold_cache.user_chunks)
+                    .await;
+                match result {
+                    Ok(_) => {
+                        let end = std::time::Instant::now();
+                        gearbot_important!("Cold resume defrosting completed in {}ms!", (end - start).as_millis());
+                        cb = cb.resume_sessions(map);
                     }
-                    let start = Instant::now();
-                    let result = cache
-                        .restore_cold_resume(&redis_pool, cold_cache.guild_chunks, cold_cache.user_chunks)
-                        .await;
-                    match result {
-                        Ok(_) => {
-                            let end = std::time::Instant::now();
-                            gearbot_important!("Cold resume defrosting completed in {}ms!", (end - start).as_millis());
-                            cb = cb.resume_sessions(map);
-                        }
 
-                        Err(e) => {
-                            gearbot_error!("Cold resume defrosting failed! {}", e);
-                            cache.reset();
-                        }
+                    Err(e) => {
+                        gearbot_error!("Cold resume defrosting failed! {}", e);
+                        cache.reset();
                     }
                 }
             }
-
-            None => {}
         };
         let cluster_config = cb.build();
 

@@ -13,7 +13,6 @@ use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
 use std::sync::atomic::Ordering;
-use tokio::macros::support::Pin;
 use twilight::model::guild::Permissions;
 
 #[derive(Clone)]

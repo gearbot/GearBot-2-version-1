@@ -1,13 +1,10 @@
 use std::collections::HashMap;
-use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
 use crate::core::CommandContext;
 use crate::parser::Parser;
 use crate::utils::Error;
-use once_cell::sync::OnceCell;
-use std::sync::Arc;
 use twilight::model::guild::Permissions;
 
 pub type CommandResult = Result<(), Error>;
