@@ -41,7 +41,7 @@ lazy_static! {
             ),
             command_with_subcommands_and_aliases!(
                 "config",
-                vec![String::from("c"), String::from("ping")],
+                vec![String::from("c")],
                 Permissions::empty(),
                 GearBotPermission::ConfigCommand,
                 CommandGroup::Admin,
