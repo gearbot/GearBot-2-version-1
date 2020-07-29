@@ -4,6 +4,7 @@ use crate::{
     command_with_subcommands_and_handler, command_with_subcommands_and_handler_and_aliases,
 };
 use lazy_static::lazy_static;
+use log::info;
 use std::collections::HashMap;
 use std::sync::Arc;
 use twilight::model::guild::Permissions;
@@ -40,7 +41,7 @@ lazy_static! {
             ),
             command_with_subcommands_and_aliases!(
                 "config",
-                vec![String::from("c")],
+                vec![String::from("c"), String::from("ping")],
                 Permissions::empty(),
                 GearBotPermission::ConfigCommand,
                 CommandGroup::Admin,

@@ -6,6 +6,7 @@ use log::{debug, info};
 use tokio::runtime::Runtime;
 use twilight::http::{request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient};
 
+use commands::ROOT_NODE;
 use git_version::git_version;
 use translation::load_translations;
 use utils::Error;
@@ -102,6 +103,11 @@ async fn real_main() -> Result<(), Error> {
     info!("Connected to redis!");
 
     gearbot_info!("Database connections established");
+    {
+        info!("Populating command list");
+        let c = ROOT_NODE.all_commands.get("something");
+        info!("Command list populated")
+    }
 
     // end of the critical failure zone, everything from here on out should be properly wrapped
     // and handled
