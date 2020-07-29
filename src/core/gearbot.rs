@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::convert::{Infallible, TryFrom};
 use std::error;
 use std::process;
 use std::sync::Arc;
@@ -24,7 +24,6 @@ use crate::{gearbot_error, gearbot_important, gearbot_info};
 use prometheus::{Encoder, TextEncoder};
 use twilight::model::gateway::payload::update_status::UpdateStatusInfo;
 use twilight::model::gateway::presence::{ActivityType, Status};
-use warp::Filter;
 
 pub struct GearBot;
 
@@ -61,17 +60,7 @@ impl GearBot {
 
         let stats = Arc::new(BotStats::new(cluster_id));
         let s = stats.clone();
-        tokio::spawn(async move {
-            let hello = warp::path!("metrics").map(move || {
-                let mut buffer = vec![];
-                let encoder = TextEncoder::new();
-                let metric_families = s.registry.gather();
-                encoder.encode(&metric_families, &mut buffer).unwrap();
-                String::from_utf8(buffer).unwrap()
-            });
-            let port = 9091 + cluster_id as u16;
-            warp::serve(hello).run(([127, 0, 0, 1], port)).await;
-        });
+        tokio::spawn(run_metrics_server(s, cluster_id));
 
         let cache = Cache::new(cluster_id, stats.clone());
 
@@ -193,4 +182,30 @@ async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), E
     commands::handle_event(event.0, event.1, ctx.clone()).await?;
 
     Ok(())
+}
+
+async fn run_metrics_server(stats: Arc<BotStats>, cluster_id: u64) {
+    use hyper::service::{make_service_fn, service_fn};
+    use hyper::{Body, Response};
+
+    let metric_service = make_service_fn(move |_| {
+        let stats = stats.clone();
+        async move {
+            Ok::<_, Infallible>(service_fn(move |_req| {
+                let mut buffer = vec![];
+                let encoder = TextEncoder::new();
+                let metric_families = stats.registry.gather();
+                encoder.encode(&metric_families, &mut buffer).unwrap();
+
+                async move { Ok::<_, Infallible>(Response::new(Body::from(buffer))) }
+            }))
+        }
+    });
+
+    let port = 9091 + cluster_id as u16;
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
+    let server = hyper::Server::bind(&addr).serve(metric_service);
+    if let Err(e) = server.await {
+        gearbot_error!("The metrics server failed: {}", e)
+    }
 }
