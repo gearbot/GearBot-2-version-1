@@ -5,7 +5,6 @@ use aes_gcm::{
 };
 use dashmap::ElementGuard;
 use log::info;
-use postgres_types::Type;
 use rand::{thread_rng, RngCore};
 use serde_json::to_value;
 use twilight::model::channel::message::MessageType;
@@ -15,7 +14,7 @@ use twilight::model::id::{ChannelId, GuildId, MessageId, UserId};
 use crate::core::{BotContext, GuildConfig};
 use crate::database::cache::{get_channel_for_message, get_full_message};
 use crate::database::guild::{get_guild_config, set_guild_config};
-use crate::utils::{Error, FetchError};
+use crate::utils::Error;
 use crate::{database, EncryptionKey};
 
 #[derive(Debug)]
@@ -107,30 +106,19 @@ impl BotContext {
     }
 
     async fn get_guild_encryption_key(&self, guild_id: GuildId) -> Result<EncryptionKey, Error> {
-        let client = self.pool.get().await?;
-
-        let fetch_id = guild_id.0 as i64;
-
-        let statement = client
-            .prepare_typed("SELECT encryption_key from guildconfig where id=$1", &[Type::INT8])
+        let ek_bytes: (Vec<u8>,) = sqlx::query_as("SELECT encryption_key from guildconfig where id=$1")
+            .bind(guild_id.0 as i64)
+            .fetch_one(&self.pool)
             .await?;
 
-        let rows = client.query(&statement, &[&fetch_id]).await?;
+        let guild_key = {
+            let master_key = self.__get_master_key().unwrap();
 
-        if let Some(ek) = rows.get(0) {
-            let ek_bytes = ek.get(0);
+            let decrypted_gk_bytes = decrypt_bytes(&ek_bytes.0, master_key, guild_id.0);
+            EncryptionKey::clone_from_slice(&decrypted_gk_bytes)
+        };
 
-            let guild_key = {
-                let master_key = self.__get_master_key().unwrap();
-
-                let decrypted_gk_bytes = decrypt_bytes(ek_bytes, master_key, fetch_id as u64);
-                EncryptionKey::clone_from_slice(&decrypted_gk_bytes)
-            };
-
-            Ok(guild_key)
-        } else {
-            Err(FetchError::ShouldExist.into())
-        }
+        Ok(guild_key)
     }
 
     pub fn generate_guild_key(&self, guild_id: u64) -> Vec<u8> {

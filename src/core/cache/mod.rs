@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
 use darkredis::ConnectionPool;
-use futures::future;
+use futures_util::future;
 use log::{debug, info, trace, warn};
 use twilight::gateway::Event;
 use twilight::model::id::{ChannelId, EmojiId, GuildId, UserId};

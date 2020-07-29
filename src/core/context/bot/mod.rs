@@ -1,8 +1,6 @@
 use aes_gcm::aead::generic_array::GenericArray;
 use chrono::{DateTime, Utc};
-use darkredis::ConnectionPool;
 use dashmap::DashMap;
-use deadpool_postgres::Pool;
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
@@ -39,11 +37,11 @@ pub struct BotContext {
     pub status_text: RwLock<String>,
     pub bot_user: CurrentUser,
     configs: DashMap<GuildId, GuildConfig>,
-    pub pool: Pool,
+    pub pool: sqlx::PgPool,
     pub translations: Translations,
     __static_master_key: Option<Vec<u8>>,
     log_pumps: DashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>,
-    pub redis_pool: ConnectionPool,
+    pub redis_pool: darkredis::ConnectionPool,
     pub cluster_id: u64,
     pub shards_per_cluster: u64,
     pub total_shards: u64,
@@ -57,10 +55,10 @@ impl BotContext {
         cluster: Cluster,
         http: HttpClient,
         bot_user: CurrentUser,
-        pool: Pool,
+        pool: sqlx::PgPool,
         translations: Translations,
         key: Option<Vec<u8>>,
-        redis_pool: ConnectionPool,
+        redis_pool: darkredis::ConnectionPool,
         cluster_id: u64,
         shards_per_cluster: u64,
         total_shards: u64,

@@ -1,6 +1,5 @@
 use std::{error, fmt, io};
 
-use deadpool_postgres::PoolError;
 use serde::export::Formatter;
 use twilight::cache::twilight_cache_inmemory;
 use twilight::gateway::{cluster, shard};
@@ -24,10 +23,7 @@ pub enum Error {
     // This error will never occur according to the Cache docs, as it exists solely to
     // fullfill a trait API.
     Cache(twilight_cache_inmemory::InMemoryCacheError),
-    Database(tokio_postgres::error::Error),
-    DatabaseAction(FetchError),
-    Pool(PoolError),
-    DatabaseMigration(String),
+    Database(sqlx::error::Error),
     UnknownEmoji(String),
     Serde(serde_json::error::Error),
     ParseError(ParseError),
@@ -103,21 +99,6 @@ impl fmt::Display for ParseError {
     }
 }
 
-#[derive(Debug)]
-pub enum FetchError {
-    ShouldExist,
-}
-
-impl error::Error for FetchError {}
-
-impl fmt::Display for FetchError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FetchError::ShouldExist => write!(f, "The provided ID doesn't exist!"),
-        }
-    }
-}
-
 impl error::Error for Error {}
 
 impl fmt::Display for Error {
@@ -144,9 +125,6 @@ impl fmt::Display for Error {
                 e
             ),
             Error::Database(e) => write!(f, "A database error occurred: {}", e),
-            Error::DatabaseAction(e) => write!(f, "{}", e),
-            Error::DatabaseMigration(e) => write!(f, "Failed to migrate the database: {}", e),
-            Error::Pool(e) => write!(f, "An error occurred in the database pool: {}", e),
             Error::UnknownEmoji(e) => write!(f, "Unknown emoji: {}", e),
             Error::Serde(e) => write!(f, "Serde error: {}", e),
             Error::ParseError(e) => write!(f, "{}", e),
@@ -179,12 +157,6 @@ impl From<CommandError> for Error {
     }
 }
 
-impl From<FetchError> for Error {
-    fn from(e: FetchError) -> Self {
-        Error::DatabaseAction(e)
-    }
-}
-
 impl From<io::Error> for Error {
     fn from(e: io::Error) -> Self {
         Error::IoError(e)
@@ -209,15 +181,9 @@ impl From<twilight_cache_inmemory::InMemoryCacheError> for Error {
     }
 }
 
-impl From<tokio_postgres::error::Error> for Error {
-    fn from(e: tokio_postgres::error::Error) -> Self {
+impl From<sqlx::error::Error> for Error {
+    fn from(e: sqlx::error::Error) -> Self {
         Error::Database(e)
-    }
-}
-
-impl From<PoolError> for Error {
-    fn from(e: PoolError) -> Self {
-        Error::Pool(e)
     }
 }
 

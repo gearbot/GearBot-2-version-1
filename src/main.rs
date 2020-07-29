@@ -1,13 +1,9 @@
-use std::str::FromStr;
 use std::time::Duration;
 
 use aes_gcm::aead::generic_array::{typenum::U32, GenericArray};
 use clap::{App, Arg};
-use darkredis::ConnectionPool;
-use deadpool_postgres::{Manager, Pool};
 use log::{debug, info};
 use tokio::runtime::Runtime;
-use tokio_postgres::{Config, NoTls};
 use twilight::http::{request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient};
 
 use git_version::git_version;
@@ -16,7 +12,6 @@ use utils::Error;
 
 use crate::core::gearbot::GearBot;
 use crate::core::{logging, BotConfig};
-use crate::database::migrations::embedded;
 
 mod commands;
 mod core;
@@ -85,13 +80,19 @@ async fn real_main() -> Result<(), Error> {
     gearbot_info!("Loaded translations!");
 
     //connect to the database
-    let manager = Manager::new(Config::from_str(&config.database.postgres)?, NoTls);
-    let postgres_pool = Pool::new(manager, 10);
-    let mut connection = postgres_pool.get().await?;
+    let postgres_pool = sqlx::Pool::connect(&config.database.postgres).await?;
 
     info!("Connected to postgres!");
 
-    let redis_pool = match ConnectionPool::create(config.database.redis.clone(), None, 5).await {
+    info!("Handling database migrations...");
+    sqlx::migrate!("./migrations")
+        .run(&postgres_pool)
+        .await
+        .expect("Failed to run database migrations!");
+
+    info!("Finished migrations!");
+
+    let redis_pool = match darkredis::ConnectionPool::create(config.database.redis.clone(), None, 5).await {
         Ok(pool) => pool,
         Err(e) => {
             gearbot_error!("Failed to connect to the redis database! {}", e);
@@ -101,12 +102,6 @@ async fn real_main() -> Result<(), Error> {
     info!("Connected to redis!");
 
     gearbot_info!("Database connections established");
-
-    //TODO: wrap this
-    embedded::migrations::runner()
-        .run_async(&mut **connection)
-        .await
-        .map_err(|e| Error::DatabaseMigration(e.to_string()))?;
 
     // end of the critical failure zone, everything from here on out should be properly wrapped
     // and handled

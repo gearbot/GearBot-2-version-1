@@ -6,8 +6,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use ctrlc;
-use darkredis::ConnectionPool;
-use deadpool_postgres::Pool;
 use log::debug;
 use tokio::{self, stream::StreamExt};
 use twilight::gateway::cluster::config::ShardScheme;
@@ -39,8 +37,8 @@ impl GearBot {
         config: BotConfig,
         http: HttpClient,
         user: CurrentUser,
-        postgres_pool: Pool,
-        redis_pool: ConnectionPool,
+        postgres_pool: sqlx::PgPool,
+        redis_pool: darkredis::ConnectionPool,
         translations: Translations,
     ) -> Result<(), Box<dyn error::Error + Send + Sync>> {
         let sharding_scheme = ShardScheme::try_from((

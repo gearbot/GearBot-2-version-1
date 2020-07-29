@@ -12,7 +12,6 @@ use crate::core::{BotContext, CommandContext, CommandMessage};
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
-use futures::Future;
 use std::sync::atomic::Ordering;
 use tokio::macros::support::Pin;
 use twilight::model::guild::Permissions;
