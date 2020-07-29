@@ -31,12 +31,11 @@ impl BotContext {
         let (guild_chunks, user_chunks) = self.cache.prepare_cold_resume(&self.redis_pool).await;
 
         // prepare resume data
-        let mut map = HashMap::new();
+        let mut map = HashMap::with_capacity(resume_data.len());
         for (shard_id, data) in resume_data {
-            if let Some(info) = data {
-                map.insert(shard_id, (info.session_id, info.sequence));
-            }
+            map.insert(shard_id, (data.session_id, data.sequence));
         }
+
         let data = ColdRebootData {
             resume_data: map,
             total_shards: self.total_shards,

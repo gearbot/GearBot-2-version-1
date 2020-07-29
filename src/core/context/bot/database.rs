@@ -139,7 +139,7 @@ impl BotContext {
 }
 
 fn encrypt_bytes(plaintext: &[u8], key: &EncryptionKey, id: u64) -> Vec<u8> {
-    let aead = Aes256Gcm::new(*key);
+    let aead = Aes256Gcm::new(key);
 
     // Since nonce's only never need to be reused, and Discor's snowflakes for messages
     // are unique, we can use the messasge id to construct the nonce with its 64 bits, and then
@@ -155,7 +155,7 @@ fn encrypt_bytes(plaintext: &[u8], key: &EncryptionKey, id: u64) -> Vec<u8> {
 }
 
 fn decrypt_bytes(ciphertext: &[u8], key: &EncryptionKey, id: u64) -> Vec<u8> {
-    let aead = Aes256Gcm::new(*key);
+    let aead = Aes256Gcm::new(key);
 
     let mut nonce_bytes = [0u8; 12];
     let msg_id_bytes = id.to_le_bytes();
