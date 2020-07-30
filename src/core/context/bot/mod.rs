@@ -10,6 +10,13 @@ use twilight::model::{
     user::CurrentUser,
 };
 
+mod cache;
+mod cold_resume;
+mod database;
+mod logpump;
+mod stats;
+pub(crate) mod status;
+
 pub use stats::BotStats;
 
 use crate::core::cache::Cache;
@@ -55,47 +62,44 @@ pub struct BotContext {
 
 impl BotContext {
     pub fn new(
-        cache: Cache,
-        cluster: Cluster,
-        http: HttpClient,
-        bot_user: CurrentUser,
-        pool: sqlx::PgPool,
+        bot_core: (Cache, Cluster, SchemeInfo),
+        http_info: (HttpClient, CurrentUser),
+        databases: (sqlx::PgPool, darkredis::ConnectionPool),
         translations: Translations,
-        key: Option<Vec<u8>>,
-        redis_pool: darkredis::ConnectionPool,
-        scheme_info: SchemeInfo,
+        config_ops: (Option<Vec<u8>>, Vec<u64>),
         stats: Arc<BotStats>,
-        global_admins: Vec<u64>,
     ) -> Self {
+        let scheme_info = bot_core.2;
         let shard_states = DashMap::with_capacity(scheme_info.shards_per_cluster as usize);
         for i in scheme_info.cluster_id * scheme_info.shards_per_cluster
             ..scheme_info.cluster_id * scheme_info.shards_per_cluster + scheme_info.shards_per_cluster
         {
             shard_states.insert(i, ShardState::PendingCreation);
-            cache
+            bot_core
+                .0
                 .missing_per_shard
                 .write()
                 .expect("Global shard state tracking got poisoned!")
                 .insert(i, AtomicU64::new(0));
         }
 
-        let global_admins = global_admins.into_iter().map(|id| UserId(id)).collect();
+        let global_admins = config_ops.1.into_iter().map(UserId).collect();
 
         stats.shard_counts.pending.set(scheme_info.shards_per_cluster as i64);
         BotContext {
-            cache,
-            cluster,
-            http,
+            cache: bot_core.0,
+            cluster: bot_core.1,
+            http: http_info.0,
             stats,
             status_type: RwLock::new(3),
             status_text: RwLock::new(String::from("the commands turn")),
-            bot_user,
+            bot_user: http_info.1,
             configs: DashMap::new(),
-            pool,
+            pool: databases.0,
             translations,
-            __static_master_key: key,
+            __static_master_key: config_ops.0,
             log_pumps: DashMap::new(),
-            redis_pool,
+            redis_pool: databases.1,
             scheme_info,
             shard_states,
             start_time: Utc::now(),
@@ -118,12 +122,3 @@ impl BotContext {
         }
     }
 }
-
-mod cache;
-
-mod database;
-mod logpump;
-
-mod cold_resume;
-mod stats;
-pub(crate) mod status;

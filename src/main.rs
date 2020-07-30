@@ -1,3 +1,6 @@
+// TODO: Remove this when the bot is a bit more functional
+#![allow(dead_code)]
+
 use std::time::Duration;
 
 use log::{debug, info};

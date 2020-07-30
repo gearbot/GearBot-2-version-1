@@ -250,7 +250,7 @@ mod tests {
     use std::fs;
 
     lazy_static! {
-        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 8] = [
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 9] = [
             GearBotString::PingPong.as_str(),
             GearBotString::CoinflipDefault.as_str(),
             GearBotString::CoinflipYes.as_str(),
@@ -259,6 +259,7 @@ mod tests {
             GearBotString::UnableToReply.as_str(),
             GearBotString::UnableToReplyForManager.as_str(),
             GearBotString::AboutDescription.as_str(),
+            GearBotString::QuoteNotFound.as_str(),
         ];
     }
 

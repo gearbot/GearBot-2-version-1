@@ -46,7 +46,7 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
             // we already know for sure the user will exist
             let user = ctx.get_user(user.id).await?;
             ctx.bot_context.cache.update_user(user.clone());
-            user.public_flags.unwrap_or_else(|| UserFlags::empty())
+            user.public_flags.unwrap_or_else(UserFlags::empty)
         }
     };
 

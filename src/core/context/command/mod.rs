@@ -19,6 +19,10 @@ use crate::translation::{GearBotString, GuildTranslator, DEFAULT_LANG};
 use crate::utils::CommandError;
 use crate::Error;
 
+mod messaging;
+mod object_fetcher;
+mod permissions;
+
 pub struct CommandMessage {
     pub id: MessageId,
     pub content: String,
@@ -77,7 +81,7 @@ impl CommandContext {
         &self.bot_context.bot_user
     }
 
-    pub fn translate<'a>(&'a self, key: GearBotString) -> String {
+    pub fn translate(&self, key: GearBotString) -> String {
         self.bot_context
             .translations
             .get_text_plain(&self.translator.language, key)
@@ -108,8 +112,3 @@ impl CommandContext {
         }
     }
 }
-
-mod bouncers;
-mod messaging;
-mod object_fetcher;
-mod permissions;

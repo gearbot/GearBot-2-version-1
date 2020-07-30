@@ -115,21 +115,14 @@ pub async fn run(
         };
     }
 
-    let cluster_config = cb.build();
-
-    let cluster = Cluster::new(cluster_config).await?;
+    let cluster = Cluster::new(cb.build()).await?;
     let context = Arc::new(BotContext::new(
-        cache,
-        cluster,
-        http,
-        bot_user,
-        postgres_pool,
+        (cache, cluster, scheme_info),
+        (http, bot_user),
+        (postgres_pool, redis_pool),
         translations,
-        config.__master_key,
-        redis_pool,
-        scheme_info,
+        (config.__master_key, config.global_admins),
         stats,
-        config.global_admins,
     ));
 
     let shutdown_ctx = context.clone();
@@ -171,10 +164,9 @@ async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), E
     modlog::handle_event(event.0, &event.1, ctx.clone()).await?;
     general::handle_event(event.0, &event.1, ctx.clone()).await?;
 
-    // Bot stat handling "hooks"
-    match &event.1 {
-        Event::MessageCreate(msg) => ctx.stats.new_message(&ctx, msg).await,
-        _ => {}
+    // Bot stat handling "hooks". This can be converted into a match if we have more stats to register here.
+    if let Event::MessageCreate(msg) = &event.1 {
+        ctx.stats.new_message(&ctx, msg).await;
     }
 
     commands::handle_event(event.0, event.1, ctx.clone()).await?;

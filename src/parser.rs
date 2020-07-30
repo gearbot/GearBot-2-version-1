@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
 use log::{debug, info, trace};
-use twilight::model::channel::Message;
+
 use twilight::model::gateway::payload::MessageCreate;
-use twilight::model::id::{GuildId, MessageId, UserId};
+use twilight::model::id::{GuildId, UserId};
 
 use crate::commands::{
     meta::nodes::{CommandNode, GearBotPermission},
     ROOT_NODE,
 };
-use crate::core::cache::{CachedChannel, CachedMember, CachedUser};
+use crate::core::cache::{CachedMember, CachedUser};
 use crate::core::{BotContext, CommandContext, CommandMessage};
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{matchers, Error, ParseError};
@@ -82,11 +82,10 @@ impl Parser {
 
         let ctx = parser.ctx.clone();
 
-        // TODO: Verify permissions
-        if node.command_permission == GearBotPermission::AdminGroup {
-            if !ctx.global_admins.contains(&message.author.id) {
-                return Err(CommandError::InvalidPermissions.into());
-            }
+        // TODO: Verify other permissions
+        if (node.command_permission == GearBotPermission::AdminGroup) && !ctx.global_admins.contains(&message.author.id)
+        {
+            return Err(CommandError::InvalidPermissions.into());
         }
 
         debug!("Executing command: {}", name);
@@ -261,7 +260,7 @@ impl Parser {
         }
     }
 
-    pub async fn _get_member(&mut self, gid: GuildId) -> Result<Arc<CachedMember>, Error> {
+    pub async fn get_member(&mut self, gid: GuildId) -> Result<Arc<CachedMember>, Error> {
         let input = self.get_next()?;
         let mention = matchers::get_mention(input);
         match mention {
@@ -293,58 +292,6 @@ impl Parser {
             Ok(self.get_user().await?)
         } else {
             Ok(alternative)
-        }
-    }
-
-    pub async fn _get_message(&mut self, ctx: &CommandContext) -> Result<Message, Error> {
-        let input = self.get_next()?;
-
-        let user_id = ctx.message.author.id;
-        let message_id = input.parse::<u64>().map_err(|_| CommandError::NoDM)?;
-        let channel_id = ctx.message.channel.get_id();
-
-        let channel = match self.ctx.cache.get_channel(channel_id) {
-            Some(ch) => ch,
-            None => return Err(Error::ParseError(ParseError::UnknownChannel(channel_id.0))),
-        };
-
-        debug!("{:?}", channel);
-
-        if let CachedChannel::Category { name, id, .. } = &*channel {
-            let bot_has_access =
-                ctx.bot_has_channel_permissions(Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY);
-
-            // Verify that the bot has access
-            if !bot_has_access {
-                return Err(Error::ParseError(ParseError::NoChannelAccessBot(name.clone())));
-            }
-
-            let user_has_access = ctx.has_channel_permissions(
-                user_id,
-                *id,
-                Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY,
-            );
-
-            // Verify that the user has access
-            if !user_has_access {
-                return Err(ParseError::NoChannelAccessUser(name.clone()).into());
-            }
-
-            // All good, fetch the message from the api instead of cache to make sure it's not only up to date but still actually exists
-            let result = self.ctx.http.message(*id, MessageId(message_id)).await;
-
-            match result {
-                Ok(message) => Ok(message.unwrap()),
-                Err(error) => {
-                    if error.to_string().contains("status: 404") {
-                        Err(Error::ParseError(ParseError::UnknownMessage))
-                    } else {
-                        Err(Error::TwilightHttp(error))
-                    }
-                }
-            }
-        } else {
-            unreachable!()
         }
     }
 }
