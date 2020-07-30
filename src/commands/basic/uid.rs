@@ -8,8 +8,7 @@ pub async fn uid(mut ctx: CommandContext) -> CommandResult {
         matchers::get_mention(msg).ok_or(ParseError::MissingArgument)?
     };
 
-    //TODO: make this actually scan and find all
-    ctx.reply_raw(user_id.to_string()).await?;
+    ctx.reply_raw(user_id).await?;
 
     Ok(())
 }

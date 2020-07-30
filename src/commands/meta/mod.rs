@@ -1,8 +1,3 @@
-use crate::commands::meta::nodes::{CommandGroup, CommandNode, GearBotPermission};
-use std::collections::HashMap;
-use std::sync::Arc;
-use twilight::model::guild::Permissions;
-
 pub mod nodes;
 
 #[macro_use]

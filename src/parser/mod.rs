@@ -3,7 +3,7 @@ use std::sync::Arc;
 use log::{debug, info, trace};
 use twilight::model::channel::Message;
 use twilight::model::gateway::payload::MessageCreate;
-use twilight::model::id::{ChannelId, GuildId, MessageId, UserId};
+use twilight::model::id::{GuildId, MessageId, UserId};
 
 use crate::commands::{
     meta::nodes::{CommandNode, GearBotPermission},
@@ -70,10 +70,8 @@ impl Parser {
         let command_nodes = parser.get_command();
 
         let mut name = String::new();
-        for (i, node) in command_nodes.iter().enumerate() {
-            if i > 0 {
-                name += "__"
-            }
+        for node in command_nodes.iter().skip(1) {
+            name += "__";
             name += &node.name
         }
 
@@ -84,14 +82,14 @@ impl Parser {
 
         let ctx = parser.ctx.clone();
 
-        //TODO: Verify permissions
+        // TODO: Verify permissions
         if node.command_permission == GearBotPermission::AdminGroup {
             if !ctx.global_admins.contains(&message.author.id) {
                 return Err(CommandError::InvalidPermissions.into());
             }
         }
 
-        println!("Executing command: {}", name);
+        debug!("Executing command: {}", name);
 
         let channel_id = message.channel_id;
 
@@ -263,7 +261,7 @@ impl Parser {
         }
     }
 
-    pub async fn get_member(&mut self, gid: GuildId) -> Result<Arc<CachedMember>, Error> {
+    pub async fn _get_member(&mut self, gid: GuildId) -> Result<Arc<CachedMember>, Error> {
         let input = self.get_next()?;
         let mention = matchers::get_mention(input);
         match mention {
@@ -298,25 +296,17 @@ impl Parser {
         }
     }
 
-    pub async fn get_message(&mut self, ctx: &CommandContext) -> Result<Message, Error> {
+    pub async fn _get_message(&mut self, ctx: &CommandContext) -> Result<Message, Error> {
         let input = self.get_next()?;
 
         let user_id = ctx.message.author.id;
         let message_id = input.parse::<u64>().map_err(|_| CommandError::NoDM)?;
+        let channel_id = ctx.message.channel.get_id();
 
-        let channel_id = self
-            .ctx
-            .get_channel_for_message(message_id)
-            .await?
-            .ok_or(ParseError::UnknownMessage)?;
-
-        let channel = match self.ctx.cache.get_channel(ChannelId(channel_id)) {
+        let channel = match self.ctx.cache.get_channel(channel_id) {
             Some(ch) => ch,
-            None => return Err(Error::ParseError(ParseError::UnknownChannel(channel_id))),
+            None => return Err(Error::ParseError(ParseError::UnknownChannel(channel_id.0))),
         };
-
-        // No DMs here
-        let guild_id = self.guild_id.unwrap();
 
         debug!("{:?}", channel);
 

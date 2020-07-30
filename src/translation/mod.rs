@@ -168,6 +168,7 @@ pub enum GearBotString {
     CoinflipNo,
     UserinfoHeader,
     AboutDescription,
+    QuoteNotFound,
 
     //DM error strings
     UnableToReply,
@@ -185,6 +186,7 @@ impl GearBotString {
             GearBotString::UnableToReply => "errors_unable_to_reply",
             GearBotString::UnableToReplyForManager => "errors_unable_to_reply_manager",
             GearBotString::AboutDescription => "basic__about",
+            GearBotString::QuoteNotFound => "basic__quote_notfound",
         }
     }
 

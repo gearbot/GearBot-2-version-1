@@ -38,6 +38,20 @@ lazy_static! {
                 GearBotPermission::PingCommand,
                 CommandGroup::Basic
             ),
+            command!(
+                "quote",
+                basic::quote,
+                Permissions::empty(),
+                GearBotPermission::QuoteCommand,
+                CommandGroup::Basic
+            ),
+            command!(
+                "uid",
+                basic::uid,
+                Permissions::empty(),
+                GearBotPermission::UidCommand,
+                CommandGroup::Basic
+            ),
             command_with_subcommands_and_aliases!(
                 "config",
                 vec![String::from("c")],
@@ -87,6 +101,13 @@ lazy_static! {
                     GearBotPermission::AdminGroup,
                     CommandGroup::Admin
                 )
+            ),
+            command!(
+                "restart",
+                admin::restart,
+                Permissions::empty(),
+                GearBotPermission::AdminGroup,
+                CommandGroup::Admin
             ),
         ];
 

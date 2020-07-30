@@ -4,7 +4,7 @@ use twilight::model::channel::Message;
 use twilight::model::id::{GuildId, MessageId};
 
 use crate::core::{BotContext, GuildConfig};
-use crate::database::{self, configs as dbconfig, get_channel_for_message, structures::UserMessage};
+use crate::database::{self, configs as dbconfig, structures::UserMessage};
 
 use crate::crypto::{self, EncryptionKey};
 use crate::utils::Error;
@@ -70,9 +70,5 @@ impl BotContext {
         };
 
         Ok(guild_key)
-    }
-
-    pub async fn get_channel_for_message(&self, message_id: u64) -> Result<Option<u64>, Error> {
-        get_channel_for_message(&self.pool, message_id).await
     }
 }

@@ -1,11 +1,11 @@
 create table message
 (
-    id         bigint        not null primary key,
-    content    bytea         not null,
-    author_id  bigint        not null,
-    channel_id bigint        not null,
-    guild_id   bigint        not null,
-    type       int2          not null,
+    id                   bigint        not null primary key,
+    encrypted_content    bytea         not null,
+    author_id            bigint        not null,
+    channel_id           bigint        not null,
+    guild_id             bigint        not null,
+    kind       int2          not null,
     pinned     bool default false
 );
 create index message_ag_index on message (author_id, guild_id);

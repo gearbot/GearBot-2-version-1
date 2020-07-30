@@ -46,6 +46,9 @@ pub fn replace_lookalikes(msg: &mut String) -> String {
     msg.replace('`', "ˋ")
 }
 
+/// Cleans a message with the specified options.
+///
+/// If an option is set to true, then it will be scrubbed out.
 pub fn clean(msg: &str, markdown: bool, links: bool, emotes: bool, lookalikes: bool) -> String {
     let mut msg = msg.to_owned();
 

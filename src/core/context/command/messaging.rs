@@ -89,12 +89,12 @@ impl CommandContext {
         Ok(sent_msg_handle)
     }
 
-    pub async fn reply_raw(&self, message: impl Into<String>) -> Result<Message, Error> {
+    pub async fn reply_raw<T: std::fmt::Display>(&self, message: T) -> Result<Message, Error> {
         let sent_msg_handle = self
             .bot_context
             .http
             .create_message(self.message.channel.get_id())
-            .content(message)?
+            .content(message.to_string())?
             .await?;
 
         Ok(sent_msg_handle)

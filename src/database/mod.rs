@@ -23,7 +23,7 @@ pub async fn insert_message(pool: &sqlx::PgPool, msg: &Message, guild_key: &Encr
     info!("It took {}us to encrypt the user message!", start.elapsed().as_micros());
 
     sqlx::query(
-        "INSERT INTO message (id, content, author_id, channel_id, guild_id, type, pinned)
+        "INSERT INTO message (id, encrypted_content, author_id, channel_id, guild_id, kind, pinned)
         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(msg.id.0 as i64)
@@ -90,19 +90,4 @@ pub async fn get_full_message(
     };
 
     Ok(user_msg)
-}
-
-pub async fn get_channel_for_message(pool: &sqlx::PgPool, msg_id: u64) -> Result<Option<u64>, Error> {
-    let row: Option<(i64,)> = sqlx::query_as("SELECT channel_id from message where id=$1")
-        .bind(msg_id as i64)
-        .fetch_optional(pool)
-        .await?;
-
-    let channel_id = if let Some(channel_id) = row {
-        Some(channel_id.0 as u64)
-    } else {
-        None
-    };
-
-    Ok(channel_id)
 }
