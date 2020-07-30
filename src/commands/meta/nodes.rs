@@ -3,14 +3,13 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::core::CommandContext;
-use crate::parser::Parser;
 use crate::utils::Error;
 use std::sync::Arc;
 use twilight::model::guild::Permissions;
 
 pub type CommandResult = Result<(), Error>;
 pub type CommandResultOuter = Pin<Box<dyn Future<Output = CommandResult> + Send>>;
-pub type CommandHandler = Box<dyn Fn(CommandContext, Parser) -> CommandResultOuter + Send + Sync>;
+pub type CommandHandler = Box<dyn Fn(CommandContext) -> CommandResultOuter + Send + Sync>;
 
 pub struct RootNode {
     pub all_commands: HashMap<String, Arc<CommandNode>>,

@@ -103,7 +103,7 @@ async fn real_main() -> Result<(), Error> {
     gearbot_info!("Database connections established");
     {
         info!("Populating command list");
-        let c = ROOT_NODE.all_commands.get("something");
+        ROOT_NODE.all_commands.get("something");
         info!("Command list populated")
     }
 

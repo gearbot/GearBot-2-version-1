@@ -13,6 +13,7 @@ pub struct BotConfig {
     pub logging: Logging,
     pub database: Database,
     pub emoji: HashMap<String, String>,
+    pub global_admins: Vec<u64>,
 }
 
 #[derive(Deserialize, Debug)]

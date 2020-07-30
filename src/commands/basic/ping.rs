@@ -2,10 +2,9 @@ use std::time::{Duration, Instant};
 
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
-use crate::parser::Parser;
 use crate::translation::{FluArgs, GearBotString};
 
-pub async fn ping(ctx: CommandContext, _: Parser) -> CommandResult {
+pub async fn ping(ctx: CommandContext) -> CommandResult {
     let start = Instant::now();
 
     let sent_msg = ctx.reply_raw(":ping_pong:").await?;

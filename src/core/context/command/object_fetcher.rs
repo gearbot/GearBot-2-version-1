@@ -13,7 +13,7 @@ use crate::Error;
 use super::CommandContext;
 
 impl CommandContext {
-    pub async fn get_user(&self, user_id: &UserId) -> Result<Arc<CachedUser>, Error> {
+    pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, Error> {
         self.bot_context.get_user(user_id).await
     }
 

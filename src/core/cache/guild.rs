@@ -153,7 +153,7 @@ impl CachedGuild {
         {
             let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
             for member in cold_guild.members {
-                let user = cache.get_user(&member.user_id).unwrap();
+                let user = cache.get_user(member.user_id).unwrap();
                 user.mutual_servers.fetch_add(1, Ordering::SeqCst);
                 members.insert(member.user_id, Arc::new(member));
             }

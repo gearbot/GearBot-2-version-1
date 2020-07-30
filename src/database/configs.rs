@@ -1,3 +1,5 @@
+use log::info;
+
 use crate::core::{BotContext, GuildConfig};
 use crate::crypto::{self, EncryptionKey};
 use crate::utils::Error;
@@ -22,6 +24,7 @@ pub async fn create_new_guild_config(
     guild_id: u64,
     master_ek: &EncryptionKey,
 ) -> Result<GuildConfig, Error> {
+    info!("No config found for {}, inserting blank one", guild_id);
     let new_config = GuildConfig::default();
 
     let guild_encryption_key = crypto::generate_guild_encryption_key(master_ek, guild_id);

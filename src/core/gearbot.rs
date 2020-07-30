@@ -130,6 +130,7 @@ impl GearBot {
             shards_per_cluster,
             total_shards,
             stats.clone(),
+            config.global_admins,
         ));
 
         let shutdown_ctx = context.clone();

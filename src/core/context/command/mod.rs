@@ -4,16 +4,34 @@ use std::sync::Arc;
 use dashmap::ElementGuard;
 use fluent_bundle::FluentArgs;
 use twilight::gateway::shard::Information;
-use twilight::model::{id::GuildId, user::CurrentUser};
+use twilight::model::channel::embed::Embed;
+use twilight::model::channel::message::{MessageFlags, MessageType};
+use twilight::model::channel::Attachment;
+use twilight::model::{
+    id::{GuildId, MessageId},
+    user::CurrentUser,
+};
 
-pub use command_message::CommandMessage;
-
-use crate::core::cache::CachedGuild;
-use crate::core::context::bot::BotStats;
+use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};
 use crate::core::{BotContext, GuildConfig};
+use crate::parser::Parser;
 use crate::translation::{GearBotString, GuildTranslator, DEFAULT_LANG};
 use crate::utils::CommandError;
 use crate::Error;
+
+pub struct CommandMessage {
+    pub id: MessageId,
+    pub content: String,
+    pub author: Arc<CachedUser>,
+    pub author_as_member: Option<Arc<CachedMember>>,
+    pub channel: Arc<CachedChannel>,
+    pub attachments: Vec<Attachment>,
+    pub embeds: Vec<Embed>,
+    pub flags: Option<MessageFlags>,
+    pub kind: MessageType,
+    pub mention_everyone: bool,
+    pub tts: bool,
+}
 
 /// The guild context that is returned inside commands that is specific to each guild, with things like the config,
 /// language, etc, set and usable behind wrapper methods for simplicity.
@@ -24,6 +42,7 @@ pub struct CommandContext {
     pub message: CommandMessage,
     pub guild: Option<Arc<CachedGuild>>,
     pub shard: u64,
+    pub parser: Parser,
 }
 
 impl CommandContext {
@@ -33,6 +52,7 @@ impl CommandContext {
         message: CommandMessage,
         guild: Option<Arc<CachedGuild>>,
         shard: u64,
+        parser: Parser,
     ) -> Self {
         let translator = match &config {
             Some(guard) => ctx.translations.get_translator(&guard.value().language),
@@ -45,6 +65,7 @@ impl CommandContext {
             message,
             guild,
             shard,
+            parser,
         }
     }
 
@@ -54,10 +75,6 @@ impl CommandContext {
 
     pub fn get_bot_user(&self) -> &CurrentUser {
         &self.bot_context.bot_user
-    }
-
-    pub fn get_bot_stats(&self) -> &BotStats {
-        &self.bot_context.stats
     }
 
     pub fn translate<'a>(&'a self, key: GearBotString) -> String {
@@ -93,7 +110,6 @@ impl CommandContext {
 }
 
 mod bouncers;
-mod command_message;
 mod messaging;
 mod object_fetcher;
 mod permissions;

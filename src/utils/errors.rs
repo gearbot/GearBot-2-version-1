@@ -41,6 +41,7 @@ pub enum Error {
 pub enum CommandError {
     // WrongArgCount { expected: u8, provided: u8 },
     NoDM,
+    InvalidPermissions,
 }
 
 #[derive(Debug)]
@@ -64,6 +65,7 @@ impl fmt::Display for CommandError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             CommandError::NoDM => write!(f, "You can not use this command in DMs"),
+            CommandError::InvalidPermissions => write!(f, "You don't have the permissions to run this command!"),
         }
     }
 }
@@ -144,7 +146,6 @@ impl fmt::Display for Error {
     }
 }
 
-// TODO: Some enum of all the possible user input data types that has `AsStr` or similar on it to return here
 impl From<ParseError> for Error {
     fn from(e: ParseError) -> Self {
         Error::ParseError(e)

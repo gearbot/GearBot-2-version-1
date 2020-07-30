@@ -10,7 +10,7 @@ pub mod macros {
     #[macro_export]
     macro_rules! pin_box {
         ($e: expr) => {
-            Box::new(move |ctx, parser| Box::pin($e(ctx, parser)))
+            Box::new(move |ctx| Box::pin($e(ctx)))
         };
     }
 
@@ -19,7 +19,7 @@ pub mod macros {
         ($name: literal, $a: expr, $e: expr, $bot_permissions: expr, $command_permission: expr, $group: expr) => {{
             Arc::new(CommandNode {
                 name: String::from($name),
-                handler: Some(Box::new(move |ctx, parser| Box::pin($e(ctx, parser)))),
+                handler: Some(Box::new(move |ctx| Box::pin($e(ctx)))),
                 sub_nodes: HashMap::new(),
                 node_list: vec![],
                 bot_permissions: $bot_permissions,
@@ -59,7 +59,7 @@ pub mod macros {
          )*
         Arc::new(CommandNode {
                 name: String::from($name),
-                handler: Some(Box::new(move |ctx, parser| Box::pin($e(ctx, parser)))),
+                handler: Some(Box::new(move |ctx| Box::pin($e(ctx)))),
                 sub_nodes: map,
                 node_list: list,
                 bot_permissions: $bot_permissions,
@@ -93,7 +93,7 @@ pub mod macros {
          )*
         Arc::new(CommandNode {
                 name: String::from($name),
-                handler: Some(Box::new(move |ctx, parser| Box::pin($e(ctx, parser)))),
+                handler: Some(Box::new(move |ctx| Box::pin($e(ctx)))),
                 sub_nodes: map,
                 node_list: list,
                 bot_permissions: $bot_permissions,

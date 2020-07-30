@@ -1,5 +1,4 @@
 use dashmap::ElementGuard;
-use log::info;
 use serde_json::to_value;
 use twilight::model::channel::Message;
 use twilight::model::id::{GuildId, MessageId};
@@ -15,7 +14,6 @@ impl BotContext {
         match self.configs.get(&guild_id) {
             Some(config) => Ok(config),
             None => {
-                info!("No config found for {}, inserting blank one", guild_id);
                 let master_ek = self.__get_master_key();
 
                 let config = match dbconfig::get_guild_config(&self, guild_id.0).await? {

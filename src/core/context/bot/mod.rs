@@ -4,7 +4,11 @@ use dashmap::DashMap;
 use tokio::sync::{mpsc::UnboundedSender, RwLock};
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
-use twilight::model::{channel::Message, id::GuildId, user::CurrentUser};
+use twilight::model::{
+    channel::Message,
+    id::{GuildId, UserId},
+    user::CurrentUser,
+};
 
 pub use stats::BotStats;
 
@@ -47,6 +51,7 @@ pub struct BotContext {
     pub total_shards: u64,
     pub shard_states: DashMap<u64, ShardState>,
     pub start_time: DateTime<Utc>,
+    pub global_admins: Vec<UserId>,
 }
 
 impl BotContext {
@@ -63,6 +68,7 @@ impl BotContext {
         shards_per_cluster: u64,
         total_shards: u64,
         stats: Arc<BotStats>,
+        global_admins: Vec<u64>,
     ) -> Self {
         let shard_states = DashMap::with_capacity(shards_per_cluster as usize);
         for i in cluster_id * shards_per_cluster..cluster_id * shards_per_cluster + shards_per_cluster {
@@ -73,6 +79,8 @@ impl BotContext {
                 .expect("Global shard state tracking got poisoned!")
                 .insert(i, AtomicU64::new(0));
         }
+
+        let global_admins = global_admins.into_iter().map(|id| UserId(id)).collect();
 
         stats.shard_counts.pending.set(shards_per_cluster as i64);
         BotContext {
@@ -94,6 +102,7 @@ impl BotContext {
             total_shards,
             shard_states,
             start_time: Utc::now(),
+            global_admins,
         }
     }
 

@@ -4,7 +4,6 @@ use twilight::model::guild::Permissions;
 use twilight::model::user::UserFlags;
 
 use crate::core::CommandContext;
-use crate::parser::Parser;
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::Emoji;
 use crate::utils::{CommandError, Error};
@@ -12,12 +11,12 @@ use crate::{utils, CommandResult};
 
 const USER_INFO_COLOR: u32 = 0x00_cea2;
 
-pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult {
+pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
     if ctx.guild.is_none() {
         return Err(Error::CmdError(CommandError::NoDM));
     }
 
-    let user = parser.get_user_or(ctx.message.author.clone()).await?;
+    let user = ctx.parser.get_user_or(ctx.message.author.clone()).await?;
 
     //set some things that are the same regardless
     let mut content = "".to_string();
@@ -45,7 +44,7 @@ pub async fn userinfo(ctx: CommandContext, mut parser: Parser) -> CommandResult 
         Some(flags) => flags,
         None => {
             // we already know for sure the user will exist
-            let user = ctx.get_user(&user.id).await?;
+            let user = ctx.get_user(user.id).await?;
             ctx.bot_context.cache.update_user(user.clone());
             user.public_flags.unwrap_or_else(|| UserFlags::empty())
         }

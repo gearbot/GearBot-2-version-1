@@ -55,7 +55,7 @@ impl CachedMember {
 
     pub fn user(&self, cache: &Cache) -> Arc<CachedUser> {
         cache
-            .get_user(&self.user_id)
+            .get_user(self.user_id)
             .expect("User got nuked from the global cache too early!")
     }
 

@@ -5,7 +5,6 @@ use twilight::builders::embed::EmbedBuilder;
 
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
-use crate::parser::Parser;
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{age, Emoji};
 use std::time::Duration;
@@ -142,7 +141,7 @@ impl fmt::Display for AboutDescription {
     }
 }
 */
-pub async fn about(ctx: CommandContext, _: Parser) -> CommandResult {
+pub async fn about(ctx: CommandContext) -> CommandResult {
     let stats = &ctx.bot_context.stats;
 
     let shard_latency = ctx

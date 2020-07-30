@@ -425,7 +425,7 @@ impl Cache {
                 trace!("{} updated in {}", event.user.id, event.guild_id);
                 match ctx.cache.get_guild(&event.guild_id) {
                     Some(guild) => {
-                        match ctx.cache.get_user(&event.user.id) {
+                        match ctx.cache.get_user(event.user.id) {
                             Some(user) => {
                                 if !user.is_same_as(&event.user) {
                                     //just update the global cache if it's different, we will receive an event for all mutual servers if the inner user changed
@@ -653,7 +653,7 @@ impl Cache {
     }
 
     pub fn get_or_insert_user(&self, user: &User) -> Arc<CachedUser> {
-        match self.get_user(&user.id) {
+        match self.get_user(user.id) {
             Some(user) => user,
             None => {
                 let arc = Arc::new(CachedUser::from_user(user));
@@ -711,12 +711,12 @@ impl Cache {
         }
     }
 
-    pub fn get_user(&self, user_id: &UserId) -> Option<Arc<CachedUser>> {
+    pub fn get_user(&self, user_id: UserId) -> Option<Arc<CachedUser>> {
         match self
             .users
             .read()
             .expect("Global users cache got poisoned!")
-            .get(user_id)
+            .get(&user_id)
         {
             Some(guard) => Some(guard.clone()),
             None => None,
@@ -745,7 +745,7 @@ impl Cache {
 
     /// we get member updates for all
     pub fn update_user(&self, new: Arc<CachedUser>) {
-        match self.get_user(&new.id) {
+        match self.get_user(new.id) {
             Some(old) => {
                 let updated = update_user_with_user(old, new);
                 let user = Arc::new(updated);
