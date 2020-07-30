@@ -128,7 +128,7 @@ impl CachedChannel {
 
     /// Gets the position of this channel
     /// returns 0 for DM (group) channels
-    pub fn _get_position(&self) -> i64 {
+    pub fn get_position(&self) -> i64 {
         match self {
             CachedChannel::TextChannel { position, .. } => *position,
             CachedChannel::DM { .. } => 0,
@@ -152,7 +152,7 @@ impl CachedChannel {
         }
     }
 
-    pub fn _get_topic(&self) -> &Option<String> {
+    pub fn get_topic(&self) -> &Option<String> {
         match self {
             CachedChannel::TextChannel { topic, .. } => topic,
             CachedChannel::DM { .. } => &None,
@@ -188,7 +188,7 @@ impl CachedChannel {
         }
     }
 
-    pub fn _is_nsfw(&self) -> bool {
+    pub fn is_nsfw(&self) -> bool {
         match self {
             CachedChannel::TextChannel { nsfw, .. } => *nsfw,
             CachedChannel::DM { .. } => false,
@@ -200,7 +200,7 @@ impl CachedChannel {
         }
     }
 
-    pub fn _is_dm(&self) -> bool {
+    pub fn is_dm(&self) -> bool {
         match self {
             CachedChannel::DM { .. } => true,
             _ => false,

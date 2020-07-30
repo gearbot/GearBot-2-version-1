@@ -27,7 +27,7 @@ pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>)
                     }
 
                     let config = ctx.get_config(guild_id).await?;
-                    config.value().prefix.clone()
+                    config.prefix.clone()
                 }
                 None => String::from("!"),
             };

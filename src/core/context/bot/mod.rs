@@ -1,7 +1,7 @@
 use aes_gcm::aead::generic_array::GenericArray;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use tokio::sync::{mpsc::UnboundedSender, RwLock};
+use tokio::sync::mpsc::UnboundedSender;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
 use twilight::model::{
@@ -14,19 +14,22 @@ mod cache;
 mod cold_resume;
 mod database;
 mod logpump;
+mod permissions;
 mod stats;
 pub(crate) mod status;
 
 pub use stats::BotStats;
 
-use crate::core::cache::Cache;
+use crate::commands::meta::nodes::GearBotPermissions;
+use crate::core::cache::{Cache, CachedGuild, CachedMember, CachedUser};
 use crate::core::GuildConfig;
 use crate::crypto::EncryptionKey;
 use crate::translation::Translations;
 use crate::utils::LogType;
 use crate::SchemeInfo;
+use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 #[derive(PartialEq, Debug)]
 pub enum ShardState {
@@ -48,14 +51,14 @@ pub struct BotContext {
     pub status_type: RwLock<u16>,
     pub status_text: RwLock<String>,
     pub bot_user: CurrentUser,
-    configs: DashMap<GuildId, GuildConfig>,
+    configs: RwLock<HashMap<GuildId, Arc<GuildConfig>>>,
     pub pool: sqlx::PgPool,
     pub translations: Translations,
     __main_encryption_key: Option<Vec<u8>>,
-    log_pumps: DashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>,
+    log_pumps: RwLock<HashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>>,
     pub redis_pool: darkredis::ConnectionPool,
     pub scheme_info: SchemeInfo,
-    pub shard_states: DashMap<u64, ShardState>,
+    pub shard_states: RwLock<HashMap<u64, ShardState>>,
     pub start_time: DateTime<Utc>,
     pub global_admins: Vec<UserId>,
 }
@@ -70,7 +73,7 @@ impl BotContext {
         stats: Arc<BotStats>,
     ) -> Self {
         let scheme_info = bot_core.2;
-        let shard_states = DashMap::with_capacity(scheme_info.shards_per_cluster as usize);
+        let mut shard_states = HashMap::with_capacity(scheme_info.shards_per_cluster as usize);
         for i in scheme_info.cluster_id * scheme_info.shards_per_cluster
             ..scheme_info.cluster_id * scheme_info.shards_per_cluster + scheme_info.shards_per_cluster
         {
@@ -94,14 +97,14 @@ impl BotContext {
             status_type: RwLock::new(3),
             status_text: RwLock::new(String::from("the commands turn")),
             bot_user: http_info.1,
-            configs: DashMap::new(),
+            configs: RwLock::new(HashMap::new()),
             pool: databases.0,
             translations,
             __main_encryption_key: config_ops.0,
-            log_pumps: DashMap::new(),
+            log_pumps: RwLock::new(HashMap::new()),
             redis_pool: databases.1,
             scheme_info,
-            shard_states,
+            shard_states: RwLock::new(shard_states),
             start_time: Utc::now(),
             global_admins,
         }

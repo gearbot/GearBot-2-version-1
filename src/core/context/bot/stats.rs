@@ -267,13 +267,14 @@ impl BotContext {
     }
 
     pub fn shard_state_change(&self, shard: u64, new_state: ShardState) {
-        if let Some(guard) = self.shard_states.get(&shard) {
-            self.get_state_metric(guard.value()).dec();
+        let mut shards = self.shard_states.write().expect("Shard states got poisoned");
+        if let Some(guard) = shards.get(&shard) {
+            self.get_state_metric(guard).dec();
         }
 
         info!("Shard {} is now {:?}", shard, new_state);
         self.get_state_metric(&new_state).inc();
-        self.shard_states.insert(shard, new_state);
+        shards.insert(shard, new_state);
     }
 
     fn get_state_metric(&self, state: &ShardState) -> &IntGauge {

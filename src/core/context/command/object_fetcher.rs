@@ -18,9 +18,9 @@ impl CommandContext {
         self.bot_context.get_user(user_id).await
     }
 
-    pub fn get_member(&self, user_id: UserId) -> Option<Arc<CachedMember>> {
+    pub fn get_member(&self, user_id: &UserId) -> Option<Arc<CachedMember>> {
         match &self.guild {
-            Some(g) => self.bot_context.cache.get_member(g.id, user_id),
+            Some(g) => self.bot_context.cache.get_member(&g.id, user_id),
             None => None,
         }
     }
@@ -29,9 +29,9 @@ impl CommandContext {
         self.bot_context.cache.get_channel(channel_id)
     }
 
-    pub fn get_role(&self, role_id: RoleId) -> Option<Arc<CachedRole>> {
+    pub fn get_role(&self, role_id: &RoleId) -> Option<Arc<CachedRole>> {
         match &self.guild {
-            Some(g) => match g.roles.read().expect("Global role cache got poisoned!").get(&role_id) {
+            Some(g) => match g.get_role(role_id) {
                 Some(guard) => Some(guard.clone()),
                 None => None,
             },

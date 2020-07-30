@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use unic_langid::LanguageIdentifier;
 
+use crate::commands::meta::nodes::GearBotPermissions;
 use crate::translation::DEFAULT_LANG;
+use twilight::model::guild::Permissions;
+use twilight::model::id::{RoleId, UserId};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GuildConfig {
@@ -9,6 +12,19 @@ pub struct GuildConfig {
     pub log_style: LogStyle,
     pub message_logs: MessageLogs,
     pub language: LanguageIdentifier,
+    pub permission_groups: Vec<PermissionGroup>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct PermissionGroup {
+    pub priority: u8,
+    pub name: String,
+    pub granted_perms: GearBotPermissions,
+    pub denied_perms: GearBotPermissions,
+    pub discord_perms: Option<Permissions>,
+    pub roles: Vec<RoleId>,
+    pub needs_all: bool,
+    pub users: Vec<UserId>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -46,6 +62,38 @@ impl Default for GuildConfig {
                 ignore_bots: true,
             },
             language: DEFAULT_LANG,
+            permission_groups: vec![
+                PermissionGroup {
+                    priority: 0,
+                    name: String::from("All members"),
+                    granted_perms: GearBotPermissions::BASIC_GROUP,
+                    denied_perms: GearBotPermissions::empty(),
+                    discord_perms: Some(Permissions::empty()),
+                    roles: vec![],
+                    needs_all: false,
+                    users: vec![],
+                },
+                PermissionGroup {
+                    priority: 25,
+                    name: String::from("Moderators"),
+                    granted_perms: GearBotPermissions::MODERATION_GROUP | GearBotPermissions::READ_CONFIG,
+                    denied_perms: GearBotPermissions::empty(),
+                    discord_perms: Some(Permissions::BAN_MEMBERS),
+                    roles: vec![],
+                    needs_all: false,
+                    users: vec![],
+                },
+                PermissionGroup {
+                    priority: 50,
+                    name: String::from("Administrators"),
+                    granted_perms: GearBotPermissions::GUILD_ADMIN_GROUP,
+                    denied_perms: GearBotPermissions::empty(),
+                    discord_perms: Some(Permissions::ADMINISTRATOR),
+                    roles: vec![],
+                    needs_all: false,
+                    users: vec![],
+                },
+            ],
         }
     }
 }

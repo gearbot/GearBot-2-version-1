@@ -6,16 +6,22 @@ use twilight::model::gateway::payload::MessageCreate;
 use twilight::model::id::{GuildId, UserId};
 
 use crate::commands::{
-    meta::nodes::{CommandNode, GearBotPermission},
+    meta::nodes::{CommandNode, GearBotPermissions},
     ROOT_NODE,
 };
 use crate::core::cache::{CachedMember, CachedUser};
-use crate::core::{BotContext, CommandContext, CommandMessage};
+use crate::core::{BotContext, CommandContext, CommandMessage, GuildConfig};
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
+use fluent_bundle::FluentArgs;
+use lazy_static::lazy_static;
 use std::sync::atomic::Ordering;
 use twilight::model::guild::Permissions;
+
+lazy_static! {
+    static ref BLANK_CONFIG: Arc<GuildConfig> = Arc::new(GuildConfig::default());
+}
 
 #[derive(Clone)]
 pub struct Parser {
@@ -64,51 +70,32 @@ impl Parser {
     ) -> Result<(), Error> {
         let message = (*message).0;
 
+        //Create parser to process message
         let mut parser = Parser::new(&message.content[prefix.len()..], ctx, shard_id, message.guild_id);
         trace!("Parser processing message: {:?}", &message.content);
 
+        //parse the message to get the nodes
         let command_nodes = parser.get_command();
 
+        //Do we even have a node to execute?
+        let node = match command_nodes.last() {
+            Some(node) => node,
+            None => return Ok(()),
+        };
+
+        //assemble the name
+        //TODO: do we need this here for anything else then debugging?
         let mut name = String::new();
         for node in command_nodes.iter().skip(1) {
             name += "__";
             name += &node.name
         }
 
-        let node = match command_nodes.last() {
-            Some(node) => node,
-            None => return Ok(()),
-        };
-
+        //grab our own clone of the ctx we can move around
         let ctx = parser.ctx.clone();
 
-        // TODO: Verify other permissions
-        if (node.command_permission == GearBotPermission::AdminGroup) && !ctx.global_admins.contains(&message.author.id)
-        {
-            return Err(CommandError::InvalidPermissions.into());
-        }
-
-        debug!("Executing command: {}", name);
-
+        //grab channel info
         let channel_id = message.channel_id;
-
-        let (member, config, guild) = {
-            match message.guild_id {
-                Some(guild_id) => match ctx.cache.get_member(guild_id, message.author.id) {
-                    Some(m) => (
-                        Some(m),
-                        Some(ctx.get_config(guild_id).await?),
-                        Some(ctx.cache.get_guild(&guild_id).unwrap()),
-                    ),
-                    None => {
-                        return Err(Error::CorruptCacheError(String::from(
-                            "Got a message with a command from someone who is not cached for this guild!",
-                        )))
-                    }
-                },
-                None => (None, None, None),
-            }
-        };
 
         let channel = match ctx.cache.get_channel(message.channel_id) {
             Some(channel) => channel,
@@ -118,13 +105,40 @@ impl Parser {
             }
         };
 
+        //author
         let author = match ctx.cache.get_user(message.author.id) {
             Some(author) => author,
             None => {
                 return Err(Error::CorruptCacheError(String::from(
                     "Got a message with a command from a user that is not in the cache!",
-                )))
+                )));
             }
+        };
+
+        //get optional guild and member, as well as a config and calculate user permissions
+        let (guild, member, config, permissions) = if !channel.is_dm() {
+            let guild = match ctx.cache.get_guild(&message.guild_id.unwrap()) {
+                Some(guild) => guild,
+                None => {
+                    return Err(Error::CorruptCacheError(String::from(
+                        "Got a message for a guild channel that isn't cached!",
+                    )));
+                }
+            };
+            let member = match ctx.cache.get_member(&guild.id, &message.author.id) {
+                Some(member) => member,
+                None => return Err(Error::CorruptCacheError(String::from("User missing in cache!"))),
+            };
+
+            let config = ctx.get_config(guild.id).await?;
+
+            let permissions = ctx.get_permissions_for(&guild, &member, &config);
+
+            (Some(guild), Some(member), config, permissions)
+        } else {
+            let mut perms = GearBotPermissions::empty() | BLANK_CONFIG.permission_groups.get(0).unwrap().granted_perms;
+            ctx.apply_admin_perms(&message.author.id, &mut perms);
+            (None, None, BLANK_CONFIG.clone(), perms)
         };
 
         let cmdm = CommandMessage {
@@ -141,9 +155,17 @@ impl Parser {
             tts: message.tts,
         };
 
-        let context = CommandContext::new(ctx.clone(), config, cmdm, guild, shard_id, parser);
-        // debug!("Bot channel perms: {:?}", context.get_bot_channel_permissions());
-        // debug!("USER channel perms: {:?}", context.get_author_channel_permissions());
+        let context = CommandContext::new(ctx.clone(), config, cmdm, guild, shard_id, parser, permissions);
+
+        //don't execute commands you are not allowed to execute
+        if !permissions.contains(node.command_permission) {
+            let args = FluArgs::with_capacity(1)
+                .insert("gearno", Emoji::No.for_chat())
+                .generate();
+            context.reply(GearBotString::MissingPermissions, args).await?;
+            return Ok(());
+        }
+
         //check if we can send a reply
         if !context.bot_has_channel_permissions(Permissions::SEND_MESSAGES) {
             let msg = &context.message;
@@ -260,19 +282,20 @@ impl Parser {
         }
     }
 
-    pub async fn get_member(&mut self, gid: GuildId) -> Result<Arc<CachedMember>, Error> {
+    pub async fn get_member(&mut self) -> Result<Arc<CachedMember>, Error> {
+        let gid = self.get_guild_id()?;
         let input = self.get_next()?;
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
-            Some(uid) => match self.ctx.cache.get_member(gid, UserId(uid)) {
+            Some(uid) => match self.ctx.cache.get_member(&gid, &UserId(uid)) {
                 Some(member) => Ok(member),
                 None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
             },
             None => {
                 // is it a userid?
                 match input.parse::<u64>() {
-                    Ok(uid) => match self.ctx.cache.get_member(gid, UserId(uid)) {
+                    Ok(uid) => match self.ctx.cache.get_member(&gid, &UserId(uid)) {
                         Some(member) => Ok(member),
                         None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
                     },
@@ -287,9 +310,24 @@ impl Parser {
         }
     }
 
+    fn get_guild_id(&self) -> Result<GuildId, Error> {
+        match self.guild_id {
+            Some(guild_id) => Ok(guild_id),
+            None => Err(Error::CmdError(CommandError::NoDM)),
+        }
+    }
+
     pub async fn get_user_or(&mut self, alternative: Arc<CachedUser>) -> Result<Arc<CachedUser>, Error> {
         if self.has_next() {
             Ok(self.get_user().await?)
+        } else {
+            Ok(alternative)
+        }
+    }
+
+    pub async fn get_member_or(&mut self, alternative: Arc<CachedMember>) -> Result<Arc<CachedMember>, Error> {
+        if self.has_next() {
+            Ok(self.get_member().await?)
         } else {
             Ok(alternative)
         }

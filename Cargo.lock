@@ -679,6 +679,7 @@ name = "gearbot"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
+ "bitflags",
  "chrono",
  "ctrlc",
  "darkredis",

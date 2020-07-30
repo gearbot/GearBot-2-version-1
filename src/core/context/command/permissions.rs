@@ -13,31 +13,16 @@ impl CommandContext {
 
     pub fn get_bot_guild_permissions(&self) -> Permissions {
         let bot_user = self.get_bot_user();
-        self.get_guild_permissions_for(bot_user.id)
+        self.get_guild_permissions_for(&bot_user.id)
     }
 
-    pub fn get_guild_permissions_for(&self, user_id: UserId) -> Permissions {
-        //owners can do whatever they want
-        if let Some(guild) = &self.guild {
-            if guild.owner_id == user_id {
-                return Permissions::all();
-            }
-        }
-
-        let mut permissions = Permissions::empty();
-
-        if let Some(member) = self.get_member(user_id) {
-            for role_id in &member.roles {
-                if let Some(role) = self.get_role(*role_id) {
-                    permissions |= role.permissions;
-                }
-            }
-        };
-        if permissions.contains(Permissions::ADMINISTRATOR) {
-            //admins also can do whatever they want
-            Permissions::all()
-        } else {
-            permissions
+    pub fn get_guild_permissions_for(&self, user_id: &UserId) -> Permissions {
+        match &self.guild {
+            Some(guild) => match self.get_member(user_id) {
+                Some(member) => self.bot_context.get_guild_permissions_for(&member, guild),
+                None => Permissions::empty(),
+            },
+            None => Permissions::empty(),
         }
     }
 
@@ -45,7 +30,15 @@ impl CommandContext {
         let mut permissions = Permissions::empty();
 
         if let Some(channel) = self.get_channel(channel_id) {
-            permissions = self.get_guild_permissions_for(user_id);
+            if channel.is_dm() {
+                return Permissions::SEND_MESSAGES
+                    | Permissions::EMBED_LINKS
+                    | Permissions::ATTACH_FILES
+                    | Permissions::USE_EXTERNAL_EMOJIS
+                    | Permissions::ADD_REACTIONS
+                    | Permissions::READ_MESSAGE_HISTORY;
+            }
+            permissions = self.get_guild_permissions_for(&user_id);
             //admins don't give a **** about overrides
             if permissions.contains(Permissions::ADMINISTRATOR) {
                 return Permissions::all();
@@ -118,7 +111,7 @@ impl CommandContext {
     }
 
     pub fn get_author_guild_permissions(&self) -> Permissions {
-        self.get_guild_permissions_for(self.message.author.id)
+        self.get_guild_permissions_for(&self.message.author.id)
     }
 
     pub fn author_has_channel_permissions(&self, permissions: Permissions) -> bool {

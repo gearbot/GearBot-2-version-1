@@ -12,6 +12,7 @@ use twilight::model::{
     user::CurrentUser,
 };
 
+use crate::commands::meta::nodes::GearBotPermissions;
 use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};
 use crate::core::{BotContext, GuildConfig};
 use crate::parser::Parser;
@@ -37,31 +38,39 @@ pub struct CommandMessage {
     pub tts: bool,
 }
 
+impl CommandMessage {
+    pub fn get_author_as_member(&self) -> Result<Arc<CachedMember>, Error> {
+        match &self.author_as_member {
+            Some(author_as_member) => Ok(author_as_member.clone()),
+            None => Err(Error::CmdError(CommandError::NoDM)),
+        }
+    }
+}
+
 /// The guild context that is returned inside commands that is specific to each guild, with things like the config,
 /// language, etc, set and usable behind wrapper methods for simplicity.
 pub struct CommandContext {
     pub translator: Arc<GuildTranslator>,
     pub bot_context: Arc<BotContext>,
-    config: Option<ElementGuard<GuildId, GuildConfig>>,
+    config: Arc<GuildConfig>,
     pub message: CommandMessage,
     pub guild: Option<Arc<CachedGuild>>,
     pub shard: u64,
     pub parser: Parser,
+    pub permissions: GearBotPermissions,
 }
 
 impl CommandContext {
     pub fn new(
         ctx: Arc<BotContext>,
-        config: Option<ElementGuard<GuildId, GuildConfig>>,
+        config: Arc<GuildConfig>,
         message: CommandMessage,
         guild: Option<Arc<CachedGuild>>,
         shard: u64,
         parser: Parser,
+        permissions: GearBotPermissions,
     ) -> Self {
-        let translator = match &config {
-            Some(guard) => ctx.translations.get_translator(&guard.value().language),
-            None => ctx.translations.get_translator(&DEFAULT_LANG),
-        };
+        let translator = ctx.translations.get_translator(&config.language);
         CommandContext {
             translator,
             bot_context: ctx,
@@ -70,6 +79,7 @@ impl CommandContext {
             guild,
             shard,
             parser,
+            permissions,
         }
     }
 
@@ -105,9 +115,17 @@ impl CommandContext {
         }
     }
 
-    pub fn get_config(&self) -> Result<&GuildConfig, Error> {
-        match &self.config {
-            Some(guard) => Ok(guard.value()),
+    pub fn get_config(&self) -> Result<Arc<GuildConfig>, Error> {
+        if self.message.channel.is_dm() {
+            Err(Error::CmdError(CommandError::NoDM))
+        } else {
+            Ok(self.config.clone())
+        }
+    }
+
+    pub fn get_guild(&self) -> Result<Arc<CachedGuild>, Error> {
+        match &self.guild {
+            Some(guild) => Ok(guild.clone()),
             None => Err(Error::CmdError(CommandError::NoDM)),
         }
     }

@@ -240,6 +240,14 @@ impl CachedGuild {
 
         guild
     }
+
+    pub fn get_role(&self, role_id: &RoleId) -> Option<Arc<CachedRole>> {
+        self.roles
+            .read()
+            .expect("Global role cache got poisoned!")
+            .get(role_id)
+            .cloned()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

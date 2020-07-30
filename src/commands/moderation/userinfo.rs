@@ -110,13 +110,13 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
         utils::age(created_at, Utc::now(), 2)
     );
 
-    let cached_member = ctx.get_member(user.id);
+    let cached_member = ctx.get_member(&user.id);
 
     match cached_member {
         Some(member) => {
             if let Some(role) = member.roles.first() {
                 // This role has to exist
-                let cached_role = ctx.get_role(*role).unwrap();
+                let cached_role = ctx.get_role(role).unwrap();
 
                 builder = builder.color(cached_role.color);
 

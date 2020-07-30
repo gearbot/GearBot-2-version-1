@@ -8,11 +8,18 @@ use crate::database::{self, configs as dbconfig, structures::UserMessage};
 
 use crate::crypto::{self, EncryptionKey};
 use crate::utils::Error;
+use std::sync::Arc;
 
 impl BotContext {
-    pub async fn get_config(&self, guild_id: GuildId) -> Result<ElementGuard<GuildId, GuildConfig>, Error> {
-        match self.configs.get(&guild_id) {
-            Some(config) => Ok(config),
+    pub async fn get_config(&self, guild_id: GuildId) -> Result<Arc<GuildConfig>, Error> {
+        let config = self
+            .configs
+            .read()
+            .expect("Config cache got poisoned!")
+            .get(&guild_id)
+            .cloned();
+        match config {
+            Some(config) => Ok(config.clone()),
             None => {
                 let master_ek = self.__get_main_encryption_key();
 
@@ -20,9 +27,12 @@ impl BotContext {
                     Some(c) => c,
                     None => dbconfig::create_new_guild_config(&self, guild_id.0, master_ek).await?,
                 };
-
-                self.configs.insert(guild_id, config);
-                Ok(self.configs.get(&guild_id).unwrap())
+                let arc = Arc::new(config);
+                self.configs
+                    .write()
+                    .expect("Config cache got poisoned!")
+                    .insert(guild_id, arc.clone());
+                Ok(arc)
             }
         }
     }
@@ -30,7 +40,10 @@ impl BotContext {
     pub async fn set_config(&self, guild_id: GuildId, config: GuildConfig) -> Result<(), Error> {
         //TODO: validate values? or do we leave that to whoever edited it?
         dbconfig::set_guild_config(&self, guild_id.0, to_value(&config)?).await?;
-        self.configs.insert(guild_id, config);
+        self.configs
+            .write()
+            .expect("Config cache got poisoned!")
+            .insert(guild_id, Arc::new(config));
         Ok(())
     }
 

@@ -250,10 +250,15 @@ impl Cache {
                             // if we where at 1 we are now at 0
                             if self.stats.guild_counts.partial.get() == 0
                                 && self.filling.load(Ordering::Relaxed)
-                                && ctx.shard_states.iter().all(|state| match state.value() {
-                                    ShardState::Ready => true,
-                                    _ => false,
-                                })
+                                && ctx
+                                    .shard_states
+                                    .read()
+                                    .expect("Shard states got poisoned")
+                                    .values()
+                                    .all(|state| match state {
+                                        ShardState::Ready => true,
+                                        _ => false,
+                                    })
                             {
                                 gearbot_important!("Initial cache filling completed for cluster {}!", self.cluster_id);
                                 self.filling.store(false, Ordering::SeqCst);
@@ -723,12 +728,12 @@ impl Cache {
         }
     }
 
-    pub fn get_member(&self, guild_id: GuildId, user_id: UserId) -> Option<Arc<CachedMember>> {
+    pub fn get_member(&self, guild_id: &GuildId, user_id: &UserId) -> Option<Arc<CachedMember>> {
         match self
             .guilds
             .read()
             .expect("Global guilds cache got poisoned!")
-            .get(&guild_id)
+            .get(guild_id)
         {
             Some(guild) => match guild
                 .members

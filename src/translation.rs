@@ -170,6 +170,9 @@ pub enum GearBotString {
     AboutDescription,
     QuoteNotFound,
 
+    //Errors
+    MissingPermissions,
+
     //DM error strings
     UnableToReply,
     UnableToReplyForManager,
@@ -187,6 +190,7 @@ impl GearBotString {
             GearBotString::UnableToReplyForManager => "errors_unable_to_reply_manager",
             GearBotString::AboutDescription => "basic__about",
             GearBotString::QuoteNotFound => "basic__quote_notfound",
+            GearBotString::MissingPermissions => "errors_missing_permissions",
         }
     }
 
@@ -250,7 +254,7 @@ mod tests {
     use std::fs;
 
     lazy_static! {
-        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 9] = [
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 10] = [
             GearBotString::PingPong.as_str(),
             GearBotString::CoinflipDefault.as_str(),
             GearBotString::CoinflipYes.as_str(),
@@ -260,6 +264,7 @@ mod tests {
             GearBotString::UnableToReplyForManager.as_str(),
             GearBotString::AboutDescription.as_str(),
             GearBotString::QuoteNotFound.as_str(),
+            GearBotString::MissingPermissions.as_str(),
         ];
     }
 

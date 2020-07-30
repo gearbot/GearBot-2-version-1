@@ -56,7 +56,7 @@ lazy_static! {
                 "config",
                 vec![String::from("c")],
                 Permissions::empty(),
-                GearBotPermissions::READ_CONFIG, //lock behind only read, technically possible to have write without read but no my problem if you set stupid settings
+                GearBotPermissions::CONFIG_COMMAND, // has it's own to not cascade to write by mistake
                 CommandGroup::GuildAdmin,
                 command_with_subcommands_and_handler_and_aliases!(
                     "get",
@@ -80,6 +80,13 @@ lazy_static! {
                     Permissions::empty(),
                     GearBotPermissions::WRITE_CONFIG,
                     CommandGroup::GuildAdmin
+                ),
+                command!(
+                "reset",
+                debug::reset_config,
+                Permissions::empty(),
+                GearBotPermissions::WRITE_CONFIG,
+                CommandGroup::GuildAdmin
                 )
             ),
             command!(
@@ -109,6 +116,13 @@ lazy_static! {
                 GearBotPermissions::BOT_ADMIN,
                 CommandGroup::BotAdmin
             ),
+            command!(
+            "perms",
+            debug::get_perms,
+            Permissions::empty(),
+            GearBotPermissions::BOT_ADMIN,
+            CommandGroup::BotAdmin
+            )
         ];
 
         let mut all_commands = HashMap::new();
