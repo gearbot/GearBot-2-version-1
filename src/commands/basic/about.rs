@@ -157,31 +157,31 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
         .unwrap_or_else(|| Duration::from_secs(0))
         .as_millis();
 
+    let avg_latency = ctx
+        .bot_context
+        .cluster
+        .info()
+        .await
+        .values()
+        .map(|info| {
+            info.latency()
+                .average()
+                .unwrap_or_else(|| Duration::new(0, 0))
+                .as_millis()
+        })
+        .sum::<u128>()
+        / ctx.bot_context.scheme_info.shards_per_cluster as u128;
+
     let args = FluArgs::with_capacity(14)
         .insert("gearDiamond", Emoji::GearDiamond.for_chat())
         .insert("gearGold", Emoji::GearGold.for_chat())
         .insert("gearIron", Emoji::GearIron.for_chat())
-        .insert("cluster_id", ctx.bot_context.cluster_id)
+        .insert("cluster_id", ctx.bot_context.scheme_info.cluster_id)
         .insert("uptime", age(ctx.bot_context.start_time, Utc::now(), 4))
         .insert("start_time", ctx.bot_context.start_time.to_rfc2822())
         .insert("version", stats.version)
-        .insert("shards", ctx.bot_context.shards_per_cluster)
-        .insert(
-            "average_latency",
-            ctx.bot_context
-                .cluster
-                .info()
-                .await
-                .values()
-                .map(|info| {
-                    info.latency()
-                        .average()
-                        .unwrap_or_else(|| Duration::new(0, 0))
-                        .as_millis()
-                })
-                .sum::<u128>()
-                / ctx.bot_context.shards_per_cluster as u128,
-        )
+        .insert("shards", ctx.bot_context.scheme_info.total_shards)
+        .insert("average_latency", avg_latency)
         .insert("guilds", stats.guild_counts.loaded.get())
         .insert("total_users", stats.user_counts.total.get())
         .insert("unique_users", stats.user_counts.unique.get())

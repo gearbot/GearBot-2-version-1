@@ -38,15 +38,15 @@ impl BotContext {
 
         let data = ColdRebootData {
             resume_data: map,
-            total_shards: self.total_shards,
+            total_shards: self.scheme_info.total_shards,
             guild_chunks,
-            shard_count: self.shards_per_cluster,
+            shard_count: self.scheme_info.shards_per_cluster,
             user_chunks,
         };
 
         connection
             .set_and_expire_seconds(
-                format!("cb_cluster_data_{}", self.cluster_id),
+                format!("cb_cluster_data_{}", self.scheme_info.cluster_id),
                 &serde_json::to_value(data).unwrap().to_string().into_bytes(),
                 180,
             )

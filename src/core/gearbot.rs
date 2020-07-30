@@ -1,6 +1,4 @@
-use std::collections::HashMap;
 use std::convert::{Infallible, TryFrom};
-use std::error;
 use std::process;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -20,152 +18,151 @@ use crate::core::handlers::{commands, general, modlog};
 use crate::core::{BotConfig, BotContext, BotStats, ColdRebootData};
 use crate::translation::Translations;
 use crate::utils::Error;
-use crate::{gearbot_error, gearbot_important, gearbot_info};
+use crate::{gearbot_error, gearbot_important, gearbot_info, SchemeInfo};
 use prometheus::{Encoder, TextEncoder};
 use twilight::model::gateway::payload::update_status::UpdateStatusInfo;
 use twilight::model::gateway::presence::{ActivityType, Status};
 
-pub struct GearBot;
+pub async fn run(
+    scheme_info: SchemeInfo,
+    config: BotConfig,
+    http: HttpClient,
+    bot_user: CurrentUser,
+    postgres_pool: sqlx::PgPool,
+    redis_pool: darkredis::ConnectionPool,
+    translations: Translations,
+) -> Result<(), Error> {
+    let sharding_scheme = ShardScheme::try_from((
+        scheme_info.cluster_id * scheme_info.shards_per_cluster
+            ..scheme_info.cluster_id * scheme_info.shards_per_cluster + scheme_info.shards_per_cluster,
+        scheme_info.total_shards,
+    ))
+    .unwrap();
 
-impl GearBot {
-    pub async fn run(
-        cluster_id: u64,
-        shards_per_cluster: u64,
-        total_shards: u64,
-        config: BotConfig,
-        http: HttpClient,
-        user: CurrentUser,
-        postgres_pool: sqlx::PgPool,
-        redis_pool: darkredis::ConnectionPool,
-        translations: Translations,
-    ) -> Result<(), Box<dyn error::Error + Send + Sync>> {
-        let sharding_scheme = ShardScheme::try_from((
-            cluster_id * shards_per_cluster..cluster_id * shards_per_cluster + shards_per_cluster,
-            total_shards,
-        ))
-        .unwrap();
+    let intents = Some(
+        GatewayIntents::GUILDS
+            | GatewayIntents::GUILD_MEMBERS
+            | GatewayIntents::GUILD_BANS
+            | GatewayIntents::GUILD_EMOJIS
+            | GatewayIntents::GUILD_INVITES
+            | GatewayIntents::GUILD_VOICE_STATES
+            | GatewayIntents::GUILD_MESSAGES
+            | GatewayIntents::GUILD_MESSAGE_REACTIONS
+            | GatewayIntents::DIRECT_MESSAGES
+            | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
+    );
 
-        let intents = Some(
-            GatewayIntents::GUILDS
-                | GatewayIntents::GUILD_MEMBERS
-                | GatewayIntents::GUILD_BANS
-                | GatewayIntents::GUILD_EMOJIS
-                | GatewayIntents::GUILD_INVITES
-                | GatewayIntents::GUILD_VOICE_STATES
-                | GatewayIntents::GUILD_MESSAGES
-                | GatewayIntents::GUILD_MESSAGE_REACTIONS
-                | GatewayIntents::DIRECT_MESSAGES
-                | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
-        );
+    let stats = Arc::new(BotStats::new(scheme_info.cluster_id));
+    let s = stats.clone();
+    tokio::spawn(run_metrics_server(s, scheme_info.cluster_id));
 
-        let stats = Arc::new(BotStats::new(cluster_id));
-        let s = stats.clone();
-        tokio::spawn(run_metrics_server(s, cluster_id));
+    let cache = Cache::new(scheme_info.cluster_id, stats.clone());
 
-        let cache = Cache::new(cluster_id, stats.clone());
+    let mut cb = ClusterConfig::builder(&config.tokens.discord)
+        .shard_scheme(sharding_scheme)
+        .intents(intents)
+        .presence(UpdateStatusInfo::new(
+            true,
+            generate_activity(
+                ActivityType::Listening,
+                String::from("to the modem screeching as I connect to the gateway"),
+            ),
+            None,
+            Status::Idle,
+        ));
 
-        let mut cb = ClusterConfig::builder(&config.tokens.discord)
-            .shard_scheme(sharding_scheme)
-            .intents(intents)
-            .presence(UpdateStatusInfo::new(
-                true,
-                generate_activity(
-                    ActivityType::Listening,
-                    String::from("to the modem screeching as i connect to the gateway"),
-                ),
-                None,
-                Status::Idle,
-            ));
-
-        //check for resume data, pass to builder if present
-        let mut connection = redis_pool.get().await;
-
-        let key = format!("cb_cluster_data_{}", cluster_id);
-        if let Some(d) = connection.get(&key).await.unwrap() {
-            let cold_cache: ColdRebootData = serde_json::from_str(&*String::from_utf8(d).unwrap())?;
+    // Check for resume data, pass to builder if present
+    {
+        let mut redis_conn = redis_pool.get().await;
+        let key = format!("cb_cluster_data_{}", scheme_info.cluster_id);
+        if let Some(cache_data) = redis_conn.get(&key).await.unwrap() {
+            let cold_cache: ColdRebootData = serde_json::from_str(&String::from_utf8(cache_data).unwrap())?;
             debug!("ColdRebootData: {:?}", cold_cache);
-            connection.del(format!("cb_cluster_data_{}", cluster_id)).await?;
-            if cold_cache.total_shards == total_shards && cold_cache.shard_count == shards_per_cluster {
-                let mut map = HashMap::new();
-                for (id, data) in cold_cache.resume_data {
-                    map.insert(
-                        id,
-                        ResumeSession {
-                            session_id: data.0,
-                            sequence: data.1,
-                        },
-                    );
-                }
+
+            redis_conn
+                .del(format!("cb_cluster_data_{}", scheme_info.cluster_id))
+                .await?;
+            if (cold_cache.total_shards == scheme_info.total_shards)
+                && (cold_cache.shard_count == scheme_info.shards_per_cluster)
+            {
+                let map = cold_cache
+                    .resume_data
+                    .into_iter()
+                    .map(|(id, data)| {
+                        (
+                            id,
+                            ResumeSession {
+                                session_id: data.0,
+                                sequence: data.1,
+                            },
+                        )
+                    })
+                    .collect();
+
                 let start = Instant::now();
                 let result = cache
                     .restore_cold_resume(&redis_pool, cold_cache.guild_chunks, cold_cache.user_chunks)
                     .await;
-                match result {
-                    Ok(_) => {
-                        let end = std::time::Instant::now();
-                        gearbot_important!("Cold resume defrosting completed in {}ms!", (end - start).as_millis());
-                        cb = cb.resume_sessions(map);
-                    }
 
-                    Err(e) => {
-                        gearbot_error!("Cold resume defrosting failed! {}", e);
-                        cache.reset();
-                    }
+                if let Err(e) = result {
+                    gearbot_error!("Cold resume defrosting failed: {}", e);
+                    cache.reset();
+                } else {
+                    gearbot_important!("Cold resume defrosting completed in {}ms!", start.elapsed().as_millis());
+                    cb = cb.resume_sessions(map);
                 }
             }
         };
-        let cluster_config = cb.build();
-
-        let cluster = Cluster::new(cluster_config).await?;
-        let context = Arc::new(BotContext::new(
-            cache,
-            cluster,
-            http,
-            user,
-            postgres_pool,
-            translations,
-            config.__master_key,
-            redis_pool.clone(),
-            cluster_id,
-            shards_per_cluster,
-            total_shards,
-            stats.clone(),
-            config.global_admins,
-        ));
-
-        let shutdown_ctx = context.clone();
-        ctrlc::set_handler(move || {
-            // We need a seperate runtime, because at this point in the program,
-            // the tokio::main instance isn't running anymore.
-            let mut rt = tokio::runtime::Runtime::new().unwrap();
-            let _ = rt.block_on(shutdown_ctx.initiate_cold_resume());
-            process::exit(0);
-        })
-        .expect("Failed to register shutdown handler!");
-
-        gearbot_info!("The cluster is going online!");
-        let c = context.cluster.clone();
-        tokio::spawn(async move {
-            tokio::time::delay_for(Duration::new(1, 0)).await;
-            c.up().await;
-        });
-        let mut bot_events = context.cluster.events().await;
-        while let Some(event) = bot_events.next().await {
-            let c = context.clone();
-            context.update_stats(event.0, &event.1);
-            context.cache.update(event.0, &event.1, context.clone());
-            tokio::spawn(async {
-                let result = handle_event(event, c).await;
-                if result.is_err() {
-                    gearbot_error!("{}", result.err().unwrap());
-                    // c.stats.had_error().await
-                }
-            });
-        }
-        context.cluster.down().await;
-
-        Ok(())
     }
+
+    let cluster_config = cb.build();
+
+    let cluster = Cluster::new(cluster_config).await?;
+    let context = Arc::new(BotContext::new(
+        cache,
+        cluster,
+        http,
+        bot_user,
+        postgres_pool,
+        translations,
+        config.__master_key,
+        redis_pool,
+        scheme_info,
+        stats,
+        config.global_admins,
+    ));
+
+    let shutdown_ctx = context.clone();
+    ctrlc::set_handler(move || {
+        // We need a seperate runtime, because at this point in the program,
+        // the tokio::main instance isn't running anymore.
+        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let _ = rt.block_on(shutdown_ctx.initiate_cold_resume());
+        process::exit(0);
+    })
+    .expect("Failed to register shutdown handler!");
+
+    gearbot_info!("The cluster is going online!");
+    let c = context.cluster.clone();
+    tokio::spawn(async move {
+        tokio::time::delay_for(Duration::from_secs(1)).await;
+        c.up().await;
+    });
+
+    let mut bot_events = context.cluster.events().await;
+    while let Some(event) = bot_events.next().await {
+        let c = context.clone();
+        context.update_stats(event.0, &event.1);
+        context.cache.update(event.0, &event.1, context.clone());
+        tokio::spawn(async {
+            if let Err(e) = handle_event(event, c).await {
+                gearbot_error!("{}", e);
+            }
+        });
+    }
+    context.cluster.down().await;
+
+    Ok(())
 }
 
 async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), Error> {

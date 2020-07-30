@@ -17,6 +17,7 @@ use crate::core::GuildConfig;
 use crate::crypto::EncryptionKey;
 use crate::translation::Translations;
 use crate::utils::LogType;
+use crate::SchemeInfo;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
@@ -46,9 +47,7 @@ pub struct BotContext {
     __static_master_key: Option<Vec<u8>>,
     log_pumps: DashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>,
     pub redis_pool: darkredis::ConnectionPool,
-    pub cluster_id: u64,
-    pub shards_per_cluster: u64,
-    pub total_shards: u64,
+    pub scheme_info: SchemeInfo,
     pub shard_states: DashMap<u64, ShardState>,
     pub start_time: DateTime<Utc>,
     pub global_admins: Vec<UserId>,
@@ -64,14 +63,14 @@ impl BotContext {
         translations: Translations,
         key: Option<Vec<u8>>,
         redis_pool: darkredis::ConnectionPool,
-        cluster_id: u64,
-        shards_per_cluster: u64,
-        total_shards: u64,
+        scheme_info: SchemeInfo,
         stats: Arc<BotStats>,
         global_admins: Vec<u64>,
     ) -> Self {
-        let shard_states = DashMap::with_capacity(shards_per_cluster as usize);
-        for i in cluster_id * shards_per_cluster..cluster_id * shards_per_cluster + shards_per_cluster {
+        let shard_states = DashMap::with_capacity(scheme_info.shards_per_cluster as usize);
+        for i in scheme_info.cluster_id * scheme_info.shards_per_cluster
+            ..scheme_info.cluster_id * scheme_info.shards_per_cluster + scheme_info.shards_per_cluster
+        {
             shard_states.insert(i, ShardState::PendingCreation);
             cache
                 .missing_per_shard
@@ -82,7 +81,7 @@ impl BotContext {
 
         let global_admins = global_admins.into_iter().map(|id| UserId(id)).collect();
 
-        stats.shard_counts.pending.set(shards_per_cluster as i64);
+        stats.shard_counts.pending.set(scheme_info.shards_per_cluster as i64);
         BotContext {
             cache,
             cluster,
@@ -97,9 +96,7 @@ impl BotContext {
             __static_master_key: key,
             log_pumps: DashMap::new(),
             redis_pool,
-            cluster_id,
-            shards_per_cluster,
-            total_shards,
+            scheme_info,
             shard_states,
             start_time: Utc::now(),
             global_admins,

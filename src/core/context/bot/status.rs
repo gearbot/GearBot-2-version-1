@@ -11,8 +11,8 @@ impl BotContext {
         activity_type: ActivityType,
         message: String,
     ) -> Result<(), Error> {
-        for shard_id in self.cluster_id * self.shards_per_cluster
-            ..self.cluster_id * self.shards_per_cluster + self.shards_per_cluster
+        for shard_id in self.scheme_info.cluster_id * self.scheme_info.shards_per_cluster
+            ..self.scheme_info.cluster_id * self.scheme_info.shards_per_cluster + self.scheme_info.shards_per_cluster
         {
             self.set_shard_activity(shard_id, status, activity_type, message.clone())
                 .await?;

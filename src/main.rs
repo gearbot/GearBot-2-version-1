@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use clap::{App, Arg};
 use log::{debug, info};
 use tokio::runtime::Runtime;
 use twilight::http::{request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient};
@@ -10,7 +9,7 @@ use git_version::git_version;
 use translation::load_translations;
 use utils::Error;
 
-use crate::core::gearbot::GearBot;
+use crate::core::gearbot;
 use crate::core::{logging, BotConfig};
 
 mod commands;
@@ -27,6 +26,13 @@ pub const GIT_VERSION: &str = git_version!();
 
 pub type CommandResult = Result<(), Error>;
 
+#[derive(Debug, Copy, Clone)]
+pub struct SchemeInfo {
+    pub cluster_id: u64,
+    pub shards_per_cluster: u64,
+    pub total_shards: u64,
+}
+
 fn main() -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
 
@@ -37,13 +43,6 @@ fn main() -> Result<(), Error> {
 }
 
 async fn real_main() -> Result<(), Error> {
-    //parse CLI args
-    let args = App::new("GearBot")
-        .arg(Arg::with_name("cluster"))
-        .arg(Arg::with_name("shards_per_cluster"))
-        .arg(Arg::with_name("total_shards"))
-        .get_matches();
-
     if let Err(e) = logging::initialize() {
         gearbot_error!("{}", e);
         return Err(e);
@@ -98,9 +97,11 @@ async fn real_main() -> Result<(), Error> {
             return Err(Error::DarkRedisError(e));
         }
     };
+
     info!("Connected to redis!");
 
     gearbot_info!("Database connections established");
+
     {
         info!("Populating command list");
         ROOT_NODE.all_commands.get("something");
@@ -110,27 +111,22 @@ async fn real_main() -> Result<(), Error> {
     // end of the critical failure zone, everything from here on out should be properly wrapped
     // and handled
 
-    let cluster = args.value_of("cluster").unwrap_or("0").parse::<u64>().unwrap_or(0);
-    let shards_per_cluster = args
-        .value_of("shards_per_cluster")
-        .unwrap_or("1")
-        .parse::<u64>()
-        .unwrap_or(1);
-    let total_shards = args.value_of("total_shards").unwrap_or("1").parse::<u64>().unwrap_or(1);
+    // Parse CLI arguments for sharding and cluster info
+    let args = std::env::args().skip(1).collect::<Vec<String>>();
+    let cluster_id = args
+        .get(0)
+        .map(|cs| cs.parse::<u64>().unwrap_or_default())
+        .unwrap_or_default();
+    let shards_per_cluster = args.get(1).map(|spc| spc.parse::<u64>().unwrap_or(1)).unwrap_or(1);
+    let total_shards = args.get(2).map(|ts| ts.parse::<u64>().unwrap_or(1)).unwrap_or(1);
 
-    if let Err(e) = GearBot::run(
-        cluster,
+    let scheme_info = SchemeInfo {
+        cluster_id,
         shards_per_cluster,
         total_shards,
-        config,
-        http,
-        user,
-        postgres_pool,
-        redis_pool,
-        translations,
-    )
-    .await
-    {
+    };
+
+    if let Err(e) = gearbot::run(scheme_info, config, http, user, postgres_pool, redis_pool, translations).await {
         gearbot_error!("Failed to start the bot: {}", e)
     }
 

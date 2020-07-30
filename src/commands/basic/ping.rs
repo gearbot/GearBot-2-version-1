@@ -9,9 +9,7 @@ pub async fn ping(ctx: CommandContext) -> CommandResult {
 
     let sent_msg = ctx.reply_raw(":ping_pong:").await?;
 
-    let finished = Instant::now();
-
-    let rest_time = (finished - start).as_millis();
+    let rest_time = start.elapsed().as_millis();
 
     let cluster_info = ctx.get_cluster_info().await;
 
