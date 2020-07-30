@@ -1,4 +1,4 @@
-use crate::commands::meta::nodes::{CommandGroup, CommandNode, GearBotPermission, RootNode};
+use crate::commands::meta::nodes::{CommandGroup, CommandNode, GearBotPermissions, RootNode};
 use crate::{
     command, command_with_aliases, command_with_subcommands, command_with_subcommands_and_aliases,
     command_with_subcommands_and_handler_and_aliases,
@@ -21,93 +21,93 @@ lazy_static! {
                 "about",
                 basic::about,
                 Permissions::EMBED_LINKS,
-                GearBotPermission::AboutCommand,
+                GearBotPermissions::ABOUT_COMMAND,
                 CommandGroup::Basic
             ),
             command!(
                 "coinflip",
                 basic::coinflip,
                 Permissions::empty(),
-                GearBotPermission::CoinflipCommand,
+                GearBotPermissions::COINFLIP_COMMAND,
                 CommandGroup::Basic
             ),
             command!(
                 "ping",
                 basic::ping,
                 Permissions::empty(),
-                GearBotPermission::PingCommand,
+                GearBotPermissions::PING_COMMAND,
                 CommandGroup::Basic
             ),
             command!(
                 "quote",
                 basic::quote,
-                Permissions::empty(),
-                GearBotPermission::QuoteCommand,
+                Permissions::EMBED_LINKS,
+                GearBotPermissions::QUOTE_COMMAND,
                 CommandGroup::Basic
             ),
             command!(
                 "uid",
                 basic::uid,
                 Permissions::empty(),
-                GearBotPermission::UidCommand,
+                GearBotPermissions::UID_COMMAND,
                 CommandGroup::Basic
             ),
             command_with_subcommands_and_aliases!(
                 "config",
                 vec![String::from("c")],
                 Permissions::empty(),
-                GearBotPermission::ConfigCommand,
-                CommandGroup::Admin,
+                GearBotPermissions::READ_CONFIG, //lock behind only read, technically possible to have write without read but no my problem if you set stupid settings
+                CommandGroup::GuildAdmin,
                 command_with_subcommands_and_handler_and_aliases!(
                     "get",
                     vec![String::from("g")],
                     debug::get_config,
                     Permissions::empty(),
-                    GearBotPermission::GetConfigCommand,
-                    CommandGroup::Admin,
+                    GearBotPermissions::READ_CONFIG,
+                    CommandGroup::GuildAdmin,
                     command_with_aliases!(
                         "pretty",
                         vec![String::from("p")],
                         debug::get_config_pretty,
                         Permissions::empty(),
-                        GearBotPermission::GetConfigCommand,
-                        CommandGroup::Admin
+                        GearBotPermissions::READ_CONFIG,
+                        CommandGroup::GuildAdmin
                     )
                 ),
                 command!(
                     "set",
                     debug::set_config,
                     Permissions::empty(),
-                    GearBotPermission::SetConfigCommand,
-                    CommandGroup::Admin
+                    GearBotPermissions::WRITE_CONFIG,
+                    CommandGroup::GuildAdmin
                 )
             ),
             command!(
                 "userinfo",
                 moderation::userinfo,
                 Permissions::EMBED_LINKS,
-                GearBotPermission::UserInfoCommand,
+                GearBotPermissions::USERINFO_COMMAND,
                 CommandGroup::Moderation
             ),
             command_with_subcommands!(
                 "check",
                 Permissions::empty(),
-                GearBotPermission::AdminGroup,
-                CommandGroup::Admin,
+                GearBotPermissions::BOT_ADMIN,
+                CommandGroup::BotAdmin,
                 command!(
                     "cache",
                     admin::check_cache,
                     Permissions::EMBED_LINKS,
-                    GearBotPermission::AdminGroup,
-                    CommandGroup::Admin
+                    GearBotPermissions::BOT_ADMIN,
+                    CommandGroup::BotAdmin
                 )
             ),
             command!(
                 "restart",
                 admin::restart,
                 Permissions::empty(),
-                GearBotPermission::AdminGroup,
-                CommandGroup::Admin
+                GearBotPermissions::BOT_ADMIN,
+                CommandGroup::BotAdmin
             ),
         ];
 

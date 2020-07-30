@@ -14,7 +14,7 @@ impl BotContext {
         match self.configs.get(&guild_id) {
             Some(config) => Ok(config),
             None => {
-                let master_ek = self.__get_master_key();
+                let master_ek = self.__get_main_encryption_key();
 
                 let config = match dbconfig::get_guild_config(&self, guild_id.0).await? {
                     Some(c) => c,
@@ -63,7 +63,7 @@ impl BotContext {
             .await?;
 
         let guild_key = {
-            let master_key = self.__get_master_key();
+            let master_key = self.__get_main_encryption_key();
 
             let decrypted_gk_bytes = crypto::decrypt_bytes(&ek_bytes.0, master_key, guild_id.0);
             EncryptionKey::clone_from_slice(&decrypted_gk_bytes)

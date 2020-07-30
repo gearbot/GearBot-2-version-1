@@ -7,8 +7,8 @@ use crate::utils::{emoji, matchers, Error};
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {
-    #[serde(alias = "DANGEROUS_MASTER_KEY")]
-    pub __master_key: Option<Vec<u8>>,
+    #[serde(alias = "DANGEROUS_MAIN_ENCRYPTION_KEY")]
+    pub __main_encryption_key: Option<Vec<u8>>,
     pub tokens: Tokens,
     pub logging: Logging,
     pub database: Database,

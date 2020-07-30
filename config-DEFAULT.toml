@@ -1,6 +1,6 @@
 # You can use the static key below for development, or make your own here: https://gchq.github.io/CyberChef/#recipe=Pseudo-Random_Number_Generator(32,'Byte%20array')
 # NOTE: DO **NOT** use the key below in any production deployment!
-#DANGEROUS_MASTER_KEY = [99,41,244,22,238,93,36,81,71,201,10,206,57,198,233,38,221,50,65,131,199,24,207,12,181,20,47,31,151,23,104,102]
+#DANGEROUS_MAIN_ENCRYPTION_KEY = [99,41,244,22,238,93,36,81,71,201,10,206,57,198,233,38,221,50,65,131,199,24,207,12,181,20,47,31,151,23,104,102]
 
 global_admins = []
 

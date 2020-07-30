@@ -51,7 +51,7 @@ pub struct BotContext {
     configs: DashMap<GuildId, GuildConfig>,
     pub pool: sqlx::PgPool,
     pub translations: Translations,
-    __static_master_key: Option<Vec<u8>>,
+    __main_encryption_key: Option<Vec<u8>>,
     log_pumps: DashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>,
     pub redis_pool: darkredis::ConnectionPool,
     pub scheme_info: SchemeInfo,
@@ -97,7 +97,7 @@ impl BotContext {
             configs: DashMap::new(),
             pool: databases.0,
             translations,
-            __static_master_key: config_ops.0,
+            __main_encryption_key: config_ops.0,
             log_pumps: DashMap::new(),
             redis_pool: databases.1,
             scheme_info,
@@ -112,8 +112,8 @@ impl BotContext {
         self.bot_user.id == other.author.id
     }
 
-    fn __get_master_key(&self) -> &EncryptionKey {
-        if let Some(mk_bytes) = &self.__static_master_key {
+    fn __get_main_encryption_key(&self) -> &EncryptionKey {
+        if let Some(mk_bytes) = &self.__main_encryption_key {
             GenericArray::from_slice(mk_bytes)
         } else {
             // It will always be returned, but the other location it could come from

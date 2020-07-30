@@ -8,12 +8,12 @@ use aes_gcm::{
 
 pub type EncryptionKey = GenericArray<u8, U32>;
 
-pub fn generate_guild_encryption_key(master_ek: &EncryptionKey, guild_id: u64) -> Vec<u8> {
+pub fn generate_guild_encryption_key(main_encryption_key: &EncryptionKey, guild_id: u64) -> Vec<u8> {
     let mut csprng = thread_rng();
     let mut guild_encryption_key = [0u8; 32];
     csprng.fill_bytes(&mut guild_encryption_key);
 
-    encrypt_bytes(&guild_encryption_key, master_ek, guild_id)
+    encrypt_bytes(&guild_encryption_key, main_encryption_key, guild_id)
 }
 
 pub fn encrypt_bytes(plaintext: &[u8], key: &EncryptionKey, msg_id: u64) -> Vec<u8> {

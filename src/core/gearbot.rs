@@ -121,7 +121,7 @@ pub async fn run(
         (http, bot_user),
         (postgres_pool, redis_pool),
         translations,
-        (config.__master_key, config.global_admins),
+        (config.__main_encryption_key, config.global_admins),
         stats,
     ));
 

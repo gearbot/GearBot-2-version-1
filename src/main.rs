@@ -56,8 +56,8 @@ async fn real_main() -> Result<(), Error> {
     let config = BotConfig::new("config.toml")?;
     debug!("Loaded config file");
 
-    if config.__master_key.is_none() {
-        panic!("The KMS needs built before GearBot can work without a static master key!");
+    if config.__main_encryption_key.is_none() {
+        panic!("The KMS needs built before GearBot can work without a static main encryption key!");
     }
 
     let mut builder = HttpClient::builder();
