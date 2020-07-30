@@ -83,6 +83,6 @@ create unique index custom_command_guild_trigger_unique on customCommand (guild_
 create table guildConfig
 (
     id bigint primary key not null,
-    config json not null,
+    config jsonb not null,
     encryption_key bytea not null
 );

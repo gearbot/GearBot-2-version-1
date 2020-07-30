@@ -1,10 +1,9 @@
 use crate::commands::meta::nodes::{CommandGroup, CommandNode, GearBotPermission, RootNode};
 use crate::{
     command, command_with_aliases, command_with_subcommands, command_with_subcommands_and_aliases,
-    command_with_subcommands_and_handler, command_with_subcommands_and_handler_and_aliases,
+    command_with_subcommands_and_handler_and_aliases,
 };
 use lazy_static::lazy_static;
-use log::info;
 use std::collections::HashMap;
 use std::sync::Arc;
 use twilight::model::guild::Permissions;
@@ -106,7 +105,7 @@ lazy_static! {
             all_commands.insert(command.name.clone(), command.clone());
 
             for a in &command.aliases {
-                if (all_commands.contains_key(a)) {
+                if all_commands.contains_key(a) {
                     panic!(format!(
                         "Tried to register command alias {} but another command was already registered with that name!",
                         a

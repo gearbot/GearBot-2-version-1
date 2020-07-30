@@ -10,9 +10,9 @@ pub use stats::BotStats;
 
 use crate::core::cache::Cache;
 use crate::core::GuildConfig;
+use crate::crypto::EncryptionKey;
 use crate::translation::Translations;
 use crate::utils::LogType;
-use crate::EncryptionKey;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
@@ -73,6 +73,7 @@ impl BotContext {
                 .expect("Global shard state tracking got poisoned!")
                 .insert(i, AtomicU64::new(0));
         }
+
         stats.shard_counts.pending.set(shards_per_cluster as i64);
         BotContext {
             cache,
@@ -101,12 +102,13 @@ impl BotContext {
         self.bot_user.id == other.author.id
     }
 
-    fn __get_master_key(&self) -> Option<&EncryptionKey> {
+    fn __get_master_key(&self) -> &EncryptionKey {
         if let Some(mk_bytes) = &self.__static_master_key {
-            let key = GenericArray::from_slice(mk_bytes);
-            Some(key)
+            GenericArray::from_slice(mk_bytes)
         } else {
-            None
+            // It will always be returned, but the other location it could come from
+            // is not implemented as of yet.
+            unreachable!()
         }
     }
 }

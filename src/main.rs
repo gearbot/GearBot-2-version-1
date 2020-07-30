@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use aes_gcm::aead::generic_array::{typenum::U32, GenericArray};
 use clap::{App, Arg};
 use log::{debug, info};
 use tokio::runtime::Runtime;
@@ -16,6 +15,7 @@ use crate::core::{logging, BotConfig};
 
 mod commands;
 mod core;
+mod crypto;
 mod database;
 mod parser;
 
@@ -26,8 +26,6 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const GIT_VERSION: &str = git_version!();
 
 pub type CommandResult = Result<(), Error>;
-
-pub type EncryptionKey = GenericArray<u8, U32>;
 
 fn main() -> Result<(), Error> {
     let mut runtime = Runtime::new()?;

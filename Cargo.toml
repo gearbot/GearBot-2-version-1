@@ -30,7 +30,7 @@ serde_json = "1"
 sqlx =  { version = "0.4.0-beta.1", default-features = false, features = ["postgres", "json", "runtime-tokio", "macros", "migrate"] }
 tokio = { version = "0.2", default-features = false, features = ["macros", "sync", "rt-core"] }
 toml = "0.5"
-twilight = { git="https://github.com/twilight-rs/twilight", branch="trunk" }
+twilight = { git = "https://github.com/twilight-rs/twilight", branch = "trunk" }
 url = "2.1"
 unic-langid = { version = "0.9", features = ["macros", "serde"] }
 
