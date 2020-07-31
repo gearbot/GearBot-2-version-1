@@ -114,49 +114,50 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
 
     match cached_member {
         Some(member) => {
-            if let Some(role) = member.roles.first() {
-                // This role has to exist
-                let cached_role = ctx.get_role(role).unwrap();
+            let color = match member.roles.first() {
+                Some(role) => ctx.get_role(role).unwrap().color,
+                None => USER_INFO_COLOR,
+            };
+            builder = builder.color(color);
 
-                builder = builder.color(cached_role.color);
+            let (joined, ago) = match &member.joined_at {
+                Some(joined) => {
+                    let joined =
+                        DateTime::from_utc(DateTime::parse_from_str(joined, "%FT%T%.f%z").unwrap().naive_utc(), Utc);
+                    (
+                        joined.format("%A %d %B %Y (%T)").to_string(),
+                        utils::age(joined, Utc::now(), 2),
+                    )
+                }
+                None => ("Unknown".to_string(), "Unknown".to_string()),
+            };
 
-                let (joined, ago) = match &member.joined_at {
-                    Some(joined) => {
-                        let joined = DateTime::from_utc(
-                            DateTime::parse_from_str(joined, "%FT%T%.f%z").unwrap().naive_utc(),
-                            Utc,
-                        );
-                        (
-                            joined.format("%A %d %B %Y (%T)").to_string(),
-                            utils::age(joined, Utc::now(), 2),
-                        )
-                    }
-                    None => ("Unknown".to_string(), "Unknown".to_string()),
-                };
-
-                let mut roles = "".to_string();
-                for (count, role) in member.roles.iter().enumerate() {
-                    if count > 0 {
-                        roles += ", ";
-                    }
-
-                    roles += &format!("<@&{}>", role.0);
-
-                    if count == 3 {
-                        roles += &format!(" and {} more", member.roles.len() - 3);
-                        break;
-                    }
+            let mut roles = "".to_string();
+            for (count, role) in member.roles.iter().enumerate() {
+                if count > 0 {
+                    roles += ", ";
                 }
 
-                content += &format!(
-                    "**Joined on**: {}\n**Been here for**: {}\n**Roles**:{}",
-                    joined, ago, roles
-                );
-                if let Some(s) = member.boosting_since.as_ref() {
-                    let since: DateTime<Utc> =
-                        DateTime::from_utc(DateTime::parse_from_str(s, "%FT%T%.f%z").unwrap().naive_utc(), Utc);
-                    content += &format!("**Boosting this server since**: {}", since);
+                roles += &format!("<@&{}>", role.0);
+
+                if count == 3 {
+                    roles += &format!(" and {} more", member.roles.len() - 3);
+                    break;
                 }
+            }
+
+            if member.roles.is_empty() {
+                roles = ctx.translate(GearBotString::UserinfoNoRoles)
+            }
+
+            content += &format!(
+                "**Joined on**: {}\n**Been here for**: {}\n**Roles**:{}",
+                joined, ago, roles
+            );
+            if let Some(s) = member.boosting_since.as_ref() {
+                let since: DateTime<Utc> =
+                    DateTime::from_utc(DateTime::parse_from_str(s, "%FT%T%.f%z").unwrap().naive_utc(), Utc);
+                content += &format!("**Boosting this server since**: {}", since);
             }
         }
         None => {

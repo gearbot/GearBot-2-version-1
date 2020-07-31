@@ -1083,3 +1083,13 @@ fn is_true(t: &bool) -> bool {
 fn get_true() -> bool {
     true
 }
+
+pub trait DiscordUser {
+    fn get_name(&self) -> &str;
+    fn get_discriminator(&self) -> &str;
+    fn get_id(&self) -> &UserId;
+}
+
+pub trait Named {
+    fn get_name(&self) -> &str;
+}

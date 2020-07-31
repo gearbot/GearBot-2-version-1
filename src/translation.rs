@@ -167,6 +167,7 @@ pub enum GearBotString {
     CoinflipYes,
     CoinflipNo,
     UserinfoHeader,
+    UserinfoNoRoles,
     AboutDescription,
     QuoteNotFound,
 
@@ -191,6 +192,7 @@ impl GearBotString {
             GearBotString::AboutDescription => "basic__about",
             GearBotString::QuoteNotFound => "basic__quote_notfound",
             GearBotString::MissingPermissions => "errors_missing_permissions",
+            GearBotString::UserinfoNoRoles => "basic__userinfo_no_roles",
         }
     }
 
@@ -254,7 +256,7 @@ mod tests {
     use std::fs;
 
     lazy_static! {
-        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 10] = [
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 11] = [
             GearBotString::PingPong.as_str(),
             GearBotString::CoinflipDefault.as_str(),
             GearBotString::CoinflipYes.as_str(),
@@ -265,6 +267,7 @@ mod tests {
             GearBotString::AboutDescription.as_str(),
             GearBotString::QuoteNotFound.as_str(),
             GearBotString::MissingPermissions.as_str(),
+            GearBotString::UserinfoNoRoles.as_str()
         ];
     }
 

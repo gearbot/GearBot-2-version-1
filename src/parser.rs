@@ -9,9 +9,10 @@ use crate::commands::{
     meta::nodes::{CommandNode, GearBotPermissions},
     ROOT_NODE,
 };
-use crate::core::cache::{CachedMember, CachedUser};
+use crate::core::cache::{CachedGuild, CachedMember, CachedUser};
 use crate::core::{BotContext, CommandContext, CommandMessage, GuildConfig};
 use crate::translation::{FluArgs, GearBotString};
+use crate::utils::matchers::split_name;
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
 use lazy_static::lazy_static;
@@ -33,8 +34,38 @@ pub struct Parser {
 
 impl Parser {
     fn new(content: &str, ctx: Arc<BotContext>, shard_id: u64, guild_id: Option<GuildId>) -> Self {
+        let temp = content.split_whitespace().collect::<Vec<&str>>();
+        let mut parts = vec![];
+        let mut index = 0;
+        while index < temp.len() {
+            let mut part = temp[index].to_string();
+            index += 1;
+            if part.starts_with('"') && !part.ends_with('"') {
+                let mut new_part = part.clone();
+                let mut new_index = index;
+                while new_index < temp.len() {
+                    new_part += " ";
+                    new_part += &*temp[new_index];
+                    new_index += 1;
+                    if new_part.ends_with('"') {
+                        index = new_index;
+                        part = new_part.clone();
+                        break;
+                    }
+                }
+            }
+            match part.strip_prefix('"') {
+                Some(new_part) => match new_part.strip_suffix('"') {
+                    Some(new_part) => part = new_part.to_string(),
+                    None => {}
+                },
+                None => {}
+            }
+
+            parts.push(part);
+        }
         Parser {
-            parts: content.split_whitespace().map(String::from).collect::<Vec<String>>(),
+            parts,
             index: 0,
             ctx,
             shard_id,
@@ -246,7 +277,6 @@ impl Parser {
         } else {
             let result = &self.parts[self.index];
             self.index += 1;
-            debug!("{}", self.index);
             Ok(result)
         }
     }
@@ -271,38 +301,96 @@ impl Parser {
                 match input.parse::<u64>() {
                     Ok(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
                     Err(_) => {
-                        //nope, must be a partial name
-                        Err(Error::ParseError(ParseError::MemberNotFoundByName(
-                            "not implemented yet".to_string(),
-                        )))
+                        // reverse our get_next and make the member getter deal with it
+                        self.index -= 1;
+                        Ok(self.get_member()?.user(&self.ctx.cache))
                     }
                 }
             }
         }
     }
 
-    pub async fn get_member(&mut self) -> Result<Arc<CachedMember>, Error> {
-        let gid = self.get_guild_id()?;
+    pub fn get_member(&mut self) -> Result<Arc<CachedMember>, Error> {
+        let cache = &self.ctx.clone().cache;
+        let guild = self.get_guild()?;
         let input = self.get_next()?;
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
-            Some(uid) => match self.ctx.cache.get_member(&gid, &UserId(uid)) {
+            Some(uid) => match self.ctx.cache.get_member(&guild.id, &UserId(uid)) {
                 Some(member) => Ok(member),
                 None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
             },
             None => {
                 // is it a userid?
                 match input.parse::<u64>() {
-                    Ok(uid) => match self.ctx.cache.get_member(&gid, &UserId(uid)) {
+                    Ok(uid) => match self.ctx.cache.get_member(&guild.id, &UserId(uid)) {
                         Some(member) => Ok(member),
                         None => Err(Error::ParseError(ParseError::MemberNotFoundById(uid))),
                     },
                     Err(_) => {
-                        //nope, must be a partial name
-                        Err(Error::ParseError(ParseError::MemberNotFoundByName(
-                            "not implemented yet".to_string(),
-                        )))
+                        //nope, might be a (partial) name
+
+                        //remove @ if there is one at the start
+                        let to_search = if input.starts_with("@") {
+                            input
+                                .char_indices()
+                                .nth(1)
+                                .and_then(|(i, _)| input.get(i..))
+                                .unwrap_or("")
+                        } else {
+                            input
+                        };
+                        let mut name = to_search;
+                        let mut discriminator = None;
+                        if let Some((n, d)) = split_name(to_search) {
+                            name = n;
+                            discriminator = Some(d);
+                        }
+                        let mut matches = vec![];
+
+                        //grab user lock so we don't need to grab one each iteration
+                        let users = cache.users.read().expect("Global user cache got poisoned");
+
+                        //loop over the members and collect those that match
+                        //some duplicated cause hashmaps don't give value only iterators
+                        let members = guild.members.read().expect("Guild inner members cache got poisoned!");
+                        for member in members.values() {
+                            //if we have a discriminator we have a full name, don't accept partials
+                            //note that this does not mean there can only be 1 match as # is valid for nicknames (but not usernames)
+                            if let Some(nickname) = &member.nickname {
+                                if nickname.starts_with(to_search) {
+                                    matches.push(member);
+                                }
+                            }
+                            let user = match users.get(&member.user_id) {
+                                Some(user) => user,
+                                None => {
+                                    return Err(Error::CorruptCacheError("member without cached username".to_string()))
+                                }
+                            };
+                            match discriminator {
+                                Some(discriminator) => {
+                                    if user.username == name && user.discriminator == discriminator {
+                                        matches.push(member)
+                                    }
+                                }
+                                None => {
+                                    if user.username.starts_with(name) {
+                                        matches.push(member);
+                                    }
+                                }
+                            }
+                        }
+
+                        // if we only have one match or work here is done
+                        if matches.len() == 1 {
+                            Ok(matches.remove(0).clone())
+                        } else if matches.len() > 1 {
+                            Err(Error::ParseError(ParseError::MultipleMembersByName(input.to_string())))
+                        } else {
+                            Err(Error::ParseError(ParseError::MemberNotFoundByName(input.to_string())))
+                        }
                     }
                 }
             }
@@ -316,6 +404,15 @@ impl Parser {
         }
     }
 
+    fn get_guild(&self) -> Result<Arc<CachedGuild>, Error> {
+        match self.ctx.cache.get_guild(&self.get_guild_id()?) {
+            Some(guild) => Ok(guild),
+            None => Err(Error::CorruptCacheError(
+                "A guild vanished from cache while still parsing a command!".to_string(),
+            )),
+        }
+    }
+
     pub async fn get_user_or(&mut self, alternative: Arc<CachedUser>) -> Result<Arc<CachedUser>, Error> {
         if self.has_next() {
             Ok(self.get_user().await?)
@@ -324,9 +421,9 @@ impl Parser {
         }
     }
 
-    pub async fn get_member_or(&mut self, alternative: Arc<CachedMember>) -> Result<Arc<CachedMember>, Error> {
+    pub fn get_member_or(&mut self, alternative: Arc<CachedMember>) -> Result<Arc<CachedMember>, Error> {
         if self.has_next() {
-            Ok(self.get_member().await?)
+            Ok(self.get_member()?)
         } else {
             Ok(alternative)
         }

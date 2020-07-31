@@ -1,4 +1,3 @@
-use log::debug;
 use regex::{Match, Regex, RegexBuilder};
 use url::{Host, Url};
 
@@ -30,9 +29,7 @@ pub fn contains_mention(msg: &str) -> bool {
 }
 
 pub fn get_mention(msg: &str) -> Option<u64> {
-    debug!("{}", msg);
     let captures = MENTION_MATCHER_SOLO.captures(msg);
-    debug!("{:?}", captures);
     match captures {
         Some(c) => Some(
             c.get(1)
@@ -87,8 +84,6 @@ pub fn contains_invite_link(msg: &str) -> bool {
                             Some(segs) => segs,
                             None => return false,
                         };
-
-                        println!("The segments were: {:?}", segments);
 
                         for seg in segments {
                             if seg.contains("invite") {
@@ -172,6 +167,17 @@ lazy_static! {
 
 lazy_static! {
     static ref START_WITH_NUMBER_MATCHER: Regex = Regex::new(r"^(\d+)").unwrap();
+}
+
+lazy_static! {
+    static ref USERNAME_WITH_DISCRIMINATOR: Regex = Regex::new(r"([!#]*)#(\d{4})").unwrap();
+}
+
+pub fn split_name(input: &str) -> Option<(&str, &str)> {
+    match USERNAME_WITH_DISCRIMINATOR.captures(input) {
+        Some(captures) => Some((captures.get(1).unwrap().as_str(), captures.get(2).unwrap().as_str())),
+        None => None,
+    }
 }
 
 #[cfg(test)]
