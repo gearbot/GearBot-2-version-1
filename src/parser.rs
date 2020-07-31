@@ -14,7 +14,6 @@ use crate::core::{BotContext, CommandContext, CommandMessage, GuildConfig};
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
-use fluent_bundle::FluentArgs;
 use lazy_static::lazy_static;
 use std::sync::atomic::Ordering;
 use twilight::model::guild::Permissions;

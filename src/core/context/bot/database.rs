@@ -1,4 +1,3 @@
-use dashmap::ElementGuard;
 use serde_json::to_value;
 use twilight::model::channel::Message;
 use twilight::model::id::{GuildId, MessageId};

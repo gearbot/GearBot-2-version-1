@@ -5,7 +5,7 @@ use crate::core::guild_config::PermissionGroup;
 use crate::core::{BotContext, GuildConfig};
 use std::sync::Arc;
 use twilight::model::guild::Permissions;
-use twilight::model::id::{GuildId, UserId};
+use twilight::model::id::UserId;
 
 impl BotContext {
     pub fn get_guild_permissions_for(&self, member: &Arc<CachedMember>, guild: &Arc<CachedGuild>) -> Permissions {

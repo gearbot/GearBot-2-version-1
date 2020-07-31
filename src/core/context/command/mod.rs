@@ -1,22 +1,18 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use dashmap::ElementGuard;
 use fluent_bundle::FluentArgs;
 use twilight::gateway::shard::Information;
 use twilight::model::channel::embed::Embed;
 use twilight::model::channel::message::{MessageFlags, MessageType};
 use twilight::model::channel::Attachment;
-use twilight::model::{
-    id::{GuildId, MessageId},
-    user::CurrentUser,
-};
+use twilight::model::{id::MessageId, user::CurrentUser};
 
 use crate::commands::meta::nodes::GearBotPermissions;
 use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};
 use crate::core::{BotContext, GuildConfig};
 use crate::parser::Parser;
-use crate::translation::{GearBotString, GuildTranslator, DEFAULT_LANG};
+use crate::translation::{GearBotString, GuildTranslator};
 use crate::utils::CommandError;
 use crate::Error;
 

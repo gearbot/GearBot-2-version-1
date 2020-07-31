@@ -1,6 +1,5 @@
 use aes_gcm::aead::generic_array::GenericArray;
 use chrono::{DateTime, Utc};
-use dashmap::DashMap;
 use tokio::sync::mpsc::UnboundedSender;
 use twilight::gateway::Cluster;
 use twilight::http::Client as HttpClient;
@@ -20,8 +19,7 @@ pub(crate) mod status;
 
 pub use stats::BotStats;
 
-use crate::commands::meta::nodes::GearBotPermissions;
-use crate::core::cache::{Cache, CachedGuild, CachedMember, CachedUser};
+use crate::core::cache::Cache;
 use crate::core::GuildConfig;
 use crate::crypto::EncryptionKey;
 use crate::translation::Translations;
