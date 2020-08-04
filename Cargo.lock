@@ -348,9 +348,9 @@ dependencies = [
 
 [[package]]
 name = "ctrlc"
-version = "3.1.5"
+version = "3.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54dedab740bc412d514cfbc4a1d9d5d16fed02c4b14a7be129003c07fdc33b9b"
+checksum = "d0b676fa23f995faf587496dcd1c80fead847ed58d2da52ac1caca9a72790dd2"
 dependencies = [
  "nix",
  "winapi 0.3.9",
@@ -369,13 +369,12 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
-version = "3.11.7"
+version = "3.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2f7a3766904c6f4734f2bbf8a037b6f84753d19fe65f54b0f4d97d8f62187bb"
+checksum = "2ad86b725566cbbf4c0cb01a17bfd1c9ad1830786a02dfc11c380b21b08f02ed"
 dependencies = [
  "ahash",
  "cfg-if",
- "num_cpus",
 ]
 
 [[package]]
@@ -441,9 +440,9 @@ checksum = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
 
 [[package]]
 name = "filetime"
-version = "0.2.10"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "affc17579b132fc2461adf7c575cc6e8b134ebca52c51f5411388965227dc695"
+checksum = "3ed85775dcc68644b5c950ac06a2b23768d3bc9390464151aaf27136998dcf9e"
 dependencies = [
  "cfg-if",
  "libc",
@@ -1924,9 +1923,9 @@ checksum = "502d53007c02d7605a05df1c1a73ee436952781653da5d0bf57ad608f66932c1"
 
 [[package]]
 name = "syn"
-version = "1.0.36"
+version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cdb98bcb1f9d81d07b536179c269ea15999b5d14ea958196413869445bb5250"
+checksum = "239f255b9e3429350f188c27b807fc9920a15eb9145230ff1a7d054c08fec319"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2081,9 +2080,9 @@ checksum = "e987b6bf443f4b5b3b6f38704195592cca41c5bb7aedd3c3693c7081f8289860"
 
 [[package]]
 name = "tracing"
-version = "0.1.17"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbdf4ccd1652592b01286a5dbe1e2a77d78afaa34beadd9872a5f7396f92aaa9"
+checksum = "f0aae59226cf195d8e74d4b34beae1859257efb4e5fed3f147d2dc2c7d372178"
 dependencies = [
  "cfg-if",
  "log",
@@ -2104,9 +2103,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94ae75f0d28ae10786f3b1895c55fe72e79928fd5ccdebb5438c75e93fec178f"
+checksum = "b2734b5a028fa697686f16c6d18c2c6a3c7e41513f9a213abb6754c4acb3c8d7"
 dependencies = [
  "lazy_static",
 ]
@@ -2140,7 +2139,7 @@ dependencies = [
 [[package]]
 name = "twilight"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "twilight-builders",
  "twilight-cache",
@@ -2154,7 +2153,7 @@ dependencies = [
 [[package]]
 name = "twilight-builders"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "twilight-model",
 ]
@@ -2162,7 +2161,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "twilight-cache-inmemory",
  "twilight-cache-trait",
@@ -2171,11 +2170,11 @@ dependencies = [
 [[package]]
 name = "twilight-cache-inmemory"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "async-trait",
  "bitflags",
- "dashmap 3.11.7",
+ "dashmap 3.11.9",
  "futures-util",
  "tracing",
  "twilight-cache-trait",
@@ -2185,7 +2184,7 @@ dependencies = [
 [[package]]
 name = "twilight-cache-trait"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "async-trait",
  "twilight-model",
@@ -2194,7 +2193,7 @@ dependencies = [
 [[package]]
 name = "twilight-command-parser"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "unicase",
 ]
@@ -2202,12 +2201,12 @@ dependencies = [
 [[package]]
 name = "twilight-gateway"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "async-trait",
  "async-tungstenite",
  "bitflags",
- "dashmap 3.11.7",
+ "dashmap 3.11.9",
  "flate2",
  "futures-channel",
  "futures-util",
@@ -2224,7 +2223,7 @@ dependencies = [
 [[package]]
 name = "twilight-http"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -2243,7 +2242,7 @@ dependencies = [
 [[package]]
 name = "twilight-model"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
  "bitflags",
  "serde",
@@ -2256,9 +2255,9 @@ dependencies = [
 [[package]]
 name = "twilight-standby"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#177725437b369e2c919a0c5f771e38086ee9ed8e"
+source = "git+https://github.com/twilight-rs/twilight?branch=trunk#22bf6d5f365f0bda6eb10c0470e6acf93f03af98"
 dependencies = [
- "dashmap 3.11.7",
+ "dashmap 3.11.9",
  "futures-channel",
  "futures-util",
  "tracing",
