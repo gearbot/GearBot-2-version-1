@@ -136,7 +136,8 @@ impl CommandContext {
             .create_message(self.message.channel.get_id())
             .content(message)?
             .embed(embed)?
-            .await?;
+            .await
+            .unwrap();
 
         Ok(sent_handle)
     }

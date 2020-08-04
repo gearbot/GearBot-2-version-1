@@ -108,6 +108,7 @@ impl From<Guild> for CachedGuild {
         for (_, emoji) in guild.emojis {
             cached_guild.emoji.push(Arc::new(CachedEmoji::from(emoji)));
         }
+
         cached_guild
     }
 }

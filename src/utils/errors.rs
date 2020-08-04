@@ -25,6 +25,7 @@ pub enum Error {
     Cache(twilight_cache_inmemory::InMemoryCacheError),
     Database(sqlx::error::Error),
     UnknownEmoji(String),
+    UnknownGuild(u64),
     Serde(serde_json::error::Error),
     ParseError(ParseError),
     LogError(GuildId),
@@ -52,6 +53,7 @@ pub enum ParseError {
     MultipleMembersByName(String),
     WrongArgumentType(String),
     InvalidUserID(u64),
+    InvalidGuildID,
     UnknownChannel(u64),
     NoChannelAccessBot(String),
     NoChannelAccessUser(String),
@@ -88,7 +90,8 @@ impl fmt::Display for ParseError {
                 "The wrong type was provided! Expected a {}, but got something else!",
                 expected
             ),
-            ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid discord userid", id),
+            ParseError::InvalidUserID(id) => write!(f, "``{}`` is not a valid Discord userid", id),
+            ParseError::InvalidGuildID => write!(f, "The provided ID is not a valid Discord guild id"),
             ParseError::UnknownChannel(id) => write!(f, "Unable to find any channel with id ``{}``", id),
             ParseError::NoChannelAccessBot(_) => write!(f, "I do not have access to that channel!"),
             ParseError::NoChannelAccessUser(_) => write!(f, "You do not have access to that channel!"),
@@ -127,6 +130,7 @@ impl fmt::Display for Error {
                 e
             ),
             Error::Database(e) => write!(f, "A database error occurred: {}", e),
+            Error::UnknownGuild(id) => write!(f, "A guild could not be found with the ID of {}", id),
             Error::UnknownEmoji(e) => write!(f, "Unknown emoji: {}", e),
             Error::Serde(e) => write!(f, "Serde error: {}", e),
             Error::ParseError(e) => write!(f, "{}", e),

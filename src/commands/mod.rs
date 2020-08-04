@@ -117,6 +117,13 @@ lazy_static! {
                 CommandGroup::BotAdmin
             ),
             command!(
+                "serverinfo",
+                admin::server_info,
+                Permissions::empty(),
+                GearBotPermissions::BOT_ADMIN, // TODO: Is this correct?
+                CommandGroup::BotAdmin
+            ),
+            command!(
             "perms",
             debug::get_perms,
             Permissions::empty(),

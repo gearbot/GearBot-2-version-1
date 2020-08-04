@@ -61,7 +61,7 @@ impl CommandContext {
     }
 
     pub async fn get_message(&mut self) -> Result<Message, Error> {
-        let input = self.parser.get_next()?;
+        let input = self.parser.get_next().ok_or(ParseError::MissingArgument)?;
 
         let user_id = self.message.author.id;
         let message_id = input.parse::<u64>().map_err(|_| CommandError::NoDM)?;

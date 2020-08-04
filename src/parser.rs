@@ -271,13 +271,15 @@ impl Parser {
         }
     }
 
-    pub fn get_next(&mut self) -> Result<&str, Error> {
-        if self.index == self.parts.len() {
-            Err(Error::ParseError(ParseError::MissingArgument))
-        } else {
+    /// Returns the next part of a message if the end of the
+    /// message hasn't yet been reached.
+    pub fn get_next(&mut self) -> Option<&str> {
+        if self.index != self.parts.len() {
             let result = &self.parts[self.index];
             self.index += 1;
-            Ok(result)
+            Some(result)
+        } else {
+            None
         }
     }
 
@@ -291,7 +293,7 @@ impl Parser {
 
     /// Parses what comes next as discord user
     pub async fn get_user(&mut self) -> Result<Arc<CachedUser>, Error> {
-        let input = self.get_next()?;
+        let input = self.get_next().ok_or(ParseError::MissingArgument)?;
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
@@ -313,7 +315,7 @@ impl Parser {
     pub fn get_member(&mut self) -> Result<Arc<CachedMember>, Error> {
         let cache = &self.ctx.clone().cache;
         let guild = self.get_guild()?;
-        let input = self.get_next()?;
+        let input = self.get_next().ok_or(ParseError::MissingArgument)?;
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
