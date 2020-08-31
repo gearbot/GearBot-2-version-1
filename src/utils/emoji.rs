@@ -3,6 +3,8 @@ use std::str::FromStr;
 
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
+use twilight::model::channel::ReactionType;
+use twilight::model::id::EmojiId;
 
 use crate::define_emoji;
 use crate::utils::errors::Error;
@@ -20,6 +22,8 @@ define_emoji!(
     GearIron => "⚙️",
     GearStone => "⚙️",
     GearWood => "⚙️",
+    Left => "⬅️",
+    Right => "➡️",
 
     StaffBadge => "",
     PartnerBadge => "",
@@ -33,7 +37,12 @@ define_emoji!(
     VerifiedBotDevBadge => ""
 );
 
-pub static EMOJI_OVERRIDES: OnceCell<HashMap<String, String>> = OnceCell::new();
+pub struct EmojiOverride {
+    pub for_chat: String,
+    pub id: EmojiId,
+}
+
+pub static EMOJI_OVERRIDES: OnceCell<HashMap<String, EmojiOverride>> = OnceCell::new();
 
 #[macro_use]
 mod macros {
@@ -64,24 +73,44 @@ mod macros {
             pub fn for_chat(&self) -> &'static str {
                 match EMOJI_OVERRIDES.get() {
                     Some(overrides) => match overrides.get(&self.to_string()) {
-                        Some(thing) => thing,
+                        Some(thing) => &thing.for_chat,
                         None => self.get_fallback()
                     },
                     None => self.get_fallback()
                 }
             }
+
+            pub fn matches(&self, emoji: &ReactionType) -> bool {
+                let o = match EMOJI_OVERRIDES.get() {
+                    Some(overrides) => overrides.get(&self.to_string()),
+                    None => None
+                };
+                match &emoji {
+                    ReactionType::Custom { id, .. } => {
+                        match o {
+                            Some(o) => id.0 == o.id.0,
+                            None => false
+                        }
+                    }
+                    ReactionType::Unicode { name } => {
+                        match o {
+                            Some(_) => false,
+                            None => *name == self.get_fallback()
+                        }
+                    }
+                }
+            }
         }
 
         impl FromStr for Emoji {
-        type Err = Error;
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.to_uppercase().as_str() {
-                $(stringify!($name) => Ok(Emoji::$name) ,)*
-            _ => Err(Error::UnknownEmoji(s.to_string())),
+            type Err = Error;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match s.to_uppercase().as_str() {
+                    $(stringify!($name) => Ok(Emoji::$name) ,)*
+                    _ => Err(Error::UnknownEmoji(s.to_string())),
+                }
+            }
         }
+     };
     }
-}
-
-};
-}
 }

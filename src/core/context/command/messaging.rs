@@ -1,13 +1,13 @@
+use fluent_bundle::FluentArgs;
 use twilight::model::{
     channel::{embed::Embed, Message},
     id::{ChannelId, MessageId},
 };
 
+use crate::translation::GearBotString;
 use crate::Error;
 
 use super::CommandContext;
-use crate::translation::GearBotString;
-use fluent_bundle::FluentArgs;
 
 impl CommandContext {
     pub async fn send_message(
@@ -136,8 +136,7 @@ impl CommandContext {
             .create_message(self.message.channel.get_id())
             .content(message)?
             .embed(embed)?
-            .await
-            .unwrap();
+            .await?;
 
         Ok(sent_handle)
     }

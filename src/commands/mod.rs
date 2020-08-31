@@ -1,22 +1,25 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use lazy_static::lazy_static;
+use twilight::model::guild::Permissions;
+
 use crate::commands::meta::nodes::{CommandGroup, CommandNode, GearBotPermissions, RootNode};
 use crate::{
     command, command_with_aliases, command_with_subcommands, command_with_subcommands_and_aliases,
     command_with_subcommands_and_handler_and_aliases,
 };
-use lazy_static::lazy_static;
-use std::collections::HashMap;
-use std::sync::Arc;
-use twilight::model::guild::Permissions;
 
 mod admin;
 mod basic;
 mod debug;
 pub mod meta;
+mod misc;
 mod moderation;
 
 lazy_static! {
     pub static ref ROOT_NODE: RootNode = {
-        let commandlist = vec![
+        let mut commandlist = vec![
             command!(
                 "about",
                 basic::about,
@@ -98,7 +101,6 @@ lazy_static! {
             ),
             command_with_subcommands!(
                 "check",
-                Permissions::empty(),
                 GearBotPermissions::BOT_ADMIN,
                 CommandGroup::BotAdmin,
                 command!(
@@ -117,24 +119,22 @@ lazy_static! {
                 CommandGroup::BotAdmin
             ),
             command!(
-                "serverinfo",
-                admin::server_info,
-                Permissions::empty(),
-                GearBotPermissions::BOT_ADMIN, // TODO: Is this correct?
-                CommandGroup::BotAdmin
-            ),
-            command!(
             "perms",
             debug::get_perms,
             Permissions::empty(),
             GearBotPermissions::BOT_ADMIN,
             CommandGroup::BotAdmin
-            )
+            ),
+            command!("test", debug::test, Permissions::empty(), GearBotPermissions::BOT_ADMIN, CommandGroup::BotAdmin),
+            command_with_subcommands!("emoji", GearBotPermissions::EMOJI_COMMAND, CommandGroup::Misc, command!("list", misc::emoji_list, Permissions::EMBED_LINKS, GearBotPermissions::EMOJI_LIST_COMMAND, CommandGroup::Misc))
         ];
 
         let mut all_commands = HashMap::new();
         let mut command_list = vec![];
         let mut by_group = HashMap::new();
+
+        commandlist.sort_by(|a, b| a.name.cmp(&b.name));
+        log::debug!("{:?}", commandlist.iter().map(|c| c.name.clone()).collect::<Vec<String>>());
 
         for command in commandlist {
             command_list.push(command.clone());
@@ -164,10 +164,13 @@ lazy_static! {
             by_group.insert(command.group.clone(), list);
         }
 
+        log::info!("Loaded {} commands in {} groups", command_list.len(), by_group.len());
+
         RootNode {
             all_commands,
             command_list,
             by_group,
+            groups: vec![CommandGroup::Basic, CommandGroup::Moderation, CommandGroup::GuildAdmin]
         }
     };
 }

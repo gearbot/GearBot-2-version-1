@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
+use twilight::model::guild::Permissions;
+use twilight::model::id::{RoleId, UserId};
 use unic_langid::LanguageIdentifier;
 
 use crate::commands::meta::nodes::GearBotPermissions;
 use crate::translation::DEFAULT_LANG;
-use twilight::model::guild::Permissions;
-use twilight::model::id::{RoleId, UserId};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GuildConfig {
@@ -66,7 +66,7 @@ impl Default for GuildConfig {
                 PermissionGroup {
                     priority: 0,
                     name: String::from("All members"),
-                    granted_perms: GearBotPermissions::BASIC_GROUP,
+                    granted_perms: GearBotPermissions::BASIC_GROUP | GearBotPermissions::EMOJI_LIST_COMMAND,
                     denied_perms: GearBotPermissions::empty(),
                     discord_perms: Some(Permissions::empty()),
                     roles: vec![],
@@ -76,7 +76,10 @@ impl Default for GuildConfig {
                 PermissionGroup {
                     priority: 25,
                     name: String::from("Moderators"),
-                    granted_perms: GearBotPermissions::MODERATION_GROUP | GearBotPermissions::READ_CONFIG,
+                    granted_perms: GearBotPermissions::BASIC_GROUP
+                        | GearBotPermissions::EMOJI_LIST_COMMAND
+                        | GearBotPermissions::MODERATION_GROUP
+                        | GearBotPermissions::READ_CONFIG,
                     denied_perms: GearBotPermissions::empty(),
                     discord_perms: Some(Permissions::BAN_MEMBERS),
                     roles: vec![],
@@ -86,7 +89,10 @@ impl Default for GuildConfig {
                 PermissionGroup {
                     priority: 50,
                     name: String::from("Administrators"),
-                    granted_perms: GearBotPermissions::GUILD_ADMIN_GROUP,
+                    granted_perms: GearBotPermissions::BASIC_GROUP
+                        | GearBotPermissions::MODERATION_GROUP
+                        | GearBotPermissions::MISC_GROUP
+                        | GearBotPermissions::GUILD_ADMIN_GROUP,
                     denied_perms: GearBotPermissions::empty(),
                     discord_perms: Some(Permissions::ADMINISTRATOR),
                     roles: vec![],

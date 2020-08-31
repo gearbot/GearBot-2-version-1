@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
@@ -8,7 +9,6 @@ use twilight::model::id::{ChannelId, GuildId, RoleId, UserId};
 use crate::core::cache::{Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole};
 
 use super::is_default;
-use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct CachedGuild {
@@ -108,7 +108,6 @@ impl From<Guild> for CachedGuild {
         for (_, emoji) in guild.emojis {
             cached_guild.emoji.push(Arc::new(CachedEmoji::from(emoji)));
         }
-
         cached_guild
     }
 }

@@ -79,8 +79,8 @@ impl CommandContext {
         }
     }
 
-    pub async fn get_cluster_info(&self) -> HashMap<u64, Information> {
-        self.bot_context.cluster.info().await
+    pub fn get_cluster_info(&self) -> HashMap<u64, Information> {
+        self.bot_context.cluster.info()
     }
 
     pub fn get_bot_user(&self) -> &CurrentUser {

@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::fs;
 
 use serde::Deserialize;
+use twilight::model::id::EmojiId;
 
-use crate::utils::{emoji, matchers, Error};
+use crate::utils::{emoji, matchers, EmojiOverride, Error};
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {
@@ -39,14 +40,26 @@ impl BotConfig {
         match toml::from_str::<BotConfig>(&config_file) {
             Err(_) => Err(Error::InvalidConfig),
             Ok(c) => {
-                let mut override_map: HashMap<String, String> = HashMap::new();
+                let mut override_map: HashMap<String, EmojiOverride> = HashMap::new();
                 let mut id_map: HashMap<String, u64> = HashMap::new();
                 for (name, value) in c.emoji.iter() {
-                    override_map.insert(name.clone(), value.clone());
+                    let info = matchers::get_emoji_parts(value);
+                    if info.len() != 1 {
+                        panic!("Not a valid emoji override found for {}", name)
+                    }
+                    let info = info.first().unwrap();
+
+                    override_map.insert(
+                        name.clone(),
+                        EmojiOverride {
+                            id: EmojiId(info.id),
+                            for_chat: value.clone(),
+                        },
+                    );
                     let id: u64 = matchers::get_emoji_parts(value)[0].id;
                     id_map.insert(name.clone(), id);
                 }
-                emoji::EMOJI_OVERRIDES.set(override_map).unwrap();
+                emoji::EMOJI_OVERRIDES.set(override_map);
                 Ok(c)
             }
         }

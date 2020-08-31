@@ -103,7 +103,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
         }
         Event::GuildCreate(guild) => {
             let c = ctx.cluster.clone();
-            let data = RequestGuildMembers::new_all(guild.id, None);
+            let data = RequestGuildMembers::builder(guild.id).query("", None);
             debug!("Requesting members for guild {}", guild.id);
             let res = c.command(shard_id, &data).await;
 

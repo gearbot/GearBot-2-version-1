@@ -4,11 +4,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use log::debug;
+use prometheus::{Encoder, TextEncoder};
 use tokio::{self, stream::StreamExt};
-use twilight::gateway::cluster::config::ShardScheme;
+use twilight::gateway::cluster::ShardScheme;
 use twilight::gateway::shard::ResumeSession;
 use twilight::gateway::{Cluster, ClusterConfig, Event};
 use twilight::http::Client as HttpClient;
+use twilight::model::gateway::payload::update_status::UpdateStatusInfo;
+use twilight::model::gateway::presence::{ActivityType, Status};
 use twilight::model::gateway::GatewayIntents;
 use twilight::model::user::CurrentUser;
 
@@ -19,9 +22,6 @@ use crate::core::{BotConfig, BotContext, BotStats, ColdRebootData};
 use crate::translation::Translations;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info, SchemeInfo};
-use prometheus::{Encoder, TextEncoder};
-use twilight::model::gateway::payload::update_status::UpdateStatusInfo;
-use twilight::model::gateway::presence::{ActivityType, Status};
 
 pub async fn run(
     scheme_info: SchemeInfo,
@@ -58,7 +58,7 @@ pub async fn run(
 
     let cache = Cache::new(scheme_info.cluster_id, stats.clone());
 
-    let mut cb = ClusterConfig::builder(&config.tokens.discord)
+    let mut cb = Cluster::builder(&config.tokens.discord)
         .shard_scheme(sharding_scheme)
         .intents(intents)
         .presence(UpdateStatusInfo::new(
@@ -115,7 +115,7 @@ pub async fn run(
         };
     }
 
-    let cluster = Cluster::new(cb.build()).await?;
+    let cluster = cb.build().await?;
     let context = Arc::new(BotContext::new(
         (cache, cluster, scheme_info),
         (http, bot_user),
@@ -142,7 +142,7 @@ pub async fn run(
         c.up().await;
     });
 
-    let mut bot_events = context.cluster.events().await;
+    let mut bot_events = context.cluster.events();
     while let Some(event) = bot_events.next().await {
         let c = context.clone();
         context.update_stats(event.0, &event.1);
@@ -153,7 +153,7 @@ pub async fn run(
             }
         });
     }
-    context.cluster.down().await;
+    context.cluster.down();
 
     Ok(())
 }

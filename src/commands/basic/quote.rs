@@ -2,14 +2,14 @@ use twilight::model::id::MessageId;
 
 use crate::core::CommandContext;
 use crate::translation::{FluArgs, GearBotString};
-use crate::utils::{self, ParseError};
+use crate::utils;
+use crate::utils::ParseError;
 use crate::CommandResult;
 
 pub async fn quote(mut ctx: CommandContext) -> CommandResult {
     let msg_id = ctx
         .parser
-        .get_next()
-        .ok_or(ParseError::MissingArgument)?
+        .get_next()?
         .parse::<u64>()
         .map_err(|_| ParseError::MissingArgument)?;
     let guild_id = ctx.guild.as_ref().unwrap().id;

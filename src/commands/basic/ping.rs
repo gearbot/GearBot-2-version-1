@@ -11,7 +11,7 @@ pub async fn ping(ctx: CommandContext) -> CommandResult {
 
     let rest_time = start.elapsed().as_millis();
 
-    let cluster_info = ctx.get_cluster_info().await;
+    let cluster_info = ctx.get_cluster_info();
 
     // This is 0 until we get a heartbeat
     let ws_time_avg = cluster_info

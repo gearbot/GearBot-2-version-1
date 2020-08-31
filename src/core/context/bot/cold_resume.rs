@@ -27,7 +27,7 @@ impl BotContext {
 
         info!("Resume data acquired");
 
-        let resume_data = self.cluster.down_resumable().await;
+        let resume_data = self.cluster.down_resumable();
         let (guild_chunks, user_chunks) = self.cache.prepare_cold_resume(&self.redis_pool).await;
 
         // prepare resume data

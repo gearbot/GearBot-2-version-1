@@ -1,8 +1,10 @@
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use lazy_static::lazy_static;
 use log::{debug, info, trace};
-
 use twilight::model::gateway::payload::MessageCreate;
+use twilight::model::guild::Permissions;
 use twilight::model::id::{GuildId, UserId};
 
 use crate::commands::{
@@ -15,9 +17,6 @@ use crate::translation::{FluArgs, GearBotString};
 use crate::utils::matchers::split_name;
 use crate::utils::{matchers, Error, ParseError};
 use crate::utils::{CommandError, Emoji};
-use lazy_static::lazy_static;
-use std::sync::atomic::Ordering;
-use twilight::model::guild::Permissions;
 
 lazy_static! {
     static ref BLANK_CONFIG: Arc<GuildConfig> = Arc::new(GuildConfig::default());
@@ -271,15 +270,13 @@ impl Parser {
         }
     }
 
-    /// Returns the next part of a message if the end of the
-    /// message hasn't yet been reached.
-    pub fn get_next(&mut self) -> Option<&str> {
-        if self.index != self.parts.len() {
+    pub fn get_next(&mut self) -> Result<&str, Error> {
+        if self.index == self.parts.len() {
+            Err(Error::ParseError(ParseError::MissingArgument))
+        } else {
             let result = &self.parts[self.index];
             self.index += 1;
-            Some(result)
-        } else {
-            None
+            Ok(result)
         }
     }
 
@@ -293,7 +290,7 @@ impl Parser {
 
     /// Parses what comes next as discord user
     pub async fn get_user(&mut self) -> Result<Arc<CachedUser>, Error> {
-        let input = self.get_next().ok_or(ParseError::MissingArgument)?;
+        let input = self.get_next()?;
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
@@ -315,7 +312,7 @@ impl Parser {
     pub fn get_member(&mut self) -> Result<Arc<CachedMember>, Error> {
         let cache = &self.ctx.clone().cache;
         let guild = self.get_guild()?;
-        let input = self.get_next().ok_or(ParseError::MissingArgument)?;
+        let input = self.get_next()?;
         let mention = matchers::get_mention(input);
         match mention {
             // we got a mention
@@ -429,5 +426,9 @@ impl Parser {
         } else {
             Ok(alternative)
         }
+    }
+
+    pub fn peek(&self) -> Option<&String> {
+        self.parts.get(self.index)
     }
 }

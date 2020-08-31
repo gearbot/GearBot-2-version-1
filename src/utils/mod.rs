@@ -12,6 +12,7 @@ pub mod matchers;
 
 pub mod emoji;
 mod errors;
+pub mod pattern;
 
 mod log_types;
 

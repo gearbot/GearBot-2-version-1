@@ -3,6 +3,7 @@ pub use cold_resume_data::ColdRebootData;
 pub use context::BotContext;
 pub use context::*;
 pub use guild_config::GuildConfig;
+pub use reactors::Reactor;
 
 mod bot_config;
 mod cold_resume_data;
@@ -13,3 +14,4 @@ mod handlers;
 pub mod logging;
 
 pub mod cache;
+mod reactors;

@@ -1,13 +1,13 @@
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use chrono::Utc;
-use twilight::builders::embed::EmbedBuilder;
+use twilight_embed_builder::{EmbedBuilder, EmbedFieldBuilder};
 
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{age, Emoji};
-use std::time::Duration;
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
 /*
@@ -148,10 +148,8 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
         .bot_context
         .cluster
         .shard(ctx.shard)
-        .await
         .unwrap()
-        .info()
-        .await?
+        .info()?
         .latency()
         .average()
         .unwrap_or_else(|| Duration::from_secs(0))
@@ -161,7 +159,6 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
         .bot_context
         .cluster
         .info()
-        .await
         .values()
         .map(|info| {
             info.latency()
@@ -195,19 +192,25 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
     let description = ctx.translate_with_args(GearBotString::AboutDescription, &args);
 
     let embed = EmbedBuilder::new()
-        .description(description)
-        .color(ABOUT_EMBED_COLOR)
+        .description(description)?
+        .color(ABOUT_EMBED_COLOR)?
         .timestamp(Utc::now().to_rfc3339())
-        .add_field("Support Server", "[Click Here](https://discord.gg/PfwZmgU)")
-        .inline()
-        .commit()
-        .add_field("Website", "[Click Here](https://gearbot.rocks)")
-        .inline()
-        .commit()
-        .add_field("GitHub", "[Click Here](https://github.com/gearbot/GearBot)")
-        .inline()
-        .commit()
-        .build();
+        .field(
+            EmbedFieldBuilder::new("Support Server", "[Click Here](https://discord.gg/PfwZmgU)")?
+                .inline()
+                .build(),
+        )
+        .field(
+            EmbedFieldBuilder::new("Website", "[Click Here](https://gearbot.rocks)")?
+                .inline()
+                .build(),
+        )
+        .field(
+            EmbedFieldBuilder::new("GitHub", "[Click Here](https://github.com/gearbot/GearBot)")?
+                .inline()
+                .build(),
+        )
+        .build()?;
     ctx.reply_embed(embed).await?;
 
     Ok(())

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
@@ -5,6 +6,9 @@ use darkredis::ConnectionPool;
 use futures_util::future;
 use log::{debug, info, trace, warn};
 use twilight::gateway::Event;
+use twilight::model::channel::{Channel, GuildChannel, PrivateChannel};
+use twilight::model::gateway::payload::RequestGuildMembers;
+use twilight::model::gateway::presence::{ActivityType, Status};
 use twilight::model::id::{ChannelId, EmojiId, GuildId, UserId};
 use twilight::model::user::User;
 
@@ -19,10 +23,6 @@ use crate::core::context::bot::ShardState;
 use crate::core::{BotContext, BotStats};
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
-use std::collections::HashMap;
-use twilight::model::channel::{Channel, GuildChannel, PrivateChannel};
-use twilight::model::gateway::payload::RequestGuildMembers;
-use twilight::model::gateway::presence::{ActivityType, Status};
 
 pub struct Cache {
     //cluster info
@@ -470,12 +470,7 @@ impl Cache {
                             let id = event.user.id;
                             let gid = guild.id;
                             tokio::spawn(async move {
-                                let data = RequestGuildMembers::new_single_user_with_nonce(
-                                    gid,
-                                    id,
-                                    None,
-                                    Some(String::from("missing_user")),
-                                );
+                                let data = RequestGuildMembers::builder(gid).nonce("missing_user").user_id(id);
                                 let _ = ctx.cluster.command(shard_id, &data).await;
                             });
                         }

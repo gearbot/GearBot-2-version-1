@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
+use twilight::model::guild::Permissions;
+use twilight::model::id::UserId;
+
 use crate::commands::meta::nodes::{CommandNode, GearBotPermissions};
 use crate::commands::ROOT_NODE;
 use crate::core::cache::{CachedGuild, CachedMember};
 use crate::core::guild_config::PermissionGroup;
 use crate::core::{BotContext, GuildConfig};
-use std::sync::Arc;
-use twilight::model::guild::Permissions;
-use twilight::model::id::UserId;
 
 impl BotContext {
     pub fn get_guild_permissions_for(&self, member: &Arc<CachedMember>, guild: &Arc<CachedGuild>) -> Permissions {
@@ -52,8 +54,10 @@ impl BotContext {
                 if group.roles.iter().all(|role_id| member.roles.contains(role_id)) {
                     apply(&mut permissions, &mut not_negated_denies, &group);
                 }
-            } else if group.roles.iter().any(|role_id| member.roles.contains(role_id)) {
-                apply(&mut permissions, &mut not_negated_denies, &group);
+            } else {
+                if group.roles.iter().any(|role_id| member.roles.contains(role_id)) {
+                    apply(&mut permissions, &mut not_negated_denies, &group);
+                }
             }
 
             if group.users.iter().any(|user_id| member.user_id == *user_id) {

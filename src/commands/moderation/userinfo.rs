@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
-use twilight::builders::embed::EmbedBuilder;
 use twilight::model::guild::Permissions;
 use twilight::model::user::UserFlags;
+use twilight_embed_builder::{EmbedAuthorBuilder, EmbedBuilder, ImageSource};
 
 use crate::core::CommandContext;
 use crate::translation::{FluArgs, GearBotString};
@@ -22,22 +22,20 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
     let mut content = "".to_string();
 
     let mut builder = EmbedBuilder::new();
-    let mut author_builder = builder
-        .author()
-        .name(format!("{}#{}", user.username, user.discriminator));
+    let mut author_builder = EmbedAuthorBuilder::new().name(format!("{}#{}", user.username, user.discriminator))?;
 
     if let Some(avatar) = user.avatar.as_ref() {
         let extension = if avatar.starts_with("a_") { "gif" } else { "png" };
 
-        author_builder = author_builder.icon_url(format!(
+        author_builder = author_builder.icon_url(ImageSource::url(format!(
             "https://cdn.discordapp.com/avatars/{}/{}.{}",
             user.id,
             user.avatar.as_ref().unwrap(),
             extension
-        ));
+        ))?);
     }
 
-    builder = author_builder.commit();
+    builder = builder.author(author_builder.build());
 
     //add badges
     let flags = match user.public_flags {
@@ -118,7 +116,7 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
                 Some(role) => ctx.get_role(role).unwrap().color,
                 None => USER_INFO_COLOR,
             };
-            builder = builder.color(color);
+            builder = builder.color(color)?;
 
             let (joined, ago) = match &member.joined_at {
                 Some(joined) => {
@@ -161,7 +159,7 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
             }
         }
         None => {
-            builder = builder.color(USER_INFO_COLOR);
+            builder = builder.color(USER_INFO_COLOR)?;
         }
     }
 
@@ -175,13 +173,13 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
         )
     }
 
-    builder = builder.description(content);
+    builder = builder.description(content)?;
 
     let args = FluArgs::with_capacity(1)
         .insert("userid", user.id.to_string())
         .generate();
 
-    ctx.reply_with_embed(GearBotString::UserinfoHeader, args, builder.build())
+    ctx.reply_with_embed(GearBotString::UserinfoHeader, args, builder.build()?)
         .await?;
 
     Ok(())

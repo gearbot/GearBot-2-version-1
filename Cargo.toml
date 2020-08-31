@@ -21,6 +21,7 @@ git-version = "0.3"
 hyper = { version = "0.13", default-features = false }
 lazy_static = "1.4"
 log = "0.4"
+num-integer="0.1"
 once_cell = "1.4"
 prometheus = { version = "0.9", default-features = false }
 rand = "0.7"
@@ -31,6 +32,8 @@ sqlx =  { version = "0.4.0-beta.1", default-features = false, features = ["postg
 tokio = { version = "0.2", default-features = false, features = ["macros", "sync", "rt-core"] }
 toml = "0.5"
 twilight = { git = "https://github.com/twilight-rs/twilight", branch = "trunk" }
+twilight-embed-builder = { branch = "trunk", git = "https://github.com/twilight-rs/twilight" }
+twilight-gateway = { branch = "trunk", default-features = false, features = ["rustls", "simd-json", "rustls", "simd-zlib"], git = "https://github.com/twilight-rs/twilight" }
 url = "2.1"
 unic-langid = { version = "0.9", features = ["macros", "serde"] }
 

@@ -3,12 +3,12 @@
 
 use std::time::Duration;
 
+use git_version::git_version;
 use log::{debug, info};
 use tokio::runtime::Runtime;
 use twilight::http::{request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient};
 
 use commands::ROOT_NODE;
-use git_version::git_version;
 use translation::load_translations;
 use utils::Error;
 
@@ -61,9 +61,9 @@ async fn real_main() -> Result<(), Error> {
     }
 
     let mut builder = HttpClient::builder();
-    builder.token(&config.tokens.discord);
+    builder = builder.token(&config.tokens.discord);
 
-    builder.default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
+    builder = builder.default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
 
     let http = builder.clone().build()?;
     // Validate token and figure out who we are

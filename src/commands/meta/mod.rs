@@ -136,7 +136,7 @@ pub mod macros {
 
     #[macro_export]
     macro_rules! command_with_subcommands {
-        ($name: literal, $bot_permissions: expr, $command_permission: expr, $group: expr, $($node: expr),*) => {
+        ($name: literal, $command_permission: expr, $group: expr, $($node: expr),*) => {
         {
         let mut map = ::std::collections::HashMap::new();
         let mut list = vec![];
@@ -158,7 +158,7 @@ pub mod macros {
                 name: String::from($name),
                 handler: None,
                 sub_nodes: map,
-                bot_permissions: $bot_permissions,
+                bot_permissions: Permissions::empty(),
                 command_permission: $command_permission,
                 group: $group,
                 aliases: vec![],
