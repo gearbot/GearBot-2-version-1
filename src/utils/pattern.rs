@@ -166,19 +166,3 @@ impl fmt::Display for Pattern {
         }
     }
 }
-
-fn main() {
-    for i in 1..100 {
-        let pattern = Pattern::new(i);
-        println!("{}: {}", i, pattern);
-        println!(
-            "{}",
-            pattern
-                .arrange(vec!["x"; i as usize])
-                .iter()
-                .map(|inner| { inner.join("").to_string() })
-                .collect::<Vec<String>>()
-                .join("\n")
-        )
-    }
-}

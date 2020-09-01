@@ -23,6 +23,7 @@ use crate::core::context::bot::ShardState;
 use crate::core::{BotContext, BotStats};
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
+use std::str::from_utf8;
 
 pub struct Cache {
     //cluster info
@@ -961,7 +962,7 @@ impl Cache {
         let key = format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index);
         let mut connection = redis_pool.get().await;
         let mut users: Vec<CachedUser> =
-            serde_json::from_str(&*String::from_utf8(connection.get(&key).await?.unwrap()).unwrap())?;
+            serde_json::from_str(from_utf8(&connection.get(&key).await?.unwrap()).unwrap())?;
         connection.del(key).await?;
         debug!("Worker {} found {} users to defrost", index, users.len());
         let mut cached_users = self.users.write().expect("User cache got poisoned!");
@@ -976,7 +977,7 @@ impl Cache {
         let key = format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index);
         let mut connection = redis_pool.get().await;
         let mut guilds: Vec<ColdStorageGuild> =
-            serde_json::from_str(&*String::from_utf8(connection.get(&key).await?.unwrap()).unwrap())?;
+            serde_json::from_str(from_utf8(&connection.get(&key).await?.unwrap()).unwrap())?;
         connection.del(key).await?;
         debug!("Worker {} found {} guilds to defrost", index, guilds.len());
         for cold_guild in guilds.drain(..) {

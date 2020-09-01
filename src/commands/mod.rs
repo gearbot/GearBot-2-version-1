@@ -134,7 +134,6 @@ lazy_static! {
         let mut by_group = HashMap::new();
 
         commandlist.sort_by(|a, b| a.name.cmp(&b.name));
-        log::debug!("{:?}", commandlist.iter().map(|c| c.name.clone()).collect::<Vec<String>>());
 
         for command in commandlist {
             command_list.push(command.clone());
