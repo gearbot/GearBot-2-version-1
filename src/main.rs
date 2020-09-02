@@ -4,7 +4,7 @@
 use std::time::Duration;
 
 use git_version::git_version;
-use log::{debug, info};
+use log::info;
 use tokio::runtime::Runtime;
 use twilight::http::{request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient};
 
@@ -46,26 +46,20 @@ fn main() -> Result<(), Error> {
 }
 
 async fn real_main() -> Result<(), Error> {
-    if let Err(e) = logging::initialize() {
-        gearbot_error!("{}", e);
-        return Err(e);
-    }
-
-    info!("Gearbot v{} starting!", VERSION);
+    println!("Gearbot v{} starting!", VERSION);
     // Read config file
     let config = BotConfig::new("config.toml")?;
-    debug!("Loaded config file");
+    println!("Loaded config file");
 
     if config.__main_encryption_key.is_none() {
         panic!("The KMS needs built before GearBot can work without a static main encryption key!");
     }
 
-    let mut builder = HttpClient::builder();
-    builder = builder.token(&config.tokens.discord);
+    let builder = HttpClient::builder()
+        .token(&config.tokens.discord)
+        .default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
 
-    builder = builder.default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
-
-    let http = builder.clone().build()?;
+    let http = builder.build()?;
     // Validate token and figure out who we are
     let user = http.current_user().await?;
     info!(
@@ -73,7 +67,10 @@ async fn real_main() -> Result<(), Error> {
         user.name, user.discriminator
     );
 
-    logging::initialize_discord_webhooks(builder.build()?, &config, user.clone());
+    if let Err(e) = logging::initialize(http.clone(), &config, user.clone()) {
+        gearbot_error!("{}", e);
+        return Err(e);
+    }
 
     gearbot_important!("Starting Gearbot v{}. Hello there, Ferris!", VERSION);
 

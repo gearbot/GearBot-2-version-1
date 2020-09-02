@@ -1,4 +1,6 @@
+use std::collections::VecDeque;
 use std::io;
+use std::sync::Arc;
 
 use flexi_logger::writers::LogWriter;
 use flexi_logger::{
@@ -13,33 +15,56 @@ use crate::core::BotConfig;
 use crate::gearbot_error;
 use crate::utils::Emoji;
 use crate::Error;
-use lazy_static::lazy_static;
 use std::sync::RwLock;
 use std::time::Duration;
 
 static LOGGER_HANDLE: OnceCell<ReconfigurationHandle> = OnceCell::new();
-static BOT_USER: OnceCell<CurrentUser> = OnceCell::new();
+type LogQueue = Arc<RwLock<VecDeque<String>>>;
+
+struct WebhookLogger {
+    queue: LogQueue,
+}
+
+impl LogWriter for WebhookLogger {
+    fn write(&self, now: &mut DeferredNow, record: &Record) -> Result<(), io::Error> {
+        let timestamp = now.now().naive_utc().format("%Y-%m-%d %H:%M:%S");
+        let log_emote = get_emoji(record.level()).for_chat();
+        let log_info = record.args();
+
+        self.queue
+            .write()
+            .unwrap()
+            .push_back(format!("``[{}]`` {} {}", timestamp, log_emote, log_info));
+
+        Ok(())
+    }
+
+    fn flush(&self) -> Result<(), io::Error> {
+        Ok(())
+    }
+
+    fn max_log_level(&self) -> LevelFilter {
+        LevelFilter::Info
+    }
+}
 
 const DISCORD_AVATAR_URL: &str = "https://cdn.discordapp.com/avatars/";
 
-lazy_static! {
-    pub static ref INFO_QUEUE: RwLock<Vec<String>> = RwLock::new(Vec::new());
-}
-lazy_static! {
-    pub static ref IMPORTANT_QUEUE: RwLock<Vec<String>> = RwLock::new(Vec::new());
-}
-
-pub fn initialize() -> Result<(), Error> {
+pub fn initialize(http: HttpClient, config: &BotConfig, user: CurrentUser) -> Result<(), Error> {
     // TODO: validate webhook by doing a get to it
     // If invalid, `return Err(Error::InvalidLoggingWebhook(url))
 
-    let important = WebhookLogger {
-        queue: &IMPORTANT_QUEUE,
-    };
+    let important_queue = LogQueue::default();
+    let info_queue = LogQueue::default();
+    let user = Arc::new(user);
 
-    let gearbot_important = Box::new(important);
+    let gearbot_important = Box::new(WebhookLogger {
+        queue: important_queue.clone(),
+    });
 
-    let gearbot_info = Box::new(WebhookLogger { queue: &INFO_QUEUE });
+    let gearbot_info = Box::new(WebhookLogger {
+        queue: info_queue.clone(),
+    });
 
     let log_init_status = LOGGER_HANDLE.set(
         Logger::with_env_or_str("info")
@@ -63,93 +88,69 @@ pub fn initialize() -> Result<(), Error> {
         gearbot_error!("The logging system was attempted to be initalized a second time!");
     }
 
+    run_logging_queue(
+        http.clone(),
+        important_queue,
+        config.logging.important_logs.to_owned(),
+        user.clone(),
+    );
+
+    run_logging_queue(http, info_queue, config.logging.info_logs.to_owned(), user);
+
     Ok(())
 }
 
-pub fn initialize_discord_webhooks(http: HttpClient, config: &BotConfig, user: CurrentUser) {
-    BOT_USER.set(user).unwrap();
-    run(http.clone(), &IMPORTANT_QUEUE, config.logging.important_logs.to_owned());
-    run(http, &INFO_QUEUE, config.logging.info_logs.to_owned());
-}
-
-struct WebhookLogger {
-    queue: &'static RwLock<Vec<String>>,
-}
-
-impl LogWriter for WebhookLogger {
-    fn write(&self, now: &mut DeferredNow, record: &Record) -> Result<(), io::Error> {
-        let timestamp = now.now().naive_utc().format("%Y-%m-%d %H:%M:%S");
-        let log_emote = get_emoji(record.level()).for_chat();
-        let log_info = &record.args();
-
-        self.queue
-            .write()
-            .unwrap()
-            .push(format!("``[{}]`` {} {}", timestamp, log_emote, log_info));
-
-        Ok(())
-    }
-
-    fn flush(&self) -> Result<(), io::Error> {
-        Ok(())
-    }
-
-    fn max_log_level(&self) -> LevelFilter {
-        LevelFilter::Info
-    }
-}
-
-pub fn run(http: HttpClient, queue: &'static RwLock<Vec<String>>, url: String) {
+pub fn run_logging_queue(http: HttpClient, queue: LogQueue, url: String, user: Arc<CurrentUser>) {
     //TODO: when we get too far behind group into a file
     tokio::spawn(async move {
         loop {
-            let mut out = {
+            let message = {
                 let mut todo = queue.write().unwrap();
 
-                let mut out = vec![];
-                let count = 0;
-                while let Some(s) = todo.first() {
-                    if count + s.len() < 2000 {
-                        out.push(todo.remove(0));
+                let mut out: Vec<String> = Vec::with_capacity(todo.len());
+                let mut total_msg_len = 0;
+
+                for s in todo.drain(..) {
+                    total_msg_len += s.len();
+
+                    if total_msg_len < 2000 {
+                        out.push(s);
                     } else {
                         break;
                     }
                 }
-                out
+
+                out.join("\n")
             };
 
-            if !out.is_empty() {
-                let message = out.join("\n");
-                out.clear();
-                match send_webhook(&http, &url, message.clone()).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        if e.to_string().contains("Response got 429: Response") {
-                            queue.write().unwrap().insert(0, message);
-                            tokio::time::delay_for(Duration::from_secs(1)).await;
-                        }
+            if !message.is_empty() {
+                if let Err(e) = send_webhook(&http, &url, &user, &message).await {
+                    if e.to_string().contains("Response got 429: Response") {
+                        queue.write().unwrap().push_front(message);
+                        tokio::time::delay_for(Duration::from_secs(1)).await;
                     }
                 }
             }
+
             tokio::time::delay_for(Duration::from_secs(1)).await;
         }
     });
 }
 
-async fn send_webhook(http: &HttpClient, url: &str, message: String) -> Result<(), Error> {
-    let user = BOT_USER.get().unwrap();
-    let executor = http
-        .execute_webhook_from_url(url)?
-        .content(message)
-        .username(&user.name);
+async fn send_webhook(http: &HttpClient, url: &str, user: &CurrentUser, message: &str) -> Result<(), Error> {
+    let executor = {
+        let raw = http
+            .execute_webhook_from_url(url)?
+            .content(message)
+            .username(&user.name);
 
-    match &user.avatar {
-        Some(avatar) => executor.avatar_url(format!("{}{}/{}.png", DISCORD_AVATAR_URL, &user.id, avatar)),
-        None => executor,
-    }
-    .await
-    .map_err(Error::TwilightHttp)
-    .map(|_| ())
+        match &user.avatar {
+            Some(avatar) => raw.avatar_url(format!("{}{}/{}.png", DISCORD_AVATAR_URL, &user.id, avatar)),
+            None => raw,
+        }
+    };
+
+    executor.await.map_err(Error::TwilightHttp).map(|_| ())
 }
 
 fn get_emoji(level: Level) -> Emoji {
