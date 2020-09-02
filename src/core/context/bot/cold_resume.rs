@@ -20,15 +20,13 @@ impl BotContext {
 
         let start = std::time::Instant::now();
 
-        let mut connection = self.redis_pool.get().await;
-
         //kill the shards and get their resume info
         //DANGER: WE WILL NOT BE GETTING EVENTS FROM THIS POINT ONWARDS, REBOOT REQUIRED
 
         info!("Resume data acquired");
 
         let resume_data = self.cluster.down_resumable();
-        let (guild_chunks, user_chunks) = self.cache.prepare_cold_resume(&self.redis_pool).await;
+        let (guild_chunks, user_chunks) = self.cache.prepare_cold_resume(&self.redis_cache).await;
 
         // prepare resume data
         let mut map = HashMap::with_capacity(resume_data.len());
@@ -44,17 +42,18 @@ impl BotContext {
             user_chunks,
         };
 
-        connection
-            .set_and_expire_seconds(
-                format!("cb_cluster_data_{}", self.scheme_info.cluster_id),
-                &serde_json::to_value(data).unwrap().to_string().into_bytes(),
-                180,
+        self.redis_cache
+            .set(
+                &format!("cb_cluster_data_{}", self.scheme_info.cluster_id),
+                &data,
+                Some(180),
             )
-            .await
-            .unwrap();
+            .await?;
 
-        let end = std::time::Instant::now();
-        info!("Cold resume preparations completed in {}ms!", (end - start).as_millis());
+        info!(
+            "Cold resume preparations completed in {}ms!",
+            start.elapsed().as_millis()
+        );
 
         Ok(())
     }

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use twilight::model::channel::{Reaction, ReactionType};
+use twilight::model::channel::Reaction;
 use twilight::model::id::MessageId;
 
 use crate::core::reactors::emoji_list_reactor::EmojiListReactor;
@@ -48,12 +48,9 @@ impl Reactor {
     }
 
     pub async fn save(&self, ctx: &Arc<BotContext>, message_id: MessageId) -> Result<(), Error> {
-        let mut connection = ctx.redis_pool.get().await;
-        let serialized = serde_json::to_string(self).unwrap();
-        connection
-            .set_and_expire_seconds(format!("reactor:{}", message_id), serialized, self.get_expiry())
-            .await?;
-        Ok(())
+        ctx.redis_cache
+            .set(&format!("reactor:{}", message_id), self, Some(self.get_expiry()))
+            .await
     }
 
     fn get_expiry(&self) -> u32 {

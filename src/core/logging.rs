@@ -126,12 +126,12 @@ pub fn run(http: HttpClient, queue: &'static RwLock<Vec<String>>, url: String) {
                     Err(e) => {
                         if e.to_string().contains("Response got 429: Response") {
                             queue.write().unwrap().insert(0, message);
-                            tokio::time::delay_for(Duration::new(1, 0)).await;
+                            tokio::time::delay_for(Duration::from_secs(1)).await;
                         }
                     }
                 }
             }
-            tokio::time::delay_for(Duration::new(1, 0)).await;
+            tokio::time::delay_for(Duration::from_secs(1)).await;
         }
     });
 }
@@ -157,7 +157,7 @@ fn get_emoji(level: Level) -> Emoji {
         Level::Error => Emoji::No,
         Level::Warn => Emoji::Warn,
         Level::Info => Emoji::Info,
-        _ => Emoji::Info, // never send to discord so doesn't matter
+        _ => Emoji::Info, // Never sent to discord so doesn't matter
     }
 }
 

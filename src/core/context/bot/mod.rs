@@ -22,6 +22,7 @@ pub use stats::BotStats;
 use crate::core::cache::Cache;
 use crate::core::GuildConfig;
 use crate::crypto::EncryptionKey;
+use crate::database::Redis;
 use crate::translation::Translations;
 use crate::utils::LogType;
 use crate::SchemeInfo;
@@ -50,11 +51,11 @@ pub struct BotContext {
     pub status_text: RwLock<String>,
     pub bot_user: CurrentUser,
     configs: RwLock<HashMap<GuildId, Arc<GuildConfig>>>,
-    pub pool: sqlx::PgPool,
+    pub backing_database: sqlx::PgPool,
     pub translations: Translations,
     __main_encryption_key: Option<Vec<u8>>,
     log_pumps: RwLock<HashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>>,
-    pub redis_pool: darkredis::ConnectionPool,
+    pub redis_cache: Redis,
     pub scheme_info: SchemeInfo,
     pub shard_states: RwLock<HashMap<u64, ShardState>>,
     pub start_time: DateTime<Utc>,
@@ -65,7 +66,7 @@ impl BotContext {
     pub fn new(
         bot_core: (Cache, Cluster, SchemeInfo),
         http_info: (HttpClient, CurrentUser),
-        databases: (sqlx::PgPool, darkredis::ConnectionPool),
+        databases: (sqlx::PgPool, Redis),
         translations: Translations,
         config_ops: (Option<Vec<u8>>, Vec<u64>),
         stats: Arc<BotStats>,
@@ -96,11 +97,11 @@ impl BotContext {
             status_text: RwLock::new(String::from("the commands turn")),
             bot_user: http_info.1,
             configs: RwLock::new(HashMap::new()),
-            pool: databases.0,
+            backing_database: databases.0,
             translations,
             __main_encryption_key: config_ops.0,
             log_pumps: RwLock::new(HashMap::new()),
-            redis_pool: databases.1,
+            redis_cache: databases.1,
             scheme_info,
             shard_states: RwLock::new(shard_states),
             start_time: Utc::now(),

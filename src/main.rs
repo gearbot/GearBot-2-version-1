@@ -93,11 +93,11 @@ async fn real_main() -> Result<(), Error> {
 
     info!("Finished migrations!");
 
-    let redis_pool = match darkredis::ConnectionPool::create(config.database.redis.clone(), None, 5).await {
+    let redis_pool = match database::Redis::new(&config.database.redis).await {
         Ok(pool) => pool,
         Err(e) => {
             gearbot_error!("Failed to connect to the redis database! {}", e);
-            return Err(Error::RedisError(e));
+            return Err(e);
         }
     };
 

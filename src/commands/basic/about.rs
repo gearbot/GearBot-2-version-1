@@ -164,7 +164,7 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
         .map(|info| {
             info.latency()
                 .average()
-                .unwrap_or_else(|| Duration::new(0, 0))
+                .unwrap_or_else(|| Duration::default())
                 .as_millis()
         })
         .sum::<u128>()

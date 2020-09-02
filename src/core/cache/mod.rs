@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
-use darkredis::ConnectionPool;
 use futures_util::future;
 use log::{debug, info, trace, warn};
 use twilight::gateway::Event;
@@ -21,9 +20,9 @@ pub use user::CachedUser;
 
 use crate::core::context::bot::ShardState;
 use crate::core::{BotContext, BotStats};
+use crate::database::Redis;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
-use std::str::from_utf8;
 
 pub struct Cache {
     //cluster info
@@ -766,7 +765,7 @@ impl Cache {
         }
     }
 
-    pub async fn prepare_cold_resume(&self, redis_pool: &ConnectionPool) -> (usize, usize) {
+    pub async fn prepare_cold_resume(&self, redis_pool: &Redis) -> (usize, usize) {
         //clear global caches so arcs can be cleaned up
         self.guild_channels
             .write()
@@ -845,12 +844,11 @@ impl Cache {
 
     async fn _prepare_cold_resume_guild(
         &self,
-        redis_pool: &ConnectionPool,
+        redis_pool: &Redis,
         todo: Vec<GuildId>,
         index: usize,
     ) -> Result<(), Error> {
         debug!("Guild dumper {} started freezing {} guilds", index, todo.len());
-        let mut connection = redis_pool.get().await;
         let mut to_dump = Vec::with_capacity(todo.len());
         {
             let mut guilds = self.guilds.write().expect("Global guilds cache got poisoned!");
@@ -859,25 +857,23 @@ impl Cache {
                 to_dump.push(ColdStorageGuild::from(g));
             }
         }
-        let serialized = serde_json::to_string(&to_dump).unwrap();
-        connection
-            .set_and_expire_seconds(
-                format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index),
-                serialized,
-                180,
+
+        redis_pool
+            .set(
+                &format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index),
+                &to_dump,
+                Some(180),
             )
-            .await?;
-        Ok(())
+            .await
     }
 
     async fn _prepare_cold_resume_user(
         &self,
-        redis_pool: &ConnectionPool,
+        redis_pool: &Redis,
         todo: Vec<UserId>,
         index: usize,
     ) -> Result<(), Error> {
         debug!("Worker {} freezing {} users", index, todo.len());
-        let mut connection = redis_pool.get().await;
         let mut chunk = Vec::with_capacity(todo.len());
         for key in todo {
             let user = self
@@ -898,21 +894,19 @@ impl Cache {
                 mutual_servers: AtomicU64::new(0),
             });
         }
-        let serialized = serde_json::to_string(&chunk).unwrap();
-        connection
-            .set_and_expire_seconds(
-                format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index),
-                serialized,
-                180,
-            )
-            .await?;
 
-        Ok(())
+        redis_pool
+            .set(
+                &format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index),
+                &chunk,
+                Some(180),
+            )
+            .await
     }
 
     pub async fn restore_cold_resume(
         &self,
-        redis_pool: &ConnectionPool,
+        redis_pool: &Redis,
         guild_chunks: usize,
         user_chunks: usize,
     ) -> Result<(), Error> {
@@ -958,13 +952,16 @@ impl Cache {
         Ok(())
     }
 
-    async fn defrost_users(&self, redis_pool: &ConnectionPool, index: usize) -> Result<(), Error> {
+    async fn defrost_users(&self, redis_pool: &Redis, index: usize) -> Result<(), Error> {
         let key = format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index);
-        let mut connection = redis_pool.get().await;
-        let mut users: Vec<CachedUser> =
-            serde_json::from_str(from_utf8(&connection.get(&key).await?.unwrap()).unwrap())?;
-        connection.del(key).await?;
+        let mut users: Vec<CachedUser> = redis_pool
+            .get(&key)
+            .await?
+            .ok_or(Error::CacheError("Cache structure not found!".to_string()))?;
+        redis_pool.delete(&key).await?;
+
         debug!("Worker {} found {} users to defrost", index, users.len());
+
         let mut cached_users = self.users.write().expect("User cache got poisoned!");
         for user in users.drain(..) {
             cached_users.insert(user.id, Arc::new(user));
@@ -973,12 +970,14 @@ impl Cache {
         Ok(())
     }
 
-    async fn defrost_guilds(&self, redis_pool: &ConnectionPool, index: usize) -> Result<(), Error> {
+    async fn defrost_guilds(&self, redis_pool: &Redis, index: usize) -> Result<(), Error> {
         let key = format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index);
-        let mut connection = redis_pool.get().await;
-        let mut guilds: Vec<ColdStorageGuild> =
-            serde_json::from_str(from_utf8(&connection.get(&key).await?.unwrap()).unwrap())?;
-        connection.del(key).await?;
+        let mut guilds: Vec<ColdStorageGuild> = redis_pool
+            .get(&key)
+            .await?
+            .ok_or(Error::CacheError("Cache structure not found!".to_string()))?;
+        redis_pool.delete(&key).await?;
+
         debug!("Worker {} found {} guilds to defrost", index, guilds.len());
         for cold_guild in guilds.drain(..) {
             let guild = CachedGuild::defrost(&self, cold_guild);

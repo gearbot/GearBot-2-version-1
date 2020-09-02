@@ -7,7 +7,7 @@ use crate::utils::Error;
 pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<Option<GuildConfig>, Error> {
     let row: Option<(serde_json::Value,)> = sqlx::query_as("SELECT config from guildconfig where id=$1")
         .bind(guild_id as i64)
-        .fetch_optional(&ctx.pool)
+        .fetch_optional(&ctx.backing_database)
         .await?;
 
     let config = if let Some(c_val) = row {
@@ -36,7 +36,7 @@ pub async fn create_new_guild_config(
         .bind(guild_id as i64)
         .bind(serde_json::to_value(&new_config).unwrap())
         .bind(guild_encryption_key)
-        .execute(&ctx.pool)
+        .execute(&ctx.backing_database)
         .await?;
 
     Ok(new_config)
@@ -46,7 +46,7 @@ pub async fn set_guild_config(ctx: &BotContext, guild_id: u64, config: serde_jso
     sqlx::query("UPDATE guildconfig set config=$1 WHERE id=$2")
         .bind(&config)
         .bind(guild_id as i64)
-        .execute(&ctx.pool)
+        .execute(&ctx.backing_database)
         .await?;
 
     Ok(())

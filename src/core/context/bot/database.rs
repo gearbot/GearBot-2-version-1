@@ -52,7 +52,7 @@ impl BotContext {
         guild_id: GuildId,
     ) -> Result<Option<UserMessage>, Error> {
         let guild_key = self.get_guild_encryption_key(guild_id).await?;
-        database::get_full_message(&self.pool, message_id, &guild_key).await
+        database::get_full_message(&self.backing_database, message_id, &guild_key).await
     }
 
     pub async fn insert_message(&self, msg: &Message, guild_id: GuildId) -> Result<(), Error> {
@@ -60,9 +60,9 @@ impl BotContext {
         let _ = self.get_config(guild_id).await?;
         let guild_key = self.get_guild_encryption_key(guild_id).await?;
 
-        database::insert_message(&self.pool, &msg, &guild_key).await?;
+        database::insert_message(&self.backing_database, &msg, &guild_key).await?;
         for attachment in &msg.attachments {
-            database::insert_attachment(&self.pool, msg.id, attachment).await?;
+            database::insert_attachment(&self.backing_database, msg.id, attachment).await?;
         }
 
         Ok(())
@@ -71,7 +71,7 @@ impl BotContext {
     async fn get_guild_encryption_key(&self, guild_id: GuildId) -> Result<EncryptionKey, Error> {
         let ek_bytes: (Vec<u8>,) = sqlx::query_as("SELECT encryption_key from guildconfig where id=$1")
             .bind(guild_id.0 as i64)
-            .fetch_one(&self.pool)
+            .fetch_one(&self.backing_database)
             .await?;
 
         let guild_key = {

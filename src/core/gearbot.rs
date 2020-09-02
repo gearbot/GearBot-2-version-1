@@ -6,19 +6,23 @@ use std::time::{Duration, Instant};
 use log::debug;
 use prometheus::{Encoder, TextEncoder};
 use tokio::{self, stream::StreamExt};
-use twilight::gateway::cluster::ShardScheme;
-use twilight::gateway::shard::ResumeSession;
-use twilight::gateway::{Cluster, Event};
+use twilight::gateway::{cluster::ShardScheme, shard::ResumeSession, Cluster, Event};
+
 use twilight::http::Client as HttpClient;
-use twilight::model::gateway::payload::update_status::UpdateStatusInfo;
-use twilight::model::gateway::presence::{ActivityType, Status};
-use twilight::model::gateway::GatewayIntents;
-use twilight::model::user::CurrentUser;
+use twilight::model::{
+    gateway::{
+        payload::update_status::UpdateStatusInfo,
+        presence::{ActivityType, Status},
+        GatewayIntents,
+    },
+    user::CurrentUser,
+};
 
 use crate::core::cache::Cache;
-use crate::core::context::bot::status::generate_activity;
+use crate::core::context::bot::status as bot_status;
 use crate::core::handlers::{commands, general, modlog};
 use crate::core::{BotConfig, BotContext, BotStats, ColdRebootData};
+use crate::database::Redis;
 use crate::translation::Translations;
 use crate::utils::Error;
 use crate::{gearbot_error, gearbot_important, gearbot_info, SchemeInfo};
@@ -29,7 +33,7 @@ pub async fn run(
     http: HttpClient,
     bot_user: CurrentUser,
     postgres_pool: sqlx::PgPool,
-    redis_pool: darkredis::ConnectionPool,
+    redis_pool: Redis,
     translations: Translations,
 ) -> Result<(), Error> {
     let sharding_scheme = ShardScheme::try_from((
@@ -62,7 +66,7 @@ pub async fn run(
         .intents(intents)
         .presence(UpdateStatusInfo::new(
             true,
-            generate_activity(
+            bot_status::generate_activity(
                 ActivityType::Listening,
                 String::from("to the modem screeching as I connect to the gateway"),
             ),
@@ -72,15 +76,14 @@ pub async fn run(
 
     // Check for resume data, pass to builder if present
     {
-        let mut redis_conn = redis_pool.get().await;
         let key = format!("cb_cluster_data_{}", scheme_info.cluster_id);
-        if let Some(cache_data) = redis_conn.get(&key).await.unwrap() {
-            let cold_cache: ColdRebootData = serde_json::from_str(&String::from_utf8(cache_data).unwrap())?;
+        if let Some(cold_cache) = redis_pool.get::<ColdRebootData>(&key).await? {
             debug!("ColdRebootData: {:?}", cold_cache);
 
-            redis_conn
-                .del(format!("cb_cluster_data_{}", scheme_info.cluster_id))
+            redis_pool
+                .delete(&format!("cb_cluster_data_{}", scheme_info.cluster_id))
                 .await?;
+
             if (cold_cache.total_shards == scheme_info.total_shards)
                 && (cold_cache.shard_count == scheme_info.shards_per_cluster)
             {
