@@ -130,7 +130,7 @@ impl Parser {
             Some(channel) => channel,
             None => {
                 let err_msg = "Got a message that we do not know the channel for!".to_string();
-                return Err(Error::CorruptCacheError(err_msg));
+                return Err(Error::CacheError(err_msg));
             }
         };
 
@@ -138,7 +138,7 @@ impl Parser {
         let author = match ctx.cache.get_user(message.author.id) {
             Some(author) => author,
             None => {
-                return Err(Error::CorruptCacheError(String::from(
+                return Err(Error::CacheError(String::from(
                     "Got a message with a command from a user that is not in the cache!",
                 )));
             }
@@ -149,14 +149,14 @@ impl Parser {
             let guild = match ctx.cache.get_guild(&message.guild_id.unwrap()) {
                 Some(guild) => guild,
                 None => {
-                    return Err(Error::CorruptCacheError(String::from(
+                    return Err(Error::CacheError(String::from(
                         "Got a message for a guild channel that isn't cached!",
                     )));
                 }
             };
             let member = match ctx.cache.get_member(&guild.id, &message.author.id) {
                 Some(member) => member,
-                None => return Err(Error::CorruptCacheError(String::from("User missing in cache!"))),
+                None => return Err(Error::CacheError(String::from("User missing in cache!"))),
             };
 
             let config = ctx.get_config(guild.id).await?;
@@ -364,9 +364,7 @@ impl Parser {
                             }
                             let user = match users.get(&member.user_id) {
                                 Some(user) => user,
-                                None => {
-                                    return Err(Error::CorruptCacheError("member without cached username".to_string()))
-                                }
+                                None => return Err(Error::CacheError("member without cached username".to_string())),
                             };
                             match discriminator {
                                 Some(discriminator) => {
@@ -406,7 +404,7 @@ impl Parser {
     fn get_guild(&self) -> Result<Arc<CachedGuild>, Error> {
         match self.ctx.cache.get_guild(&self.get_guild_id()?) {
             Some(guild) => Ok(guild),
-            None => Err(Error::CorruptCacheError(
+            None => Err(Error::CacheError(
                 "A guild vanished from cache while still parsing a command!".to_string(),
             )),
         }

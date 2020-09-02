@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use twilight::model::channel::{Reaction, ReactionType};
 use twilight::model::id::MessageId;
 
-use crate::core::cache::CachedMember;
 use crate::core::reactors::emoji_list_reactor::EmojiListReactor;
 use crate::core::BotContext;
 use crate::utils::{Emoji, Error};
@@ -33,12 +32,7 @@ impl Reactor {
         }
     }
 
-    pub async fn do_your_thing(
-        mut self,
-        emoji: Emoji,
-        ctx: &Arc<BotContext>,
-        reaction: &Reaction,
-    ) -> Result<(), Error> {
+    pub async fn do_your_thing(self, emoji: Emoji, ctx: &Arc<BotContext>, reaction: &Reaction) -> Result<(), Error> {
         let member = match &reaction.guild_id {
             Some(guild_id) => ctx.cache.get_member(guild_id, &reaction.user_id),
             None => None,

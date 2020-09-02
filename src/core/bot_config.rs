@@ -40,14 +40,19 @@ impl BotConfig {
         match toml::from_str::<BotConfig>(&config_file) {
             Err(_) => Err(Error::InvalidConfig),
             Ok(c) => {
-                let mut override_map: HashMap<String, EmojiOverride> = HashMap::new();
-                let mut id_map: HashMap<String, u64> = HashMap::new();
-                for (name, value) in c.emoji.iter() {
-                    let info = matchers::get_emoji_parts(value);
+                let mut override_map: HashMap<String, EmojiOverride> = HashMap::with_capacity(c.emoji.len());
+                let mut id_map: HashMap<String, u64> = HashMap::with_capacity(c.emoji.len());
+
+                for (name, value) in &c.emoji {
+                    let info = matchers::get_emoji_parts(&value);
+
                     if info.len() != 1 {
-                        panic!("Not a valid emoji override found for {}", name)
+                        panic!("Invalid emoji override found for {}", name)
                     }
+
                     let info = info.first().unwrap();
+
+                    let id: u64 = matchers::get_emoji_parts(&value)[0].id;
 
                     override_map.insert(
                         name.clone(),
@@ -56,10 +61,10 @@ impl BotConfig {
                             for_chat: value.clone(),
                         },
                     );
-                    let id: u64 = matchers::get_emoji_parts(value)[0].id;
+
                     id_map.insert(name.clone(), id);
                 }
-                emoji::EMOJI_OVERRIDES.set(override_map);
+                emoji::EMOJI_OVERRIDES.set(override_map).unwrap();
                 Ok(c)
             }
         }

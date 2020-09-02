@@ -1,11 +1,11 @@
-use twilight::model::channel::{Reaction, ReactionType};
-use twilight::model::id::GuildId;
+// use twilight::model::channel::{Reaction, ReactionType};
+// use twilight::model::id::GuildId;
 
 use crate::core::{CommandContext, Reactor};
 use crate::utils::pattern::Pattern;
 use crate::CommandResult;
 
-pub async fn test(mut ctx: CommandContext) -> CommandResult {
+pub async fn test(ctx: CommandContext) -> CommandResult {
     // let reactor = Reactors::new_emoji_list();
     // let reaction = Reaction {
     //     channel_id: Default::default(),

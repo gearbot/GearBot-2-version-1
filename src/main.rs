@@ -97,7 +97,7 @@ async fn real_main() -> Result<(), Error> {
         Ok(pool) => pool,
         Err(e) => {
             gearbot_error!("Failed to connect to the redis database! {}", e);
-            return Err(Error::DarkRedisError(e));
+            return Err(Error::RedisError(e));
         }
     };
 

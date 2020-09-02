@@ -924,7 +924,7 @@ impl Cache {
 
         for result in future::join_all(user_defrosters).await {
             if let Err(e) = result {
-                return Err(Error::CacheDefrostError(format!("Failed to defrost users: {}", e)));
+                return Err(Error::CacheError(format!("Failed to defrost users: {}", e)));
             }
         }
         self.stats
@@ -940,7 +940,7 @@ impl Cache {
 
         for result in future::join_all(guild_defrosters).await {
             if let Err(e) = result {
-                return Err(Error::CacheDefrostError(format!("Failed to defrost guilds: {}", e)));
+                return Err(Error::CacheError(format!("Failed to defrost guilds: {}", e)));
             }
         }
 

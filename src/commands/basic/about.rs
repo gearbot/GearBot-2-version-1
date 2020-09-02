@@ -7,7 +7,7 @@ use twilight_embed_builder::{EmbedBuilder, EmbedFieldBuilder};
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
 use crate::translation::{FluArgs, GearBotString};
-use crate::utils::{age, Emoji};
+use crate::utils::{age, Emoji, Error};
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
 /*
@@ -149,7 +149,8 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
         .cluster
         .shard(ctx.shard)
         .unwrap()
-        .info()?
+        .info()
+        .map_err(|e| Error::ShardOrClusterError(e.to_string()))?
         .latency()
         .average()
         .unwrap_or_else(|| Duration::from_secs(0))
@@ -211,6 +212,7 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
                 .build(),
         )
         .build()?;
+
     ctx.reply_embed(embed).await?;
 
     Ok(())

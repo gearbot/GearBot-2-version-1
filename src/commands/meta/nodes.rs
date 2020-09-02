@@ -8,7 +8,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use twilight::model::guild::Permissions;
 
 use crate::core::CommandContext;
-use crate::translation::GearBotString;
 use crate::utils::Error;
 
 pub type CommandResult = Result<(), Error>;

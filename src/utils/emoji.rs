@@ -37,6 +37,7 @@ define_emoji!(
     VerifiedBotDevBadge => ""
 );
 
+#[derive(Debug)]
 pub struct EmojiOverride {
     pub for_chat: String,
     pub id: EmojiId,

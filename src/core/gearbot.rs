@@ -8,7 +8,7 @@ use prometheus::{Encoder, TextEncoder};
 use tokio::{self, stream::StreamExt};
 use twilight::gateway::cluster::ShardScheme;
 use twilight::gateway::shard::ResumeSession;
-use twilight::gateway::{Cluster, ClusterConfig, Event};
+use twilight::gateway::{Cluster, Event};
 use twilight::http::Client as HttpClient;
 use twilight::model::gateway::payload::update_status::UpdateStatusInfo;
 use twilight::model::gateway::presence::{ActivityType, Status};
@@ -53,8 +53,7 @@ pub async fn run(
     );
 
     let stats = Arc::new(BotStats::new(scheme_info.cluster_id));
-    let s = stats.clone();
-    tokio::spawn(run_metrics_server(s, scheme_info.cluster_id));
+    tokio::spawn(run_metrics_server(Arc::clone(&stats), scheme_info.cluster_id));
 
     let cache = Cache::new(scheme_info.cluster_id, stats.clone());
 
@@ -136,10 +135,10 @@ pub async fn run(
     .expect("Failed to register shutdown handler!");
 
     gearbot_info!("The cluster is going online!");
-    let c = context.cluster.clone();
+    let up_cluster = context.cluster.clone();
     tokio::spawn(async move {
         tokio::time::delay_for(Duration::from_secs(1)).await;
-        c.up().await;
+        up_cluster.up().await;
     });
 
     let mut bot_events = context.cluster.events();
@@ -159,8 +158,6 @@ pub async fn run(
 }
 
 async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), Error> {
-    // Process anything that uses the event ID that we care about, aka shard events
-    // debug!("Got a {:?} event on shard {}", event.1.kind(), event.0);
     modlog::handle_event(event.0, &event.1, ctx.clone()).await?;
     general::handle_event(event.0, &event.1, ctx.clone()).await?;
 

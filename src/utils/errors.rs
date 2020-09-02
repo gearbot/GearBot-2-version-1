@@ -2,7 +2,6 @@ use std::{error, fmt, io};
 
 use serde::export::Formatter;
 use twilight::gateway::cluster::ClusterStartError;
-use twilight::gateway::shard::SessionInactiveError;
 use twilight::gateway::{cluster, shard};
 use twilight::http;
 use twilight::http::request::channel::message::create_message::CreateMessageError;
@@ -14,36 +13,33 @@ use twilight_embed_builder::{
 
 #[derive(Debug)]
 pub enum Error {
-    CmdError(CommandError),
-    InvalidSession(u64),
     MissingToken,
     NoConfig,
     InvalidConfig,
     InvalidLoggingWebhook(String),
     NoLoggingSpec,
     IoError(io::Error),
+
     TwilightHttp(http::Error),
     TwilightCluster(cluster::ClusterCommandError),
+    GatewayError(shard::CommandError),
+    ShardOrClusterError(String),
+    InvalidSession(u64),
+
     Database(sqlx::error::Error),
-    UnknownEmoji(String),
+    RedisError(darkredis::Error),
+
     Serde(serde_json::error::Error),
     ParseError(ParseError),
+    CmdError(CommandError),
     LogError(GuildId),
     CreateMessageError(CreateMessageError),
     UpdateMessageError(UpdateMessageError),
-    CacheDefrostError(String),
-    DarkRedisError(darkredis::Error),
-    CorruptCacheError(String),
+    CacheError(String),
+
     PrometheusError(prometheus::Error),
-    GatewayError(shard::CommandError),
-    ClusterStartError(ClusterStartError),
-    EmbedFieldError(EmbedFieldError),
-    EmbedBuildError(EmbedBuildError),
-    SessionInactiveError(SessionInactiveError),
-    EmbedDescriptionError(EmbedDescriptionError),
-    EmbedColorError(EmbedColorError),
-    EmbedAuthorNameError(EmbedAuthorNameError),
-    ImageSourceUrlError(ImageSourceUrlError),
+    UnknownEmoji(String),
+    EmbedError(String),
 }
 
 #[derive(Debug)]
@@ -141,19 +137,12 @@ impl fmt::Display for Error {
             ),
             Error::CreateMessageError(e) => write!(f, "Error creating message: {}", e),
             Error::UpdateMessageError(e) => write!(f, "Error updating message: {}", e),
-            Error::CacheDefrostError(e) => write!(f, "Error defrosting cache: {}", e),
-            Error::DarkRedisError(e) => write!(f, "Error communicating with the redis cache: {}", e),
-            Error::CorruptCacheError(e) => write!(f, "CRITICAL CACHE CORRUPTION DETECTED: {}", e),
+            Error::CacheError(e) => write!(f, "An error occured with a cache task: {}", e),
+            Error::RedisError(e) => write!(f, "Error communicating with the redis cache: {}", e),
             Error::PrometheusError(e) => write!(f, "Prometheus stat tracking failed: {}", e),
             Error::GatewayError(e) => write!(f, "Gateway error: {}", e),
-            Error::ClusterStartError(e) => write!(f, "Failed to start the cluster: {}", e),
-            Error::EmbedFieldError(e) => write!(f, "Failed to create embed field: {}", e),
-            Error::EmbedBuildError(e) => write!(f, "Failed to build embed: {}", e),
-            Error::SessionInactiveError(e) => write!(f, "Shard inactive: {}", e),
-            Error::EmbedDescriptionError(e) => write!(f, "Failed to set embed description: {}", e),
-            Error::EmbedColorError(e) => write!(f, "Failed to set embed color: {}", e),
-            Error::EmbedAuthorNameError(e) => write!(f, "Failed to set embed author: {}", e),
-            Error::ImageSourceUrlError(e) => write!(f, "Failed to set image source: {}", e),
+            Error::ShardOrClusterError(e) => write!(f, "A cluster or shard error occured: {}", e),
+            Error::EmbedError(e) => write!(f, "An embed was constructed invalidly: {}", e),
         }
     }
 }
@@ -213,7 +202,7 @@ impl From<UpdateMessageError> for Error {
 }
 impl From<darkredis::Error> for Error {
     fn from(e: darkredis::Error) -> Self {
-        Error::DarkRedisError(e)
+        Error::RedisError(e)
     }
 }
 
@@ -225,47 +214,41 @@ impl From<shard::CommandError> for Error {
 
 impl From<ClusterStartError> for Error {
     fn from(e: ClusterStartError) -> Self {
-        Error::ClusterStartError(e)
+        Error::ShardOrClusterError(e.to_string())
     }
 }
 
 impl From<EmbedFieldError> for Error {
     fn from(e: EmbedFieldError) -> Self {
-        Error::EmbedFieldError(e)
+        Error::EmbedError(e.to_string())
     }
 }
 
 impl From<EmbedBuildError> for Error {
     fn from(e: EmbedBuildError) -> Self {
-        Error::EmbedBuildError(e)
-    }
-}
-
-impl From<SessionInactiveError> for Error {
-    fn from(e: SessionInactiveError) -> Self {
-        Error::SessionInactiveError(e)
+        Error::EmbedError(e.to_string())
     }
 }
 
 impl From<EmbedDescriptionError> for Error {
     fn from(e: EmbedDescriptionError) -> Self {
-        Error::EmbedDescriptionError(e)
+        Error::EmbedError(e.to_string())
     }
 }
 
 impl From<EmbedColorError> for Error {
     fn from(e: EmbedColorError) -> Self {
-        Error::EmbedColorError(e)
+        Error::EmbedError(e.to_string())
     }
 }
 
 impl From<EmbedAuthorNameError> for Error {
     fn from(e: EmbedAuthorNameError) -> Self {
-        Error::EmbedAuthorNameError(e)
+        Error::EmbedError(e.to_string())
     }
 }
 impl From<ImageSourceUrlError> for Error {
     fn from(e: ImageSourceUrlError) -> Self {
-        Error::ImageSourceUrlError(e)
+        Error::EmbedError(e.to_string())
     }
 }
