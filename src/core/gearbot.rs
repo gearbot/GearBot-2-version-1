@@ -13,7 +13,7 @@ use twilight::model::{
     gateway::{
         payload::update_status::UpdateStatusInfo,
         presence::{ActivityType, Status},
-        GatewayIntents,
+        Intents,
     },
     user::CurrentUser,
 };
@@ -44,16 +44,16 @@ pub async fn run(
     .unwrap();
 
     let intents = Some(
-        GatewayIntents::GUILDS
-            | GatewayIntents::GUILD_MEMBERS
-            | GatewayIntents::GUILD_BANS
-            | GatewayIntents::GUILD_EMOJIS
-            | GatewayIntents::GUILD_INVITES
-            | GatewayIntents::GUILD_VOICE_STATES
-            | GatewayIntents::GUILD_MESSAGES
-            | GatewayIntents::GUILD_MESSAGE_REACTIONS
-            | GatewayIntents::DIRECT_MESSAGES
-            | GatewayIntents::DIRECT_MESSAGE_REACTIONS,
+        Intents::GUILDS
+            | Intents::GUILD_MEMBERS
+            | Intents::GUILD_BANS
+            | Intents::GUILD_EMOJIS
+            | Intents::GUILD_INVITES
+            | Intents::GUILD_VOICE_STATES
+            | Intents::GUILD_MESSAGES
+            | Intents::GUILD_MESSAGE_REACTIONS
+            | Intents::DIRECT_MESSAGES
+            | Intents::DIRECT_MESSAGE_REACTIONS,
     );
 
     let stats = Arc::new(BotStats::new(scheme_info.cluster_id));

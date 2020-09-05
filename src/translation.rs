@@ -19,13 +19,6 @@ pub const DEFAULT_LANG: LanguageIdentifier = langid!("en_US");
 /// The transations for all languages that the bot can handle.
 pub struct Translations(HashMap<LanguageIdentifier, Arc<FluentBundle<FluentResource>>>);
 
-/// A translator that handles all language translation for a specific guild depending on what
-/// their language is set to.
-pub struct GuildTranslator {
-    pub language: LanguageIdentifier,
-    pub translator: Arc<FluentBundle<FluentResource>>,
-}
-
 pub struct FluArgs<'a>(FluentArgs<'a>);
 
 impl<'a> FluArgs<'a> {
@@ -129,12 +122,8 @@ impl Translations {
         }
     }
 
-    pub fn get_translator(&self, lang: &LanguageIdentifier) -> Arc<GuildTranslator> {
-        Arc::new(GuildTranslator {
-            language: lang.clone(),
-            // If the guild has a language set, it exists in the HashMap.
-            translator: Arc::clone(self.0.get(lang).unwrap()),
-        })
+    pub fn get_translator(&self, lang: &LanguageIdentifier) -> Arc<FluentBundle<FluentResource>> {
+        Arc::clone(self.0.get(lang).unwrap())
     }
 }
 
@@ -171,6 +160,10 @@ pub enum GearBotString {
     AboutDescription,
     QuoteNotFound,
 
+    EmojiPageHeader,
+    EmojiOverviewHeader,
+    EmojiInfo,
+
     //Errors
     MissingPermissions,
 
@@ -193,6 +186,9 @@ impl GearBotString {
             GearBotString::QuoteNotFound => "basic__quote_notfound",
             GearBotString::MissingPermissions => "errors_missing_permissions",
             GearBotString::UserinfoNoRoles => "basic__userinfo_no_roles",
+            GearBotString::EmojiPageHeader => "basic__emoji_page_header",
+            GearBotString::EmojiOverviewHeader => "basic__emoji_overview_header",
+            GearBotString::EmojiInfo => "basic__emoji_info",
         }
     }
 
@@ -256,7 +252,7 @@ mod tests {
     use std::fs;
 
     lazy_static! {
-        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 11] = [
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 13] = [
             GearBotString::PingPong.as_str(),
             GearBotString::CoinflipDefault.as_str(),
             GearBotString::CoinflipYes.as_str(),
@@ -267,7 +263,10 @@ mod tests {
             GearBotString::AboutDescription.as_str(),
             GearBotString::QuoteNotFound.as_str(),
             GearBotString::MissingPermissions.as_str(),
-            GearBotString::UserinfoNoRoles.as_str()
+            GearBotString::UserinfoNoRoles.as_str(),
+            GearBotString::EmojiPageHeader.as_str(),
+            GearBotString::EmojiOverviewHeader.as_str(),
+            GearBotString::EmojiInfo.as_str(),
         ];
     }
 

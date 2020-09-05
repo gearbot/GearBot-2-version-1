@@ -12,7 +12,7 @@ use crate::commands::meta::nodes::GearBotPermissions;
 use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};
 use crate::core::{BotContext, GuildConfig};
 use crate::parser::Parser;
-use crate::translation::{GearBotString, GuildTranslator};
+use crate::translation::GearBotString;
 use crate::utils::CommandError;
 use crate::Error;
 
@@ -46,7 +46,6 @@ impl CommandMessage {
 /// The guild context that is returned inside commands that is specific to each guild, with things like the config,
 /// language, etc, set and usable behind wrapper methods for simplicity.
 pub struct CommandContext {
-    pub translator: Arc<GuildTranslator>,
     pub bot_context: Arc<BotContext>,
     config: Arc<GuildConfig>,
     pub message: CommandMessage,
@@ -66,9 +65,7 @@ impl CommandContext {
         parser: Parser,
         permissions: GearBotPermissions,
     ) -> Self {
-        let translator = ctx.translations.get_translator(&config.language);
         CommandContext {
-            translator,
             bot_context: ctx,
             config,
             message,
@@ -90,12 +87,12 @@ impl CommandContext {
     pub fn translate(&self, key: GearBotString) -> String {
         self.bot_context
             .translations
-            .get_text_plain(&self.translator.language, key)
+            .get_text_plain(&self.config.language, key)
             .to_string()
     }
 
     pub fn translate_with_args(&self, string_key: GearBotString, args: &FluentArgs<'_>) -> String {
-        let guild_lang = &self.translator.language;
+        let guild_lang = &self.config.language;
 
         self.bot_context
             .translations

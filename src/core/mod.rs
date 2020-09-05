@@ -14,4 +14,4 @@ mod handlers;
 pub mod logging;
 
 pub mod cache;
-mod reactors;
+pub mod reactors;

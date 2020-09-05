@@ -52,13 +52,15 @@ impl BotConfig {
 
                     let info = info.first().unwrap();
 
-                    let id: u64 = matchers::get_emoji_parts(&value)[0].id;
+                    let id = matchers::get_emoji_parts(&value)[0].id;
+                    let e_name = matchers::get_emoji_parts(&value)[0].name.clone();
 
                     override_map.insert(
                         name.clone(),
                         EmojiOverride {
                             id: EmojiId(info.id),
                             for_chat: value.clone(),
+                            name: e_name,
                         },
                     );
 

@@ -108,6 +108,8 @@ impl From<Guild> for CachedGuild {
         for (_, emoji) in guild.emojis {
             cached_guild.emoji.push(Arc::new(CachedEmoji::from(emoji)));
         }
+
+        cached_guild.emoji.sort_by(|a, b| a.id.cmp(&b.id));
         cached_guild
     }
 }
@@ -171,11 +173,12 @@ impl CachedGuild {
         for emoji in cold_guild.emoji {
             guild.emoji.push(Arc::new(emoji));
         }
+        guild.emoji.sort_by(|a, b| a.id.cmp(&b.id));
         guild
     }
 
     pub fn update(&self, other: &PartialGuild) -> Self {
-        let guild = CachedGuild {
+        let mut guild = CachedGuild {
             id: other.id,
             name: other.name.clone(),
             icon: other.icon.clone(),
@@ -238,6 +241,8 @@ impl CachedGuild {
             }
         }
 
+        guild.emoji.sort_by(|a, b| a.id.cmp(&b.id));
+
         guild
     }
 
@@ -247,6 +252,20 @@ impl CachedGuild {
             .expect("Global role cache got poisoned!")
             .get(role_id)
             .cloned()
+    }
+
+    pub fn get_icon_url(&self, animated: bool) -> Option<String> {
+        match &self.icon {
+            Some(icon) => {
+                let animated = animated && icon.starts_with("a_");
+                let extension = if animated { "gif" } else { "png" };
+                Some(format!(
+                    "https://cdn.discordapp.com/icons/{}/{}.{}",
+                    self.id, icon, extension
+                ))
+            }
+            None => None,
+        }
     }
 }
 

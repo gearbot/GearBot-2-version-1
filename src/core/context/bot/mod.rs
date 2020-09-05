@@ -23,12 +23,14 @@ use crate::core::cache::Cache;
 use crate::core::GuildConfig;
 use crate::crypto::EncryptionKey;
 use crate::database::Redis;
-use crate::translation::Translations;
+use crate::translation::{GearBotString, Translations};
 use crate::utils::LogType;
 use crate::SchemeInfo;
+use fluent_bundle::FluentArgs;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, RwLock};
+use unic_langid::LanguageIdentifier;
 
 #[derive(PartialEq, Debug)]
 pub enum ShardState {
@@ -122,5 +124,20 @@ impl BotContext {
             // is not implemented as of yet.
             unreachable!()
         }
+    }
+
+    pub fn translate(&self, language: &LanguageIdentifier, key: GearBotString) -> String {
+        self.translations.get_text_plain(language, key).to_string()
+    }
+
+    pub fn translate_with_args(
+        &self,
+        language: &LanguageIdentifier,
+        string_key: GearBotString,
+        args: &FluentArgs<'_>,
+    ) -> String {
+        self.translations
+            .get_text_with_args(language, string_key, args)
+            .replace("\\n", "\n")
     }
 }

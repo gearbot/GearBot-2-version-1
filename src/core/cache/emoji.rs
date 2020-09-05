@@ -24,6 +24,16 @@ pub struct CachedEmoji {
     pub available: bool,
 }
 
+impl CachedEmoji {
+    pub fn get_url(&self) -> String {
+        format!(
+            "https://cdn.discordapp.com/emojis/{}.{}",
+            self.id,
+            if self.animated { "gif" } else { "png" }
+        )
+    }
+}
+
 impl From<Emoji> for CachedEmoji {
     fn from(emoji: Emoji) -> Self {
         let creator = match emoji.user {

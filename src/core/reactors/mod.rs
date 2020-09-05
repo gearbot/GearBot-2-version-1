@@ -12,6 +12,8 @@ mod emoji_list_reactor;
 mod help_reactor;
 pub mod reactor_controller;
 
+pub use emoji_list_reactor::gen_emoji_page;
+
 #[derive(Deserialize, Serialize, Debug)]
 pub enum Reactor {
     Help,
@@ -32,19 +34,29 @@ impl Reactor {
         }
     }
 
-    pub async fn do_your_thing(self, emoji: Emoji, ctx: &Arc<BotContext>, reaction: &Reaction) -> Result<(), Error> {
+    pub async fn do_your_thing(self, emoji: Emoji, ctx: &Arc<BotContext>, reaction: &Reaction) -> Result<Self, Error> {
         let member = match &reaction.guild_id {
             Some(guild_id) => ctx.cache.get_member(guild_id, &reaction.user_id),
             None => None,
         };
-        match self {
-            Reactor::Help => {}
+        let new = match self {
+            Reactor::Help => self,
             Reactor::EmojiList(mut inner) => {
                 inner.do_the_thing(emoji, ctx, member, reaction).await?;
-                log::info!("inner page count is now at {}", inner.page);
+                Reactor::EmojiList { 0: inner }
             }
-        }
-        Ok(())
+        };
+
+        new.save(ctx, reaction.message_id).await?;
+        ctx.http
+            .delete_reaction(
+                reaction.channel_id,
+                reaction.message_id,
+                reaction.emoji.clone(),
+                reaction.user_id.clone(),
+            )
+            .await?;
+        Ok(new)
     }
 
     pub async fn save(&self, ctx: &Arc<BotContext>, message_id: MessageId) -> Result<(), Error> {
@@ -57,5 +69,34 @@ impl Reactor {
         match self {
             _ => 60 * 60 * 24,
         }
+    }
+}
+
+pub fn get_emoji(options: Vec<Emoji>, reaction: &Reaction) -> Option<Emoji> {
+    for e in options {
+        if e.matches(&reaction.emoji) {
+            return Some(e);
+        }
+    }
+    None
+}
+
+pub fn scroll_page(pages: u8, current: u8, emoji: &Emoji) -> u8 {
+    match emoji {
+        Emoji::Left => {
+            if current == 0 {
+                pages - 1
+            } else {
+                current - 1
+            }
+        }
+        Emoji::Right => {
+            if current + 1 == pages {
+                0
+            } else {
+                current + 1
+            }
+        }
+        _ => current,
     }
 }

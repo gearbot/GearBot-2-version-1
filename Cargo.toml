@@ -32,7 +32,9 @@ sqlx =  { version = "0.4.0-beta.1", default-features = false, features = ["postg
 tokio = { version = "0.2", default-features = false, features = ["macros", "sync", "rt-core"] }
 toml = "0.5"
 twilight = { git = "https://github.com/twilight-rs/twilight", branch = "trunk" }
+#twilight = { path="../../../rust/twilight/twilight" }
 twilight-embed-builder = { branch = "trunk", git = "https://github.com/twilight-rs/twilight" }
+#twilight-embed-builder = { path="../../../rust/twilight/utils/embed-builder" }
 twilight-gateway = { branch = "trunk", default-features = false, features = ["rustls", "simd-json", "rustls", "simd-zlib"], git = "https://github.com/twilight-rs/twilight" }
 url = "2.1"
 unic-langid = { version = "0.9", features = ["macros", "serde"] }

@@ -3,11 +3,11 @@ use std::str::FromStr;
 
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
-use twilight::model::channel::ReactionType;
 use twilight::model::id::EmojiId;
 
 use crate::define_emoji;
 use crate::utils::errors::Error;
+use twilight::model::channel::ReactionType;
 
 define_emoji!(
     Yes => "✅",
@@ -41,6 +41,7 @@ define_emoji!(
 pub struct EmojiOverride {
     pub for_chat: String,
     pub id: EmojiId,
+    pub name: String,
 }
 
 pub static EMOJI_OVERRIDES: OnceCell<HashMap<String, EmojiOverride>> = OnceCell::new();
@@ -99,6 +100,19 @@ mod macros {
                             None => *name == self.get_fallback()
                         }
                     }
+                }
+            }
+
+
+            pub fn to_reaction(&self) -> ReactionType {
+                let o = match EMOJI_OVERRIDES.get() {
+                        Some(overrides) => overrides.get(&self.to_string()),
+                        None => None
+                    };
+                if let Some(o) = o {
+                    ReactionType::Custom{id: o.id, name: Some(o.name.clone()), animated: false}
+                } else {
+                    ReactionType::Unicode{name: self.get_fallback().to_string()}
                 }
             }
         }

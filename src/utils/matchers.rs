@@ -119,8 +119,8 @@ pub fn get_emoji_parts(msg: &str) -> Vec<EmojiInfo> {
     let mut results: Vec<EmojiInfo> = vec![];
     for m in EMOJI_MATCHER.captures_iter(msg) {
         results.push(EmojiInfo {
-            animated: &m[0] == "a",
-            name: m[1].to_owned(),
+            animated: &m[1] == "a",
+            name: m[2].to_owned(),
             id: m[3].parse::<u64>().unwrap(),
         });
     }

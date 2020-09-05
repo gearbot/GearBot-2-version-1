@@ -9,5 +9,8 @@
   "basic__about": "{ $gearDiamond } **__Cluster information__** { $gearDiamond } \\n ***Cluster***: { $cluster_id }\\n***Uptime***:  { $uptime } (started at { $start_time })\\n***Running version: *** { $version }\\n***Shards***: { $shards }\\n***Average shard latency***: { $average_latency }ms\\n***Guilds***: { $guilds }\\n***Total  users***: { $total_users }\\n***Unique users***: { $unique_users }\\n\\n{ $gearGold } **__Shard information__** { $gearGold } \\n***Shard***: { $shard }\\n***Shard latency***: { $latency }ms\\n\\n{ $gearIron } **__Event information__** { $gearIron } \\n***User messages recieved***: { $user_messages }\\n***Messages send***: { $messages_send }\\n***Commands executed***: { $commands_executed }",
   "basic__quote_notfound": "The specified message couldn't be found!",
   "errors_missing_permissions": "{$gearno} You do not have permission to execute this command {$gearno}",
-  "basic__userinfo_no_roles": "This user has no roles"
+  "basic__userinfo_no_roles": "This user has no roles",
+  "basic__emoji_page_header": "{$guild_name} emoji {$page}/{$pages}",
+  "basic__emoji_overview_header": "{$guild_name} emoji overview",
+  "basic__emoji_info": "**Name: **{$emoji_name}\\n **ID:** {$id} \\n**Requires colons:** {$requires_colons}\\n**Animated: ** {$animated}\\n**Managed:** {$managed}\\n**Role requirement**: {$role_requirement}"
 }
