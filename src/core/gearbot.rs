@@ -6,10 +6,10 @@ use std::time::{Duration, Instant};
 use log::debug;
 use prometheus::{Encoder, TextEncoder};
 use tokio::{self, stream::StreamExt};
-use twilight::gateway::{cluster::ShardScheme, shard::ResumeSession, Cluster, Event};
+use twilight_gateway::{cluster::ShardScheme, shard::ResumeSession, Cluster, Event};
 
-use twilight::http::Client as HttpClient;
-use twilight::model::{
+use twilight_http::Client as HttpClient;
+use twilight_model::{
     gateway::{
         payload::update_status::UpdateStatusInfo,
         presence::{ActivityType, Status},
@@ -43,18 +43,16 @@ pub async fn run(
     ))
     .unwrap();
 
-    let intents = Some(
-        Intents::GUILDS
-            | Intents::GUILD_MEMBERS
-            | Intents::GUILD_BANS
-            | Intents::GUILD_EMOJIS
-            | Intents::GUILD_INVITES
-            | Intents::GUILD_VOICE_STATES
-            | Intents::GUILD_MESSAGES
-            | Intents::GUILD_MESSAGE_REACTIONS
-            | Intents::DIRECT_MESSAGES
-            | Intents::DIRECT_MESSAGE_REACTIONS,
-    );
+    let intents = Intents::GUILDS
+        | Intents::GUILD_MEMBERS
+        | Intents::GUILD_BANS
+        | Intents::GUILD_EMOJIS
+        | Intents::GUILD_INVITES
+        | Intents::GUILD_VOICE_STATES
+        | Intents::GUILD_MESSAGES
+        | Intents::GUILD_MESSAGE_REACTIONS
+        | Intents::DIRECT_MESSAGES
+        | Intents::DIRECT_MESSAGE_REACTIONS;
 
     let stats = Arc::new(BotStats::new(scheme_info.cluster_id));
     tokio::spawn(run_metrics_server(Arc::clone(&stats), scheme_info.cluster_id));
@@ -192,8 +190,7 @@ async fn run_metrics_server(stats: Arc<BotStats>, cluster_id: u64) {
         }
     });
 
-    let port = 9091 + cluster_id as u16;
-    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 9090));
     let server = hyper::Server::bind(&addr).serve(metric_service);
     if let Err(e) = server.await {
         gearbot_error!("The metrics server failed: {}", e)

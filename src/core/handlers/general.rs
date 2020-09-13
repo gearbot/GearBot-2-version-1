@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use log::debug;
-use twilight::gateway::Event;
+use twilight_gateway::Event;
 
 use crate::core::reactors::reactor_controller;
 use crate::core::BotContext;

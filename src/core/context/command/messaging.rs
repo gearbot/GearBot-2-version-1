@@ -1,5 +1,5 @@
 use fluent_bundle::FluentArgs;
-use twilight::model::{
+use twilight_model::{
     channel::{embed::Embed, Message},
     id::{ChannelId, MessageId},
 };

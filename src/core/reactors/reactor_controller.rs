@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use twilight::model::channel::Reaction;
+use twilight_model::channel::Reaction;
 
 use crate::core::{BotContext, Reactor};
 use crate::utils::Error;

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use bitflags::bitflags;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use twilight::model::guild::Permissions;
+use twilight_model::guild::Permissions;
 
 use crate::core::CommandContext;
 use crate::utils::Error;

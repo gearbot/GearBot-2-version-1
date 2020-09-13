@@ -7,8 +7,8 @@
 
 # Config and tokens
 .env
-config.toml
-logconfig.toml
+*.toml
+!config-DEFAULT.toml
 
 # ingore logs
 logs

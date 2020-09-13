@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use twilight::model::guild::Permissions;
-use twilight::model::id::{RoleId, UserId};
+use twilight_model::guild::Permissions;
+use twilight_model::id::{RoleId, UserId};
 use unic_langid::LanguageIdentifier;
 
 use crate::commands::meta::nodes::GearBotPermissions;

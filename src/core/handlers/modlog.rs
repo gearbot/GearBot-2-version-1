@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use log::debug;
-use twilight::gateway::Event;
-use twilight::model::gateway::payload::RequestGuildMembers;
+use twilight_gateway::Event;
+use twilight_model::gateway::payload::RequestGuildMembers;
 
 use crate::core::BotContext;
 use crate::utils::Error;

@@ -1,15 +1,15 @@
 use std::{error, fmt, io};
 
 use serde::export::Formatter;
-use twilight::gateway::cluster::ClusterStartError;
-use twilight::gateway::{cluster, shard};
-use twilight::http;
-use twilight::http::request::channel::message::create_message::CreateMessageError;
-use twilight::http::request::channel::message::update_message::UpdateMessageError;
-use twilight::model::id::GuildId;
 use twilight_embed_builder::{
     EmbedAuthorNameError, EmbedBuildError, EmbedColorError, EmbedDescriptionError, EmbedFieldError, ImageSourceUrlError,
 };
+use twilight_gateway::cluster::ClusterStartError;
+use twilight_gateway::{cluster, shard};
+use twilight_http;
+use twilight_http::request::channel::message::create_message::CreateMessageError;
+use twilight_http::request::channel::message::update_message::UpdateMessageError;
+use twilight_model::id::GuildId;
 
 #[derive(Debug)]
 pub enum Error {
@@ -20,7 +20,7 @@ pub enum Error {
     NoLoggingSpec,
     IoError(io::Error),
 
-    TwilightHttp(http::Error),
+    TwilightHttp(twilight_http::Error),
     TwilightCluster(cluster::ClusterCommandError),
     GatewayError(shard::CommandError),
     ShardOrClusterError(String),
@@ -165,8 +165,8 @@ impl From<io::Error> for Error {
     }
 }
 
-impl From<http::Error> for Error {
-    fn from(e: http::Error) -> Self {
+impl From<twilight_http::Error> for Error {
+    fn from(e: twilight_http::Error) -> Self {
         Error::TwilightHttp(e)
     }
 }

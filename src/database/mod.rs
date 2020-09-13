@@ -6,8 +6,8 @@ pub mod structures;
 
 use structures::{StoredUserMessage, UserMessage};
 
-use twilight::model::channel::{Attachment, Message};
-use twilight::model::id::{ChannelId, GuildId, MessageId, UserId};
+use twilight_model::channel::{Attachment, Message};
+use twilight_model::id::{ChannelId, GuildId, MessageId, UserId};
 
 use log::info;
 

@@ -3,8 +3,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 
 use serde::{Deserialize, Serialize};
-use twilight::model::guild::{DefaultMessageNotificationLevel, Guild, PartialGuild, PremiumTier, VerificationLevel};
-use twilight::model::id::{ChannelId, GuildId, RoleId, UserId};
+use twilight_model::guild::{DefaultMessageNotificationLevel, Guild, PartialGuild, PremiumTier, VerificationLevel};
+use twilight_model::id::{ChannelId, GuildId, RoleId, UserId};
 
 use crate::core::cache::{Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole};
 

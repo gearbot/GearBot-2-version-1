@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use log::{debug, trace};
-use twilight::gateway::Event;
+use twilight_gateway::Event;
 
 use crate::core::BotContext;
 use crate::parser::Parser;

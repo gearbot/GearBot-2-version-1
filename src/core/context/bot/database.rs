@@ -1,6 +1,6 @@
 use serde_json::to_value;
-use twilight::model::channel::Message;
-use twilight::model::id::{GuildId, MessageId};
+use twilight_model::channel::Message;
+use twilight_model::id::{GuildId, MessageId};
 
 use crate::core::{BotContext, GuildConfig};
 use crate::database::{self, configs as dbconfig, structures::UserMessage};

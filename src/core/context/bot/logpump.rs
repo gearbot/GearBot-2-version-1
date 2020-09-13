@@ -1,5 +1,5 @@
 use chrono::Utc;
-use twilight::model::id::GuildId;
+use twilight_model::id::GuildId;
 
 use crate::core::BotContext;
 use crate::utils::{Error, LogType};

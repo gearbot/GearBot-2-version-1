@@ -4,12 +4,12 @@ use std::sync::{Arc, RwLock};
 
 use futures_util::future;
 use log::{debug, info, trace, warn};
-use twilight::gateway::Event;
-use twilight::model::channel::{Channel, GuildChannel, PrivateChannel};
-use twilight::model::gateway::payload::RequestGuildMembers;
-use twilight::model::gateway::presence::{ActivityType, Status};
-use twilight::model::id::{ChannelId, EmojiId, GuildId, UserId};
-use twilight::model::user::User;
+use twilight_gateway::Event;
+use twilight_model::channel::{Channel, GuildChannel, PrivateChannel};
+use twilight_model::gateway::payload::RequestGuildMembers;
+use twilight_model::gateway::presence::{ActivityType, Status};
+use twilight_model::id::{ChannelId, EmojiId, GuildId, UserId};
+use twilight_model::user::User;
 
 pub use channel::CachedChannel;
 pub use emoji::CachedEmoji;

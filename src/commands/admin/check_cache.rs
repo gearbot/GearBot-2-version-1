@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 
 use log::info;
-use twilight::model::id::{GuildId, UserId};
 use twilight_embed_builder::{EmbedBuilder, EmbedFieldBuilder};
+use twilight_model::id::{GuildId, UserId};
 
 use crate::core::CommandContext;
 use crate::CommandResult;

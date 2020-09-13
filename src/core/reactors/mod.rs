@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use twilight::model::channel::Reaction;
-use twilight::model::id::MessageId;
+use twilight_model::channel::Reaction;
+use twilight_model::id::MessageId;
 
 use crate::core::reactors::emoji_list_reactor::EmojiListReactor;
 use crate::core::BotContext;
@@ -42,7 +42,7 @@ impl Reactor {
         let new = match self {
             Reactor::Help => self,
             Reactor::EmojiList(mut inner) => {
-                inner.do_the_thing(emoji, ctx, member, reaction).await?;
+                inner.do_the_thing(emoji.clone(), ctx, member, reaction).await?;
                 Reactor::EmojiList { 0: inner }
             }
         };
@@ -52,7 +52,7 @@ impl Reactor {
             .delete_reaction(
                 reaction.channel_id,
                 reaction.message_id,
-                reaction.emoji.clone(),
+                emoji.to_reaction(),
                 reaction.user_id.clone(),
             )
             .await?;

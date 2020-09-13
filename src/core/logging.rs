@@ -8,8 +8,8 @@ use flexi_logger::{
 };
 use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
-use twilight::http::Client as HttpClient;
-use twilight::model::user::CurrentUser;
+use twilight_http::Client as HttpClient;
+use twilight_model::user::CurrentUser;
 
 use crate::core::BotConfig;
 use crate::gearbot_error;

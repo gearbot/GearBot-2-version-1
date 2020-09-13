@@ -6,7 +6,9 @@ use std::time::Duration;
 use git_version::git_version;
 use log::info;
 use tokio::runtime::Runtime;
-use twilight::http::{request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient};
+use twilight_http::{
+    client::Proxy, request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient,
+};
 
 use commands::ROOT_NODE;
 use translation::load_translations;
@@ -56,9 +58,15 @@ async fn real_main() -> Result<(), Error> {
         panic!("The KMS needs built before GearBot can work without a static main encryption key!");
     }
 
-    let builder = HttpClient::builder()
+    let mut builder = HttpClient::builder()
         .token(&config.tokens.discord)
         .default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
+    if let Some(proxy_url) = &config.proxy_url {
+        builder = builder
+            .proxy(Proxy::all(proxy_url).unwrap())
+            .proxy_http(true)
+            .ratelimiter(None);
+    }
 
     let http = builder.build()?;
     // Validate token and figure out who we are

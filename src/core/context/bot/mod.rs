@@ -1,9 +1,9 @@
 use aes_gcm::aead::generic_array::GenericArray;
 use chrono::{DateTime, Utc};
 use tokio::sync::mpsc::UnboundedSender;
-use twilight::gateway::Cluster;
-use twilight::http::Client as HttpClient;
-use twilight::model::{
+use twilight_gateway::Cluster;
+use twilight_http::Client as HttpClient;
+use twilight_model::{
     channel::Message,
     id::{GuildId, UserId},
     user::CurrentUser,

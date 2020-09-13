@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use twilight::model::channel::Reaction;
-// use twilight::model::id::MessageId;
+use twilight_model::channel::Reaction;
+// use twilight_model::id::MessageId;
 
 use crate::core::cache::{CachedGuild, CachedMember};
 use crate::core::reactors::{get_emoji, scroll_page};
 use crate::core::BotContext;
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{Emoji, Error};
-use twilight::model::channel::embed::Embed;
 use twilight_embed_builder::{EmbedAuthorBuilder, EmbedBuilder, ImageSource};
+use twilight_model::channel::embed::Embed;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct EmojiListReactor {

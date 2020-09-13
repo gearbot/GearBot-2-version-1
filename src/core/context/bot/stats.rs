@@ -1,7 +1,7 @@
 use std::sync::atomic::AtomicU64;
 
 use chrono::{DateTime, Utc};
-use twilight::model::channel::Message;
+use twilight_model::channel::Message;
 
 use git_version::git_version;
 
@@ -11,7 +11,7 @@ use prometheus::{IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registr
 use crate::core::context::bot::ShardState;
 use log::info;
 use std::collections::HashMap;
-use twilight::model::gateway::event::Event;
+use twilight_model::gateway::event::Event;
 
 pub struct EventStats {
     pub ban_add: IntCounter,

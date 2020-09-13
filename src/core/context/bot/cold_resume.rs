@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use log::info;
-use twilight::model::gateway::presence::{ActivityType, Status};
+use twilight_model::gateway::presence::{ActivityType, Status};
 
 use crate::core::{BotContext, ColdRebootData};
 use crate::gearbot_important;

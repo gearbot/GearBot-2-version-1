@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use lazy_static::lazy_static;
-use twilight::model::guild::Permissions;
+use twilight_model::guild::Permissions;
 
 use crate::commands::meta::nodes::{CommandGroup, CommandNode, GearBotPermissions, RootNode};
 use crate::{

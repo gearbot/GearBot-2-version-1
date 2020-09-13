@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use twilight::model::{
+use twilight_model::{
     channel::Message,
     guild::{Ban, Permissions},
     id::{ChannelId, MessageId, RoleId, UserId},

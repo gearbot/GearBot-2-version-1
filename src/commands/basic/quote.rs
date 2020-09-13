@@ -1,4 +1,4 @@
-use twilight::model::id::MessageId;
+use twilight_model::id::MessageId;
 
 use crate::core::CommandContext;
 use crate::translation::{FluArgs, GearBotString};

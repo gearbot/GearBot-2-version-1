@@ -1,4 +1,4 @@
-use twilight::model::{
+use twilight_model::{
     channel::permission_overwrite::PermissionOverwriteType,
     guild::Permissions,
     id::{ChannelId, UserId},

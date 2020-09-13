@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
-use twilight::model::guild::{Permissions, Role};
-use twilight::model::id::RoleId;
+use twilight_model::guild::{Permissions, Role};
+use twilight_model::id::RoleId;
 
 use super::is_default;
 

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 
 use serde::Deserialize;
-use twilight::model::id::EmojiId;
+use twilight_model::id::EmojiId;
 
 use crate::utils::{emoji, matchers, EmojiOverride, Error};
 
@@ -15,6 +15,7 @@ pub struct BotConfig {
     pub database: Database,
     pub emoji: HashMap<String, String>,
     pub global_admins: Vec<u64>,
+    pub proxy_url: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]

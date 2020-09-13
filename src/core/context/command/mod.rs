@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fluent_bundle::FluentArgs;
-use twilight::gateway::shard::Information;
-use twilight::model::channel::embed::Embed;
-use twilight::model::channel::message::{MessageFlags, MessageType};
-use twilight::model::channel::Attachment;
-use twilight::model::{id::MessageId, user::CurrentUser};
+use twilight_gateway::shard::Information;
+use twilight_model::channel::embed::Embed;
+use twilight_model::channel::message::{MessageFlags, MessageType};
+use twilight_model::channel::Attachment;
+use twilight_model::{id::MessageId, user::CurrentUser};
 
 use crate::commands::meta::nodes::GearBotPermissions;
 use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};

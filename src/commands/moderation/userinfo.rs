@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
-use twilight::model::guild::Permissions;
-use twilight::model::user::UserFlags;
 use twilight_embed_builder::{EmbedAuthorBuilder, EmbedBuilder, ImageSource};
+use twilight_model::guild::Permissions;
+use twilight_model::user::UserFlags;
 
 use crate::core::CommandContext;
 use crate::translation::{FluArgs, GearBotString};

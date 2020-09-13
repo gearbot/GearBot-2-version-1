@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use twilight::model::guild::Permissions;
-use twilight::model::id::UserId;
+use twilight_model::guild::Permissions;
+use twilight_model::id::UserId;
 
 use crate::commands::meta::nodes::{CommandNode, GearBotPermissions};
 use crate::commands::ROOT_NODE;

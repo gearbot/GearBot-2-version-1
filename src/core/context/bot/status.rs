@@ -1,5 +1,5 @@
-use twilight::model::gateway::payload::UpdateStatus;
-use twilight::model::gateway::presence::{Activity, ActivityType, Status};
+use twilight_model::gateway::payload::UpdateStatus;
+use twilight_model::gateway::presence::{Activity, ActivityType, Status};
 
 use crate::core::BotContext;
 use crate::utils::Error;

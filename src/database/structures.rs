@@ -1,5 +1,5 @@
-use twilight::model::channel::message::MessageType;
-use twilight::model::id::{ChannelId, GuildId, UserId};
+use twilight_model::channel::message::MessageType;
+use twilight_model::id::{ChannelId, GuildId, UserId};
 
 #[derive(Debug)]
 pub struct UserMessage {

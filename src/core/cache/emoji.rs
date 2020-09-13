@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use twilight::model::guild::Emoji;
-use twilight::model::id::{EmojiId, RoleId, UserId};
+use twilight_model::guild::Emoji;
+use twilight_model::id::{EmojiId, RoleId, UserId};
 
 use super::{get_true, is_default, is_true};
 

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use twilight::model::channel::permission_overwrite::PermissionOverwrite;
-use twilight::model::channel::{ChannelType, GuildChannel, PrivateChannel};
-use twilight::model::id::{ChannelId, GuildId};
+use twilight_model::channel::permission_overwrite::PermissionOverwrite;
+use twilight_model::channel::{ChannelType, GuildChannel, PrivateChannel};
+use twilight_model::id::{ChannelId, GuildId};
 
 use super::is_default;
 use crate::core::cache::{Cache, CachedUser};

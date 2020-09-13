@@ -1,5 +1,5 @@
-// use twilight::model::channel::{Reaction, ReactionType};
-// use twilight::model::id::GuildId;
+// use twilight_model::channel::{Reaction, ReactionType};
+// use twilight_model::id::GuildId;
 
 use crate::core::CommandContext;
 use crate::utils::pattern::Pattern;

@@ -100,10 +100,8 @@ dependencies = [
  "futures-io",
  "futures-util",
  "log",
- "native-tls",
  "pin-project",
  "tokio",
- "tokio-native-tls",
  "tungstenite",
 ]
 
@@ -220,10 +218,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "cloudflare-zlib-sys"
-version = "0.2.0"
+name = "cmake"
+version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e195cb274a0d6ee87e718838a09baecd7cbc9f6075dac256a84cb5842739c06"
+checksum = "0e56268c17a6248366d66d4a47a3381369d068cce8409bb1716ed77ea32163bb"
 dependencies = [
  "cc",
 ]
@@ -427,7 +425,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "766d0e77a2c1502169d4a93ff3b8c15a71fd946cd0126309752104e5f3c46d94"
 dependencies = [
  "cfg-if",
- "cloudflare-zlib-sys",
  "crc32fast",
  "libc",
  "libz-sys",
@@ -680,9 +677,10 @@ dependencies = [
  "sqlx",
  "tokio",
  "toml",
- "twilight",
  "twilight-embed-builder",
  "twilight-gateway",
+ "twilight-http",
+ "twilight-model",
  "unic-langid",
  "url",
 ]
@@ -896,19 +894,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hyper-tls"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d979acc56dcb5b8dddba3917601745e877576475aa046df3226eabdecef78eed"
-dependencies = [
- "bytes",
- "hyper",
- "native-tls",
- "tokio",
- "tokio-tls",
-]
-
-[[package]]
 name = "idna"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1049,6 +1034,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "602113192b08db8f38796c4e85c39e960c145965140e918018bcde1952429655"
 dependencies = [
  "cc",
+ "cmake",
+ "libc",
  "pkg-config",
  "vcpkg",
 ]
@@ -1595,14 +1582,12 @@ dependencies = [
  "http-body",
  "hyper",
  "hyper-rustls",
- "hyper-tls",
  "ipnet",
  "js-sys",
  "lazy_static",
  "log",
  "mime",
  "mime_guess",
- "native-tls",
  "percent-encoding",
  "pin-project-lite",
  "rustls",
@@ -1610,7 +1595,6 @@ dependencies = [
  "serde_urlencoded",
  "tokio",
  "tokio-rustls",
- "tokio-tls",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -2105,16 +2089,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-tls"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a70f4fcd7b3b24fb194f837560168208f669ca8cb70d0c4b862944452396343"
-dependencies = [
- "native-tls",
- "tokio",
-]
-
-[[package]]
 name = "tokio-util"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2194,7 +2168,6 @@ dependencies = [
  "httparse",
  "input_buffer",
  "log",
- "native-tls",
  "rand",
  "sha-1",
  "url",
@@ -2202,41 +2175,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "twilight"
-version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#7432810ec8e1cbcbf1538a184ab9c04818d96794"
-dependencies = [
- "twilight-cache-inmemory",
- "twilight-command-parser",
- "twilight-gateway",
- "twilight-http",
- "twilight-model",
- "twilight-standby",
-]
-
-[[package]]
-name = "twilight-cache-inmemory"
-version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#7432810ec8e1cbcbf1538a184ab9c04818d96794"
-dependencies = [
- "bitflags",
- "dashmap 3.11.10",
- "tracing",
- "twilight-model",
-]
-
-[[package]]
-name = "twilight-command-parser"
-version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#7432810ec8e1cbcbf1538a184ab9c04818d96794"
-dependencies = [
- "unicase",
-]
-
-[[package]]
 name = "twilight-embed-builder"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#7432810ec8e1cbcbf1538a184ab9c04818d96794"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19d40537b15479d6ac56223b515a3009514f204e59cee1ea1265bb871fc08354"
 dependencies = [
  "twilight-model",
 ]
@@ -2244,7 +2186,8 @@ dependencies = [
 [[package]]
 name = "twilight-gateway"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#7432810ec8e1cbcbf1538a184ab9c04818d96794"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a182f95b53811561f1c3a4d7d6283000447bc5f06181f51ad4285a3d5f4c43f"
 dependencies = [
  "async-tungstenite",
  "bitflags",
@@ -2266,7 +2209,8 @@ dependencies = [
 [[package]]
 name = "twilight-http"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#7432810ec8e1cbcbf1538a184ab9c04818d96794"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4dadf05c1d6ab389297fd341b3cd97fd5095525b0ba9127733fe94b9c67f065d"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -2285,7 +2229,8 @@ dependencies = [
 [[package]]
 name = "twilight-model"
 version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#7432810ec8e1cbcbf1538a184ab9c04818d96794"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20cd42af580c74fdc7a08840c7f220822e4ed2415c901e2f6659bdcfcf637413"
 dependencies = [
  "bitflags",
  "serde",
@@ -2293,18 +2238,6 @@ dependencies = [
  "serde-value",
  "serde_repr",
  "tracing",
-]
-
-[[package]]
-name = "twilight-standby"
-version = "0.1.0"
-source = "git+https://github.com/twilight-rs/twilight?branch=trunk#7432810ec8e1cbcbf1538a184ab9c04818d96794"
-dependencies = [
- "dashmap 3.11.10",
- "futures-channel",
- "futures-util",
- "tracing",
- "twilight-model",
 ]
 
 [[package]]

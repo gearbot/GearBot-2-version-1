@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use lazy_static::lazy_static;
 use log::{debug, info, trace};
-use twilight::model::gateway::payload::MessageCreate;
-use twilight::model::guild::Permissions;
-use twilight::model::id::{GuildId, UserId};
+use twilight_model::gateway::payload::MessageCreate;
+use twilight_model::guild::Permissions;
+use twilight_model::id::{GuildId, UserId};
 
 use crate::commands::{
     meta::nodes::{CommandNode, GearBotPermissions},
