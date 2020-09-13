@@ -19,25 +19,14 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Cache cargo registry
-        uses: actions/cache@v1
+      - name: Setup cache
+        uses: actions/cache@v2
         with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo index
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-release-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Cache cargo build
-        uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-target-release-${{ hashFiles('**/Cargo.lock') }}
-
-
+          path: |
+              ~/.cargo/registry
+              ~/.cargo/git
+              target
+          key: ${{ runner.os }}-release-${{ steps.toolchain.outputs.rustc_hash }}-${{ hashFiles('**/Cargo.lock') }}
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
@@ -46,9 +35,26 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release
+          args: --release -target=x86_64-unknown-linux-gnu
       - name: upload artifact
         uses: actions/upload-artifact@v1
         with:
           name: GearBot
-          path: target/release/gearbot
+          path: target/x86_64-unknown-linux-gnu/release/gearbot
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: aenterprise
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          push: true
+          tags: gearbot/gearbot:latest
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
