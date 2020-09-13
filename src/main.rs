@@ -14,6 +14,7 @@ use utils::Error;
 
 use crate::core::gearbot;
 use crate::core::{logging, BotConfig};
+use std::env;
 
 mod commands;
 mod core;
@@ -48,7 +49,7 @@ fn main() -> Result<(), Error> {
 async fn real_main() -> Result<(), Error> {
     println!("Gearbot v{} starting!", VERSION);
     // Read config file
-    let config = BotConfig::new("config.toml")?;
+    let config = BotConfig::new(&env::var("CONFIG_FILE").unwrap_or("config.toml".to_string()))?;
     println!("Loaded config file");
 
     if config.__main_encryption_key.is_none() {
