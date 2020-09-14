@@ -110,7 +110,7 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
 
     let cached_member = ctx.get_member(&user.id);
 
-    match cached_member {
+    match &cached_member {
         Some(member) => {
             let color = match member.roles.first() {
                 Some(role) => ctx.get_role(role).unwrap().color,
@@ -163,10 +163,11 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
         }
     }
 
-    let bot_has_guild_permissions =
-        ctx.bot_has_guild_permissions(Permissions::BAN_MEMBERS) && ctx.get_ban(user.id).await?.is_some();
+    let is_banned = cached_member.is_none()
+        && ctx.bot_has_guild_permissions(Permissions::BAN_MEMBERS)
+        && ctx.get_ban(user.id).await?.is_some();
 
-    if bot_has_guild_permissions {
+    if is_banned {
         content += &*format!(
             "{} **This user is currently banned from this server**",
             Emoji::Bad.for_chat()

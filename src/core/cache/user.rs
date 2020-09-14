@@ -39,6 +39,19 @@ impl CachedUser {
         }
     }
 
+    pub fn clone(&self) -> Self {
+        CachedUser {
+            id: self.id,
+            username: self.username.clone(),
+            discriminator: self.discriminator.clone(),
+            avatar: self.avatar.clone(),
+            bot_user: self.bot_user,
+            system_user: self.system_user,
+            public_flags: self.public_flags,
+            mutual_servers: AtomicU64::new(0),
+        }
+    }
+
     pub fn is_same_as(&self, user: &User) -> bool {
         self.id == user.id
             && self.username == user.name
