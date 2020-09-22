@@ -190,7 +190,7 @@ async fn run_metrics_server(stats: Arc<BotStats>, cluster_id: u64) {
         }
     });
 
-    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 9090));
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 9091));
     let server = hyper::Server::bind(&addr).serve(metric_service);
     if let Err(e) = server.await {
         gearbot_error!("The metrics server failed: {}", e)

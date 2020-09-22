@@ -106,6 +106,20 @@ impl Cache {
                 let guild = CachedGuild::from(e.0.clone());
 
                 {
+                    //fine to always grab a write lock here, we update from the main loop itself
+                    let mut unavailable = self
+                        .unavailable_guilds
+                        .write()
+                        .expect("Unavailable guilds got poisoned!");
+                    if let Some(index) = unavailable.iter().position(|id| *id == guild.id) {
+                        //guild is available again
+                        unavailable.remove(index);
+                        info!("Guild \"{}\", ``{}`` became available again", guild.name, guild.id);
+                        self.stats.guild_counts.outage.dec();
+                    }
+                }
+
+                {
                     let mut guild_channels = self
                         .guild_channels
                         .write()
@@ -571,10 +585,9 @@ impl Cache {
     }
 
     fn guild_unavailable(&self, guild: &Arc<CachedGuild>) {
-        gearbot_warn!(
+        info!(
             "Guild \"{}\", ``{}`` became unavailable due to an outage",
-            guild.name,
-            guild.id
+            guild.name, guild.id
         );
         self.stats.guild_counts.outage.inc();
         let mut list = self.unavailable_guilds.write().unwrap();
