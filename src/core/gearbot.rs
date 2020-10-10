@@ -125,6 +125,13 @@ pub async fn run(
         stats,
     ));
 
+    //establish api connection
+    let c = context.clone();
+    log::debug!("spawning api link");
+    tokio::spawn(async move {
+        c.redis_cache.establish_api_link(c.clone()).await;
+    });
+
     let shutdown_ctx = context.clone();
     ctrlc::set_handler(move || {
         // We need a seperate runtime, because at this point in the program,

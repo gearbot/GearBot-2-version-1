@@ -2,8 +2,8 @@
 // use twilight_model::id::GuildId;
 
 use crate::core::CommandContext;
-use crate::utils::pattern::Pattern;
 use crate::CommandResult;
+use twilight_model::id::UserId;
 
 pub async fn test(ctx: CommandContext) -> CommandResult {
     // let reactor = Reactors::new_emoji_list();
@@ -21,20 +21,24 @@ pub async fn test(ctx: CommandContext) -> CommandResult {
     //         .await;
     // }
 
-    let out = Pattern::new(ctx.parser.parts.len() - 1)
-        .arrange(
-            ctx.parser
-                .parts
-                .iter()
-                .skip(1)
-                .map(String::from)
-                .collect::<Vec<String>>(),
-        )
-        .iter()
-        .map(|inner| inner.join("").to_string())
-        .collect::<Vec<String>>()
-        .join("\n");
-
-    ctx.reply_raw(out).await?;
+    // let out = Pattern::new(ctx.parser.parts.len() - 1)
+    //     .arrange(
+    //         ctx.parser
+    //             .parts
+    //             .iter()
+    //             .skip(1)
+    //             .map(String::from)
+    //             .collect::<Vec<String>>(),
+    //     )
+    //     .iter()
+    //     .map(|inner| inner.join("").to_string())
+    //     .collect::<Vec<String>>()
+    //     .join("\n");
+    //
+    // ctx.reply_raw(out).await?;
+    ctx.bot_context
+        .http
+        .delete_ban(ctx.get_guild()?.id, UserId(366972849258496000))
+        .await?;
     Ok(())
 }

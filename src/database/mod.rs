@@ -1,5 +1,6 @@
 pub mod configs;
 mod redis;
+pub use redis::api_structs;
 pub use redis::Redis;
 
 pub mod structures;

@@ -112,7 +112,7 @@ lazy_static! {
                 )
             ),
             command!(
-                "restart",
+                "redis_test",
                 admin::restart,
                 Permissions::empty(),
                 GearBotPermissions::BOT_ADMIN,

@@ -43,6 +43,17 @@ pub enum Error {
 }
 
 #[derive(Debug)]
+pub enum ApiMessageError {}
+
+impl error::Error for ApiMessageError {}
+
+impl fmt::Display for ApiMessageError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug)]
 pub enum CommandError {
     // WrongArgCount { expected: u8, provided: u8 },
     NoDM,

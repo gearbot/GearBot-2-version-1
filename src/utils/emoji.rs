@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use once_cell::sync::OnceCell;
-use serde::Deserialize;
 use twilight_model::id::EmojiId;
 
 use crate::define_emoji;
@@ -54,7 +53,7 @@ mod macros {
     ($($name: ident => $fallback: literal), *) => {
 
 
-        #[derive(Deserialize, Debug, Clone)]
+        #[derive(Debug, Clone)]
         pub enum Emoji {
             $( $name ,)*
         }

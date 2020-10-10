@@ -22,6 +22,7 @@ pub use stats::BotStats;
 use crate::core::cache::Cache;
 use crate::core::GuildConfig;
 use crate::crypto::EncryptionKey;
+use crate::database::api_structs::{RawTeamMembers, TeamInfo, TeamMember};
 use crate::database::Redis;
 use crate::translation::{GearBotString, Translations};
 use crate::utils::LogType;
@@ -62,6 +63,7 @@ pub struct BotContext {
     pub shard_states: RwLock<HashMap<u64, ShardState>>,
     pub start_time: DateTime<Utc>,
     pub global_admins: Vec<UserId>,
+    team_info: RawTeamMembers,
 }
 
 impl BotContext {
@@ -90,6 +92,10 @@ impl BotContext {
         let global_admins = config_ops.1.into_iter().map(UserId).collect();
 
         stats.shard_counts.pending.set(scheme_info.shards_per_cluster as i64);
+
+        let team_info: RawTeamMembers =
+            toml::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/team.toml"))).unwrap();
+
         BotContext {
             cache: bot_core.0,
             cluster: bot_core.1,
@@ -108,6 +114,7 @@ impl BotContext {
             shard_states: RwLock::new(shard_states),
             start_time: Utc::now(),
             global_admins,
+            team_info,
         }
     }
 
@@ -139,5 +146,22 @@ impl BotContext {
         self.translations
             .get_text_with_args(language, string_key, args)
             .replace("\\n", "\n")
+    }
+
+    pub async fn get_team_info(&self) -> TeamInfo {
+        let mut members = vec![];
+        for m in &self.team_info.members {
+            let user = self.get_user(UserId(m.id)).await.unwrap();
+            members.push(TeamMember {
+                username: user.username.clone(),
+                discriminator: user.discriminator.clone(),
+                id: m.id,
+                avatar: user.avatar.clone().unwrap_or("".to_string()),
+                team: m.team.clone(),
+                socials: m.socials.clone(),
+            });
+        }
+
+        TeamInfo { members }
     }
 }

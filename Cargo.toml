@@ -37,6 +37,7 @@ twilight-http = "0.1"
 twilight-model = "0.1"
 url = "2.1"
 unic-langid = { version = "0.9", features = ["macros", "serde"] }
+uuid = { version = "0.8", features = ["serde", "v4"], default_features = false }
 
 [profile.dev]
 debug = 0
