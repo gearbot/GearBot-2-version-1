@@ -43,7 +43,7 @@ pub struct RawTeamMembers {
 
 #[derive(Debug, Deserialize)]
 pub struct RawTeamMember {
-    pub id: u64,
+    pub id: String,
     pub team: String,
     pub socials: TeamSocials,
 }
@@ -52,7 +52,7 @@ pub struct RawTeamMember {
 pub struct TeamMember {
     pub username: String,
     pub discriminator: String,
-    pub id: u64,
+    pub id: String,
     pub avatar: String,
     pub team: String,
     pub socials: TeamSocials,
