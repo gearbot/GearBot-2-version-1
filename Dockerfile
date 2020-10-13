@@ -1,6 +1,21 @@
-FROM ubuntu:latest
-RUN apt-get update && apt-get install  ca-certificates libssl-dev -y
+FROM rust:latest as builder
+USER root
+RUN apt-get update && apt-get install cmake -y
+WORKDIR /compile
+RUN mkdir ./src
+RUN echo "fn main() {}" > ./src/main.rs
+COPY ./Cargo.toml ./Cargo.toml
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./.cargo ./.cargo
+RUN cargo build --release
+RUN rm -f ./target/release/deps/gearbot*
+COPY ./migrations ./migrations
+COPY ./team.toml ./team.toml
+COPY ./src ./src
+COPY ./.git ./.git
+RUN cargo build --release
+FROM debian:latest
 WORKDIR /GearBot
-COPY ./target/x86_64-unknown-linux-gnu/release/gearbot /GearBot/gearbot
+COPY --from=builder ./compile/target/release/gearbot /GearBot/gearbot
 COPY ./lang /GearBot/lang
 ENTRYPOINT /GearBot/gearbot
