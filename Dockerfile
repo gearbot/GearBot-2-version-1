@@ -14,7 +14,7 @@ COPY ./team.toml ./team.toml
 COPY ./src ./src
 COPY ./.git ./.git
 RUN cargo build --release
-FROM debian:latest
+FROM debian:buster-slim
 WORKDIR /GearBot
 COPY --from=builder ./compile/target/release/gearbot /GearBot/gearbot
 COPY ./lang /GearBot/lang
