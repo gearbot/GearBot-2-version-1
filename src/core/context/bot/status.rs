@@ -3,6 +3,7 @@ use twilight_model::gateway::presence::{Activity, ActivityType, Status};
 
 use crate::core::BotContext;
 use crate::utils::Error;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 impl BotContext {
     pub async fn set_cluster_activity(
@@ -30,7 +31,12 @@ impl BotContext {
         self.cluster
             .command(
                 shard_id,
-                &UpdateStatus::new(false, generate_activity(activity_type, message), None, status),
+                &UpdateStatus::new(
+                    vec![generate_activity(activity_type, message)],
+                    false,
+                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+                    status,
+                ),
             )
             .await?;
         Ok(())
