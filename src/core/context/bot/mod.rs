@@ -1,6 +1,5 @@
 use aes_gcm::aead::generic_array::GenericArray;
 use chrono::{DateTime, Utc};
-use tokio::sync::mpsc::UnboundedSender;
 use twilight_gateway::Cluster;
 use twilight_http::Client as HttpClient;
 use twilight_model::{
@@ -25,7 +24,6 @@ use crate::crypto::EncryptionKey;
 use crate::database::api_structs::{RawTeamMembers, TeamInfo, TeamMember};
 use crate::database::Redis;
 use crate::translation::{GearBotString, Translations};
-use crate::utils::LogType;
 use crate::SchemeInfo;
 use fluent_bundle::FluentArgs;
 use std::collections::HashMap;

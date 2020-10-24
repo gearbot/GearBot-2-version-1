@@ -1,4 +1,3 @@
-use serde_json::to_value;
 use twilight_model::channel::Message;
 use twilight_model::id::{GuildId, MessageId};
 
@@ -6,7 +5,7 @@ use crate::core::{BotContext, GuildConfig};
 use crate::database::{self, configs as dbconfig, structures::UserMessage};
 
 use crate::crypto::{self, EncryptionKey};
-use crate::utils::{CommandError, ConfigError, DatabaseError};
+use crate::utils::DatabaseError;
 use std::sync::Arc;
 
 impl BotContext {

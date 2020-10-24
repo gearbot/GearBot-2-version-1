@@ -1,8 +1,4 @@
-use chrono::Utc;
-use twilight_model::id::GuildId;
-
 use crate::core::BotContext;
-use crate::utils::LogType;
 
 impl BotContext {
     // pub fn log(&self, guild_id: GuildId, log: LogType) -> Result<(), Error> {

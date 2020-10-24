@@ -7,7 +7,7 @@ use twilight_embed_builder::{EmbedBuilder, EmbedFieldBuilder};
 use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
 use crate::translation::{FluArgs, GearBotString};
-use crate::utils::{age, CommandError, Emoji, OtherFailure};
+use crate::utils::{age, Emoji, OtherFailure};
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
 

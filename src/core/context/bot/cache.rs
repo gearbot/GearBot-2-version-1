@@ -4,7 +4,7 @@ use twilight_model::id::UserId;
 
 use crate::core::cache::CachedUser;
 use crate::core::BotContext;
-use crate::utils::{CacheError, ParseError};
+use crate::utils::ParseError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

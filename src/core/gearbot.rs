@@ -55,7 +55,7 @@ pub async fn run(
         | Intents::DIRECT_MESSAGE_REACTIONS;
 
     let stats = Arc::new(BotStats::new(scheme_info.cluster_id));
-    tokio::spawn(run_metrics_server(Arc::clone(&stats), scheme_info.cluster_id));
+    tokio::spawn(run_metrics_server(Arc::clone(&stats)));
 
     let cache = Cache::new(scheme_info.cluster_id, stats.clone());
 
@@ -184,7 +184,7 @@ async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), E
     Ok(())
 }
 
-async fn run_metrics_server(stats: Arc<BotStats>, cluster_id: u64) {
+async fn run_metrics_server(stats: Arc<BotStats>) {
     use hyper::service::{make_service_fn, service_fn};
     use hyper::{Body, Response};
 

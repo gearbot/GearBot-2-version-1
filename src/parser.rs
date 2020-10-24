@@ -265,7 +265,7 @@ impl Parser {
                     Ok(metric) => {
                         metric.inc();
                     }
-                    Err(e) => {
+                    Err(_) => {
                         //TODO: log error properly
                         // Err(Error::PrometheusError(e))
                     }

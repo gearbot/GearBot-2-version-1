@@ -6,7 +6,6 @@ use twilight_model::id::EmojiId;
 
 use crate::define_emoji;
 use crate::utils::EmojiError;
-use std::convert::Infallible;
 use twilight_http::request::channel::reaction::RequestReactionType;
 use twilight_model::channel::ReactionType;
 

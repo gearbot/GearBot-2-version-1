@@ -24,17 +24,6 @@ pub enum StartupError {
 }
 
 #[derive(Debug)]
-pub enum CacheError {}
-
-impl error::Error for CacheError {}
-
-impl fmt::Display for CacheError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
-    }
-}
-
-#[derive(Debug)]
 pub enum ColdResumeError {
     MissingData(String),
     Database(DatabaseError),
@@ -44,7 +33,10 @@ impl error::Error for ColdResumeError {}
 
 impl fmt::Display for ColdResumeError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        match self {
+            ColdResumeError::MissingData(e) => write!(f, "Cold resume data missing: {}", e),
+            ColdResumeError::Database(e) => write!(f, "Database failure: {}", e),
+        }
     }
 }
 
@@ -59,7 +51,11 @@ impl error::Error for ApiCommunicaionError {}
 
 impl fmt::Display for ApiCommunicaionError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        match self {
+            ApiCommunicaionError::Deseralizing(e) => write!(f, "Failed to deserialize api message: {}", e),
+            ApiCommunicaionError::Serializing(e) => write!(f, "Failed to serialize message for the api: {}", e),
+            ApiCommunicaionError::Redis(e) => write!(f, "Redis failure: {}", e),
+        }
     }
 }
 
@@ -79,7 +75,17 @@ impl error::Error for EventHandlerError {}
 
 impl fmt::Display for EventHandlerError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        match self {
+            EventHandlerError::InvalidSession(e) => write!(f, "Our gateway session died: {}", e),
+            EventHandlerError::Gateway(e) => write!(f, "Gateway error: {}", e),
+            EventHandlerError::TwilightCluster(e) => write!(f, "Gateway command error: {}", e),
+            EventHandlerError::UnknownGuild(e) => write!(f, "Event recieved for unknown guild {}", e),
+            EventHandlerError::UnknownChannel(e) => write!(f, "Event received for unknown channel {}", e),
+            EventHandlerError::UnknownUser(e) => write!(f, "Event received for unknown user {}", e),
+            EventHandlerError::Reactor(e) => write!(f, "Message reactor failure: {}", e),
+            EventHandlerError::Database(e) => write!(f, "Database interaction failed: {}", e),
+            EventHandlerError::Twilight(e) => write!(f, "Failed to interact with the discord api: {}", e),
+        }
     }
 }
 
@@ -94,7 +100,11 @@ impl error::Error for ReactorError {}
 
 impl fmt::Display for ReactorError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        match self {
+            ReactorError::Database(e) => write!(f, "Database failure: {}", e),
+            ReactorError::TwilightHttp(e) => write!(f, "Failed to interact with the discord api: {}", e),
+            ReactorError::Message(e) => write!(f, "Message operation failed: {}", e),
+        }
     }
 }
 
@@ -114,18 +124,16 @@ impl error::Error for MessageError {}
 
 impl fmt::Display for MessageError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
-    }
-}
-
-#[derive(Debug)]
-pub enum ConfigError {}
-
-impl error::Error for ConfigError {}
-
-impl fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        match self {
+            MessageError::Create(e) => write!(f, "Failed to create message: {}", e),
+            MessageError::Update(e) => write!(f, "Failed to create message update: {}", e),
+            MessageError::EmbedBuild(e) => write!(f, "Failed to assemble embed: {}", e),
+            MessageError::EmbedField(e) => write!(f, "Failed to create embed field: {}", e),
+            MessageError::EmbedDescription(e) => write!(f, "Failed to set embed description: {}", e),
+            MessageError::EmbedColor(e) => write!(f, "Failed to set embed color: {}", e),
+            MessageError::EmbedAuthorName(e) => write!(f, "Failed to set embed author name: {}", e),
+            MessageError::ImageSourceUrl(e) => write!(f, "Failed to set embed image url: {}", e),
+        }
     }
 }
 
@@ -141,7 +149,12 @@ impl error::Error for DatabaseError {}
 
 impl fmt::Display for DatabaseError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        match self {
+            DatabaseError::Sqlx(e) => write!(f, "Database failure: {:?}", e),
+            DatabaseError::Deserializing(e) => write!(f, "Failed to deserialize: {}", e),
+            DatabaseError::Serializing(e) => write!(f, "Failed to seralize: {}", e),
+            DatabaseError::Darkredis(e) => write!(f, "Redis failure: {}", e),
+        }
     }
 }
 
@@ -154,7 +167,9 @@ impl error::Error for EmojiError {}
 
 impl fmt::Display for EmojiError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        match self {
+            EmojiError::UnknownEmoji(e) => write!(f, "Unknown emoji: {}", e),
+        }
     }
 }
 

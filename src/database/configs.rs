@@ -1,6 +1,6 @@
 use log::info;
 
-use crate::core::{BotConfig, BotContext, GuildConfig};
+use crate::core::{BotContext, GuildConfig};
 use crate::crypto::{self, EncryptionKey};
 use crate::utils::DatabaseError;
 
