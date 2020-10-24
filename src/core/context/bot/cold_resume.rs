@@ -5,18 +5,19 @@ use twilight_model::gateway::presence::{ActivityType, Status};
 
 use crate::core::{BotContext, ColdRebootData};
 use crate::gearbot_important;
-use crate::utils::Error;
+use crate::utils::ColdResumeError;
 
 impl BotContext {
-    pub async fn initiate_cold_resume(&self) -> Result<(), Error> {
+    pub async fn initiate_cold_resume(&self) -> Result<(), ColdResumeError> {
         // preparing for update rollout, set status to atleast give some indication to users
         gearbot_important!("Preparing for cold resume!");
-        self.set_cluster_activity(
-            Status::Idle,
-            ActivityType::Watching,
-            String::from("the new update being deployed. Replies might be delayed a bit"),
-        )
-        .await?;
+        let _ = self
+            .set_cluster_activity(
+                Status::Idle,
+                ActivityType::Watching,
+                String::from("the new update being deployed. Replies might be delayed a bit"),
+            )
+            .await;
 
         let start = std::time::Instant::now();
 

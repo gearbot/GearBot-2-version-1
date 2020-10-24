@@ -13,8 +13,7 @@ use twilight_model::user::CurrentUser;
 
 use crate::core::BotConfig;
 use crate::gearbot_error;
-use crate::utils::Emoji;
-use crate::Error;
+use crate::utils::{Emoji, StartupError};
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -50,7 +49,7 @@ impl LogWriter for WebhookLogger {
 
 const DISCORD_AVATAR_URL: &str = "https://cdn.discordapp.com/avatars/";
 
-pub fn initialize(http: HttpClient, config: &BotConfig, user: CurrentUser) -> Result<(), Error> {
+pub fn initialize(http: HttpClient, config: &BotConfig, user: CurrentUser) -> Result<(), StartupError> {
     // TODO: validate webhook by doing a get to it
     // If invalid, `return Err(Error::InvalidLoggingWebhook(url))
 
@@ -81,7 +80,7 @@ pub fn initialize(http: HttpClient, config: &BotConfig, user: CurrentUser) -> Re
             .add_writer("gearbot_important", gearbot_important)
             .add_writer("gearbot_info", gearbot_info)
             .start_with_specfile("logconfig.toml")
-            .map_err(|_| Error::NoLoggingSpec)?,
+            .map_err(|_| StartupError::NoLoggingSpec)?,
     );
 
     if log_init_status.is_err() {
@@ -137,7 +136,12 @@ pub fn run_logging_queue(http: HttpClient, queue: LogQueue, url: String, user: A
     });
 }
 
-async fn send_webhook(http: &HttpClient, url: &str, user: &CurrentUser, message: &str) -> Result<(), Error> {
+async fn send_webhook(
+    http: &HttpClient,
+    url: &str,
+    user: &CurrentUser,
+    message: &str,
+) -> Result<(), twilight_http::Error> {
     let executor = {
         let raw = http
             .execute_webhook_from_url(url)?
@@ -150,7 +154,7 @@ async fn send_webhook(http: &HttpClient, url: &str, user: &CurrentUser, message:
         }
     };
 
-    executor.await.map_err(Error::TwilightHttp).map(|_| ())
+    executor.await.map(|_| ())
 }
 
 fn get_emoji(level: Level) -> Emoji {

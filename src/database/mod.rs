@@ -13,9 +13,13 @@ use twilight_model::id::{ChannelId, GuildId, MessageId, UserId};
 use log::info;
 
 use crate::crypto::{self, EncryptionKey};
-use crate::utils::Error;
+use crate::utils::DatabaseError;
 
-pub async fn insert_message(pool: &sqlx::PgPool, msg: &Message, guild_key: &EncryptionKey) -> Result<(), Error> {
+pub async fn insert_message(
+    pool: &sqlx::PgPool,
+    msg: &Message,
+    guild_key: &EncryptionKey,
+) -> Result<(), DatabaseError> {
     let start = std::time::Instant::now();
 
     let ciphertext = {
@@ -47,7 +51,7 @@ pub async fn insert_attachment(
     pool: &sqlx::PgPool,
     message_id: MessageId,
     attachment: &Attachment,
-) -> Result<(), Error> {
+) -> Result<(), DatabaseError> {
     sqlx::query(
         "INSERT INTO attachment (id, name, image, message_id)
         VALUES ($1, $2, $3, $4)",
@@ -66,7 +70,7 @@ pub async fn get_full_message(
     pool: &sqlx::PgPool,
     message_id: MessageId,
     guild_key: &EncryptionKey,
-) -> Result<Option<UserMessage>, Error> {
+) -> Result<Option<UserMessage>, DatabaseError> {
     let stored_message: Option<StoredUserMessage> = sqlx::query_as("SELECT * from message where id=$1")
         .bind(message_id.0 as i64)
         .fetch_optional(pool)

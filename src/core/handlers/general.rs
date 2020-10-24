@@ -5,10 +5,10 @@ use twilight_gateway::Event;
 
 use crate::core::reactors::reactor_controller;
 use crate::core::BotContext;
-use crate::utils::Error;
+use crate::utils::EventHandlerError;
 use crate::{gearbot_info, gearbot_warn};
 
-pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
+pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), EventHandlerError> {
     match &event {
         Event::ShardReconnecting(_) => gearbot_info!("Shard {} is attempting to reconnect", shard_id),
         Event::ShardResuming(_) => gearbot_info!("Shard {} is resuming", shard_id),
@@ -22,7 +22,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
                     shard_id
                 );
             } else {
-                return Err(Error::InvalidSession(shard_id));
+                return Err(EventHandlerError::InvalidSession(shard_id));
             }
         }
         Event::GatewayReconnect => gearbot_info!("Gateway requested shard {} to reconnect!", shard_id),

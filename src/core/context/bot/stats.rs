@@ -215,7 +215,7 @@ impl BotStats {
 }
 
 impl BotContext {
-    pub fn update_stats(&self, shard_id: u64, event: &Event) {
+    pub async fn update_stats(&self, shard_id: u64, event: &Event) {
         match event {
             Event::BanAdd(_) => self.stats.event_counts.ban_add.inc(),
             Event::BanRemove(_) => self.stats.event_counts.ban_remove.inc(),
@@ -254,20 +254,20 @@ impl BotContext {
             Event::VoiceStateUpdate(_) => self.stats.event_counts.voice_state_update.inc(),
             Event::WebhooksUpdate(_) => self.stats.event_counts.webhooks_update.inc(),
 
-            Event::ShardConnecting(_) => self.shard_state_change(shard_id, ShardState::Connecting),
-            Event::ShardIdentifying(_) => self.shard_state_change(shard_id, ShardState::Identifying),
-            Event::ShardConnected(_) => self.shard_state_change(shard_id, ShardState::Connected),
-            Event::Ready(_) => self.shard_state_change(shard_id, ShardState::Ready),
-            Event::Resumed => self.shard_state_change(shard_id, ShardState::Ready),
-            Event::ShardResuming(_) => self.shard_state_change(shard_id, ShardState::Resuming),
-            Event::ShardReconnecting(_) => self.shard_state_change(shard_id, ShardState::Reconnecting),
-            Event::ShardDisconnected(_) => self.shard_state_change(shard_id, ShardState::Disconnected),
+            Event::ShardConnecting(_) => self.shard_state_change(shard_id, ShardState::Connecting).await,
+            Event::ShardIdentifying(_) => self.shard_state_change(shard_id, ShardState::Identifying).await,
+            Event::ShardConnected(_) => self.shard_state_change(shard_id, ShardState::Connected).await,
+            Event::Ready(_) => self.shard_state_change(shard_id, ShardState::Ready).await,
+            Event::Resumed => self.shard_state_change(shard_id, ShardState::Ready).await,
+            Event::ShardResuming(_) => self.shard_state_change(shard_id, ShardState::Resuming).await,
+            Event::ShardReconnecting(_) => self.shard_state_change(shard_id, ShardState::Reconnecting).await,
+            Event::ShardDisconnected(_) => self.shard_state_change(shard_id, ShardState::Disconnected).await,
             _ => {}
         }
     }
 
-    pub fn shard_state_change(&self, shard: u64, new_state: ShardState) {
-        let mut shards = self.shard_states.write().expect("Shard states got poisoned");
+    pub async fn shard_state_change(&self, shard: u64, new_state: ShardState) {
+        let mut shards = self.shard_states.write().await;
         if let Some(guard) = shards.get(&shard) {
             self.get_state_metric(guard).dec();
         }

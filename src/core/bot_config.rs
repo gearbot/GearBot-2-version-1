@@ -4,7 +4,7 @@ use std::fs;
 use serde::Deserialize;
 use twilight_model::id::EmojiId;
 
-use crate::utils::{emoji, matchers, EmojiOverride, Error};
+use crate::utils::{emoji, matchers, EmojiOverride, StartupError};
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {
@@ -36,10 +36,10 @@ pub struct Database {
 }
 
 impl BotConfig {
-    pub fn new(filename: &str) -> Result<Self, Error> {
-        let config_file = fs::read_to_string(filename).map_err(|_| Error::NoConfig)?;
+    pub fn new(filename: &str) -> Result<Self, StartupError> {
+        let config_file = fs::read_to_string(filename).map_err(|_| StartupError::NoConfig)?;
         match toml::from_str::<BotConfig>(&config_file) {
-            Err(_) => Err(Error::InvalidConfig),
+            Err(_) => Err(StartupError::InvalidConfig),
             Ok(c) => {
                 let mut override_map: HashMap<String, EmojiOverride> = HashMap::with_capacity(c.emoji.len());
                 let mut id_map: HashMap<String, u64> = HashMap::with_capacity(c.emoji.len());

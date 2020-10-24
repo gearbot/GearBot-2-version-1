@@ -4,7 +4,7 @@ use twilight_model::id::UserId;
 
 use crate::core::cache::CachedUser;
 use crate::core::BotContext;
-use crate::utils::{Error, ParseError};
+use crate::utils::{CacheError, ParseError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -17,7 +17,7 @@ enum UserHolder {
 const USER_CACHE_DURATION: u32 = 3600;
 
 impl BotContext {
-    pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, Error> {
+    pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, ParseError> {
         match self.cache.get_user(user_id) {
             Some(user) => Ok(user),
             None => {
@@ -26,7 +26,7 @@ impl BotContext {
                 match self.redis_cache.get::<UserHolder>(&redis_key).await? {
                     Some(option) => match option {
                         UserHolder::Valid(user) => Ok(Arc::new(user)),
-                        UserHolder::Invalid => Err(Error::ParseError(ParseError::InvalidUserID(user_id.0))),
+                        UserHolder::Invalid => Err(ParseError::InvalidUserID(user_id.0)),
                     },
                     None => {
                         // let's see if we can get em from the api
@@ -48,7 +48,7 @@ impl BotContext {
                                 self.redis_cache
                                     .set(&redis_key, &UserHolder::Invalid, Some(USER_CACHE_DURATION))
                                     .await?;
-                                Err(Error::ParseError(ParseError::InvalidUserID(user_id.0)))
+                                Err(ParseError::InvalidUserID(user_id.0))
                             }
                         }
                     }

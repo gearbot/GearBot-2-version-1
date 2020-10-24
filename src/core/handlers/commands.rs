@@ -6,9 +6,9 @@ use twilight_gateway::Event;
 
 use crate::core::BotContext;
 use crate::parser::Parser;
-use crate::utils::Error;
+use crate::utils::EventHandlerError;
 
-pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>) -> Result<(), Error> {
+pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>) -> Result<(), EventHandlerError> {
     match event {
         Event::MessageCreate(msg) if !msg.author.bot => {
             trace!("Received a message from {}, saying {}", msg.author.name, msg.content);

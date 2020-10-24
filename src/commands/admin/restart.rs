@@ -10,6 +10,6 @@ pub async fn restart(ctx: CommandContext) -> CommandResult {
         .await?;
 
     gearbot_important!("Reboot initiated by {}", ctx.message.author.username);
-    ctx.bot_context.initiate_cold_resume().await?;
+    ctx.bot_context.initiate_cold_resume().await.unwrap();
     Ok(())
 }

@@ -1,10 +1,10 @@
 use log::info;
 
-use crate::core::{BotContext, GuildConfig};
+use crate::core::{BotConfig, BotContext, GuildConfig};
 use crate::crypto::{self, EncryptionKey};
-use crate::utils::Error;
+use crate::utils::DatabaseError;
 
-pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<Option<GuildConfig>, Error> {
+pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<Option<GuildConfig>, DatabaseError> {
     let row: Option<(serde_json::Value,)> = sqlx::query_as("SELECT config from guildconfig where id=$1")
         .bind(guild_id as i64)
         .fetch_optional(&ctx.backing_database)
@@ -26,7 +26,7 @@ pub async fn create_new_guild_config(
     ctx: &BotContext,
     guild_id: u64,
     master_ek: &EncryptionKey,
-) -> Result<GuildConfig, Error> {
+) -> Result<GuildConfig, DatabaseError> {
     info!("No config found for {}, inserting blank one", guild_id);
     let new_config = GuildConfig::default();
 
@@ -34,7 +34,7 @@ pub async fn create_new_guild_config(
 
     sqlx::query("INSERT INTO guildconfig (id, config, encryption_key) VALUES ($1, $2, $3)")
         .bind(guild_id as i64)
-        .bind(serde_json::to_value(&new_config).unwrap())
+        .bind(serde_json::to_value(&new_config).map_err(|e| DatabaseError::Serializing(e))?)
         .bind(guild_encryption_key)
         .execute(&ctx.backing_database)
         .await?;
@@ -42,9 +42,9 @@ pub async fn create_new_guild_config(
     Ok(new_config)
 }
 
-pub async fn set_guild_config(ctx: &BotContext, guild_id: u64, config: serde_json::Value) -> Result<(), Error> {
+pub async fn set_guild_config(ctx: &BotContext, guild_id: u64, config: &GuildConfig) -> Result<(), DatabaseError> {
     sqlx::query("UPDATE guildconfig set config=$1 WHERE id=$2")
-        .bind(&config)
+        .bind(serde_json::to_value(config).map_err(|e| DatabaseError::Serializing(e))?)
         .bind(guild_id as i64)
         .execute(&ctx.backing_database)
         .await?;

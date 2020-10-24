@@ -30,7 +30,8 @@ use crate::SchemeInfo;
 use fluent_bundle::FluentArgs;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use unic_langid::LanguageIdentifier;
 
 #[derive(PartialEq, Debug)]
@@ -57,7 +58,6 @@ pub struct BotContext {
     pub backing_database: sqlx::PgPool,
     pub translations: Translations,
     __main_encryption_key: Option<Vec<u8>>,
-    log_pumps: RwLock<HashMap<GuildId, UnboundedSender<(DateTime<Utc>, LogType)>>>,
     pub redis_cache: Redis,
     pub scheme_info: SchemeInfo,
     pub shard_states: RwLock<HashMap<u64, ShardState>>,
@@ -108,7 +108,6 @@ impl BotContext {
             backing_database: databases.0,
             translations,
             __main_encryption_key: config_ops.0,
-            log_pumps: RwLock::new(HashMap::new()),
             redis_cache: databases.1,
             scheme_info,
             shard_states: RwLock::new(shard_states),

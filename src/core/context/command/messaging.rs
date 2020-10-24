@@ -5,9 +5,9 @@ use twilight_model::{
 };
 
 use crate::translation::GearBotString;
-use crate::Error;
 
 use super::CommandContext;
+use crate::utils::{CommandError, MessageError};
 
 impl CommandContext {
     pub async fn send_message(
@@ -15,7 +15,7 @@ impl CommandContext {
         channel_id: ChannelId,
         key: GearBotString,
         args: FluentArgs<'_>,
-    ) -> Result<Message, Error> {
+    ) -> Result<Message, CommandError> {
         let translated = self.translate_with_args(key, &args);
         let sent_msg_handle = self
             .bot_context
@@ -27,7 +27,11 @@ impl CommandContext {
         Ok(sent_msg_handle)
     }
 
-    pub async fn send_message_raw(&self, message: impl Into<String>, channel_id: ChannelId) -> Result<Message, Error> {
+    pub async fn send_message_raw(
+        &self,
+        message: impl Into<String>,
+        channel_id: ChannelId,
+    ) -> Result<Message, CommandError> {
         let sent_msg_handle = self
             .bot_context
             .http
@@ -38,7 +42,7 @@ impl CommandContext {
         Ok(sent_msg_handle)
     }
 
-    pub async fn send_embed(&self, embed: Embed, channel_id: ChannelId) -> Result<Message, Error> {
+    pub async fn send_embed(&self, embed: Embed, channel_id: ChannelId) -> Result<Message, CommandError> {
         let sent_embed_handle = self.bot_context.http.create_message(channel_id).embed(embed)?.await?;
 
         Ok(sent_embed_handle)
@@ -49,7 +53,7 @@ impl CommandContext {
         msg: impl Into<String>,
         embed: Embed,
         channel_id: ChannelId,
-    ) -> Result<Message, Error> {
+    ) -> Result<Message, CommandError> {
         let sent_handle = self
             .bot_context
             .http
@@ -66,7 +70,7 @@ impl CommandContext {
         updated_content: impl Into<String>,
         channel_id: ChannelId,
         msg_id: MessageId,
-    ) -> Result<Message, Error> {
+    ) -> Result<Message, CommandError> {
         let updated_message_handle = self
             .bot_context
             .http
@@ -77,7 +81,7 @@ impl CommandContext {
         Ok(updated_message_handle)
     }
 
-    pub async fn reply(&self, key: GearBotString, args: FluentArgs<'_>) -> Result<Message, Error> {
+    pub async fn reply(&self, key: GearBotString, args: FluentArgs<'_>) -> Result<Message, CommandError> {
         let translated = self.translate_with_args(key, &args);
         let sent_msg_handle = self
             .bot_context
@@ -89,7 +93,7 @@ impl CommandContext {
         Ok(sent_msg_handle)
     }
 
-    pub async fn reply_raw<T: std::fmt::Display>(&self, message: T) -> Result<Message, Error> {
+    pub async fn reply_raw<T: std::fmt::Display>(&self, message: T) -> Result<Message, CommandError> {
         let sent_msg_handle = self
             .bot_context
             .http
@@ -100,7 +104,7 @@ impl CommandContext {
         Ok(sent_msg_handle)
     }
 
-    pub async fn reply_embed(&self, embed: Embed) -> Result<Message, Error> {
+    pub async fn reply_embed(&self, embed: Embed) -> Result<Message, CommandError> {
         let sent_embed_handle = self
             .bot_context
             .http
@@ -116,7 +120,7 @@ impl CommandContext {
         key: GearBotString,
         args: FluentArgs<'_>,
         embed: Embed,
-    ) -> Result<Message, Error> {
+    ) -> Result<Message, CommandError> {
         let translated = self.translate_with_args(key, &args);
         let sent_handle = self
             .bot_context
@@ -129,7 +133,11 @@ impl CommandContext {
         Ok(sent_handle)
     }
 
-    pub async fn reply_raw_with_embed(&self, message: impl Into<String>, embed: Embed) -> Result<Message, Error> {
+    pub async fn reply_raw_with_embed(
+        &self,
+        message: impl Into<String>,
+        embed: Embed,
+    ) -> Result<Message, CommandError> {
         let sent_handle = self
             .bot_context
             .http

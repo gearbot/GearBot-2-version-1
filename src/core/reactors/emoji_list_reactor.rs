@@ -6,9 +6,9 @@ use twilight_model::channel::Reaction;
 
 use crate::core::cache::{CachedGuild, CachedMember};
 use crate::core::reactors::{get_emoji, scroll_page};
-use crate::core::BotContext;
+use crate::core::{BotContext, GuildConfig};
 use crate::translation::{FluArgs, GearBotString};
-use crate::utils::{Emoji, Error};
+use crate::utils::{Emoji, MessageError, ReactorError};
 use twilight_embed_builder::{EmbedAuthorBuilder, EmbedBuilder, ImageSource};
 use twilight_model::channel::embed::Embed;
 
@@ -28,13 +28,13 @@ impl EmojiListReactor {
         ctx: &Arc<BotContext>,
         member: Option<Arc<CachedMember>>,
         reaction: &Reaction,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ReactorError> {
         if let Some(_) = member {
             //if we have a cached member, we have a guildid
             if let Some(guild) = ctx.cache.get_guild(&reaction.guild_id.unwrap()) {
                 let pages = guild.emoji.len() as u8 + 1;
                 self.page = scroll_page(pages, self.page, &emoji);
-                let embed = gen_emoji_page(self.page, pages, &guild, ctx).await?;
+                let embed = gen_emoji_page(self.page, pages, &guild, &ctx.get_config(guild.id).await?, ctx).await?;
                 ctx.http
                     .update_message(reaction.channel_id, reaction.message_id)
                     .embed(embed)?
@@ -50,10 +50,10 @@ pub async fn gen_emoji_page(
     page: u8,
     pages: u8,
     guild: &Arc<CachedGuild>,
+    guild_config: &Arc<GuildConfig>,
     ctx: &Arc<BotContext>,
-) -> Result<Embed, Error> {
-    let config = ctx.get_config(guild.id).await?;
-    let lang = &config.language;
+) -> Result<Embed, MessageError> {
+    let lang = &guild_config.language;
     let mut author_builder = EmbedAuthorBuilder::new();
     if let Some(icon_url) = guild.get_icon_url(true) {
         author_builder = author_builder.icon_url(ImageSource::url(icon_url)?)

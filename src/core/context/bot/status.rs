@@ -2,8 +2,9 @@ use twilight_model::gateway::payload::UpdateStatus;
 use twilight_model::gateway::presence::{Activity, ActivityType, Status};
 
 use crate::core::BotContext;
-use crate::utils::Error;
+use crate::utils::EventHandlerError;
 use std::time::{SystemTime, UNIX_EPOCH};
+use twilight_gateway::cluster::ClusterCommandError;
 
 impl BotContext {
     pub async fn set_cluster_activity(
@@ -11,7 +12,7 @@ impl BotContext {
         status: Status,
         activity_type: ActivityType,
         message: String,
-    ) -> Result<(), Error> {
+    ) -> Result<(), EventHandlerError> {
         for shard_id in self.scheme_info.cluster_id * self.scheme_info.shards_per_cluster
             ..self.scheme_info.cluster_id * self.scheme_info.shards_per_cluster + self.scheme_info.shards_per_cluster
         {
@@ -27,7 +28,7 @@ impl BotContext {
         status: Status,
         activity_type: ActivityType,
         message: String,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ClusterCommandError> {
         self.cluster
             .command(
                 shard_id,

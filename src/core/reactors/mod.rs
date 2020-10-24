@@ -6,7 +6,7 @@ use twilight_model::id::MessageId;
 
 use crate::core::reactors::emoji_list_reactor::EmojiListReactor;
 use crate::core::BotContext;
-use crate::utils::{Emoji, Error};
+use crate::utils::{DatabaseError, Emoji, ReactorError};
 
 mod emoji_list_reactor;
 mod help_reactor;
@@ -34,7 +34,12 @@ impl Reactor {
         }
     }
 
-    pub async fn do_your_thing(self, emoji: Emoji, ctx: &Arc<BotContext>, reaction: &Reaction) -> Result<Self, Error> {
+    pub async fn do_your_thing(
+        self,
+        emoji: Emoji,
+        ctx: &Arc<BotContext>,
+        reaction: &Reaction,
+    ) -> Result<Self, ReactorError> {
         let member = match &reaction.guild_id {
             Some(guild_id) => ctx.cache.get_member(guild_id, &reaction.user_id),
             None => None,
@@ -59,7 +64,7 @@ impl Reactor {
         Ok(new)
     }
 
-    pub async fn save(&self, ctx: &Arc<BotContext>, message_id: MessageId) -> Result<(), Error> {
+    pub async fn save(&self, ctx: &Arc<BotContext>, message_id: MessageId) -> Result<(), DatabaseError> {
         ctx.redis_cache
             .set(&format!("reactor:{}", message_id), self, Some(self.get_expiry()))
             .await

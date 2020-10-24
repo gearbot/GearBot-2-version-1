@@ -5,9 +5,9 @@ use twilight_gateway::Event;
 use twilight_model::gateway::payload::RequestGuildMembers;
 
 use crate::core::BotContext;
-use crate::utils::Error;
+use crate::utils::EventHandlerError;
 
-pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), Error> {
+pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), EventHandlerError> {
     match &event {
         Event::MemberChunk(_chunk) => {}
         Event::UserUpdate(_) => {}
@@ -105,11 +105,7 @@ pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) ->
             let c = ctx.cluster.clone();
             let data = RequestGuildMembers::builder(guild.id).query("", None);
             debug!("Requesting members for guild {}", guild.id);
-            let res = c.command(shard_id, &data).await;
-
-            if let Err(e) = res {
-                return Err(Error::TwilightCluster(e));
-            }
+            c.command(shard_id, &data).await?;
         }
         _ => {}
     }

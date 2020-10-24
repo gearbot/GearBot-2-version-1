@@ -24,7 +24,7 @@ use crate::core::handlers::{commands, general, modlog};
 use crate::core::{BotConfig, BotContext, BotStats, ColdRebootData};
 use crate::database::Redis;
 use crate::translation::Translations;
-use crate::utils::Error;
+use crate::utils::{EventHandlerError, StartupError};
 use crate::{gearbot_error, gearbot_important, gearbot_info, SchemeInfo};
 
 pub async fn run(
@@ -35,7 +35,7 @@ pub async fn run(
     postgres_pool: sqlx::PgPool,
     redis_pool: Redis,
     translations: Translations,
-) -> Result<(), Error> {
+) -> Result<(), StartupError> {
     let sharding_scheme = ShardScheme::try_from((
         scheme_info.cluster_id * scheme_info.shards_per_cluster
             ..scheme_info.cluster_id * scheme_info.shards_per_cluster + scheme_info.shards_per_cluster,
@@ -73,46 +73,51 @@ pub async fn run(
         ));
 
     // Check for resume data, pass to builder if present
-    {
-        let key = format!("cb_cluster_data_{}", scheme_info.cluster_id);
-        if let Some(cold_cache) = redis_pool.get::<ColdRebootData>(&key).await? {
-            debug!("ColdRebootData: {:?}", cold_cache);
+    let key = format!("cb_cluster_data_{}", scheme_info.cluster_id);
+    match redis_pool.get::<ColdRebootData>(&key).await {
+        Ok(result) => {
+            if let Some(cold_cache) = result {
+                debug!("ColdRebootData: {:?}", cold_cache);
 
-            redis_pool
-                .delete(&format!("cb_cluster_data_{}", scheme_info.cluster_id))
-                .await?;
+                redis_pool
+                    .delete(&format!("cb_cluster_data_{}", scheme_info.cluster_id))
+                    .await?;
 
-            if (cold_cache.total_shards == scheme_info.total_shards)
-                && (cold_cache.shard_count == scheme_info.shards_per_cluster)
-            {
-                let map = cold_cache
-                    .resume_data
-                    .into_iter()
-                    .map(|(id, data)| {
-                        (
-                            id,
-                            ResumeSession {
-                                session_id: data.0,
-                                sequence: data.1,
-                            },
-                        )
-                    })
-                    .collect();
+                if (cold_cache.total_shards == scheme_info.total_shards)
+                    && (cold_cache.shard_count == scheme_info.shards_per_cluster)
+                {
+                    let map = cold_cache
+                        .resume_data
+                        .into_iter()
+                        .map(|(id, data)| {
+                            (
+                                id,
+                                ResumeSession {
+                                    session_id: data.0,
+                                    sequence: data.1,
+                                },
+                            )
+                        })
+                        .collect();
 
-                let start = Instant::now();
-                let result = cache
-                    .restore_cold_resume(&redis_pool, cold_cache.guild_chunks, cold_cache.user_chunks)
-                    .await;
+                    let start = Instant::now();
+                    let result = cache
+                        .restore_cold_resume(&redis_pool, cold_cache.guild_chunks, cold_cache.user_chunks)
+                        .await;
 
-                if let Err(e) = result {
-                    gearbot_error!("Cold resume defrosting failed: {}", e);
-                    cache.reset();
-                } else {
-                    gearbot_important!("Cold resume defrosting completed in {}ms!", start.elapsed().as_millis());
-                    cb = cb.resume_sessions(map);
+                    if let Err(e) = result {
+                        gearbot_error!("Cold resume defrosting failed: {}", e);
+                        cache.reset();
+                    } else {
+                        gearbot_important!("Cold resume defrosting completed in {}ms!", start.elapsed().as_millis());
+                        cb = cb.resume_sessions(map);
+                    }
                 }
             }
-        };
+        }
+        Err(e) => {
+            gearbot_error!("Failed to get cold resume data: {}", e);
+        }
     }
 
     let cluster = cb.build().await?;
@@ -152,8 +157,8 @@ pub async fn run(
     let mut bot_events = context.cluster.events();
     while let Some(event) = bot_events.next().await {
         let c = context.clone();
-        context.update_stats(event.0, &event.1);
-        context.cache.update(event.0, &event.1, context.clone());
+        context.update_stats(event.0, &event.1).await; //this is fine to await, only async for updating shard states, gona be extremely rare something else also has a lock on that
+        context.cache.update(event.0, &event.1, context.clone()).await; //we are awaiting this because cache needs ot be updated before it's safe to spawn off the handling, to avoid working with stale data
         tokio::spawn(async {
             if let Err(e) = handle_event(event, c).await {
                 gearbot_error!("{}", e);
@@ -165,7 +170,7 @@ pub async fn run(
     Ok(())
 }
 
-async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), Error> {
+async fn handle_event(event: (u64, Event), ctx: Arc<BotContext>) -> Result<(), EventHandlerError> {
     modlog::handle_event(event.0, &event.1, ctx.clone()).await?;
     general::handle_event(event.0, &event.1, ctx.clone()).await?;
 

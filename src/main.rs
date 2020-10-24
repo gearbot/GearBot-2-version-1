@@ -12,10 +12,10 @@ use twilight_http::{
 
 use commands::ROOT_NODE;
 use translation::load_translations;
-use utils::Error;
 
 use crate::core::gearbot;
 use crate::core::{logging, BotConfig};
+use crate::utils::{CommandError, StartupError};
 use std::env;
 
 mod commands;
@@ -30,7 +30,7 @@ mod utils;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const GIT_VERSION: &str = git_version!();
 
-pub type CommandResult = Result<(), Error>;
+pub type CommandResult = Result<(), CommandError>;
 
 #[derive(Debug, Copy, Clone)]
 pub struct SchemeInfo {
@@ -39,7 +39,7 @@ pub struct SchemeInfo {
     pub total_shards: u64,
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<(), StartupError> {
     let mut runtime = Runtime::new()?;
 
     runtime.block_on(async move { real_main().await })?;
@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn real_main() -> Result<(), Error> {
+async fn real_main() -> Result<(), StartupError> {
     println!("Gearbot v{} starting!", VERSION);
     // Read config file
     let config = BotConfig::new(&env::var("CONFIG_FILE").unwrap_or("config.toml".to_string()))?;
@@ -103,7 +103,7 @@ async fn real_main() -> Result<(), Error> {
         Ok(pool) => pool,
         Err(e) => {
             gearbot_error!("Failed to connect to the redis database! {}", e);
-            return Err(e);
+            return Err(StartupError::DarkRedis(e));
         }
     };
 

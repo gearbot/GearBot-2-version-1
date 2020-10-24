@@ -6,7 +6,7 @@ use crate::CommandResult;
 pub async fn emoji_list(ctx: CommandContext) -> CommandResult {
     let reactor = Reactor::new_emoji_list();
     let pages = ctx.get_guild()?.emoji.len() as u8 + 1;
-    let page = gen_emoji_page(0, pages, &ctx.get_guild()?, &ctx.bot_context).await?;
+    let page = gen_emoji_page(0, pages, &ctx.get_guild()?, &ctx.get_config()?, &ctx.bot_context).await?;
     let message = ctx.reply_embed(page).await?;
     reactor.save(&ctx.bot_context, message.id).await?;
     ctx.bot_context

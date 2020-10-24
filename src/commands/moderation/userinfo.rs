@@ -5,15 +5,15 @@ use twilight_model::user::UserFlags;
 
 use crate::core::CommandContext;
 use crate::translation::{FluArgs, GearBotString};
+use crate::utils::CommandError;
 use crate::utils::Emoji;
-use crate::utils::{CommandError, Error};
 use crate::{utils, CommandResult};
 
 const USER_INFO_COLOR: u32 = 0x00_cea2;
 
 pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
     if ctx.guild.is_none() {
-        return Err(Error::CmdError(CommandError::NoDM));
+        return Err(CommandError::NoDM);
     }
 
     let user = ctx.parser.get_user_or(ctx.message.author.clone()).await?;

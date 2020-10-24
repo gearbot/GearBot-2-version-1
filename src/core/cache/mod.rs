@@ -21,7 +21,7 @@ pub use user::CachedUser;
 use crate::core::context::bot::ShardState;
 use crate::core::{BotContext, BotStats};
 use crate::database::Redis;
-use crate::utils::Error;
+use crate::utils::{ColdResumeError, DatabaseError};
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
 
 pub struct Cache {
@@ -78,7 +78,7 @@ impl Cache {
             .clear();
     }
 
-    pub fn update(&self, shard_id: u64, event: &Event, ctx: Arc<BotContext>) {
+    pub async fn update(&self, shard_id: u64, event: &Event, ctx: Arc<BotContext>) {
         match event {
             Event::Ready(ready) => {
                 self.missing_per_shard
@@ -264,15 +264,10 @@ impl Cache {
                             // if we where at 1 we are now at 0
                             if self.stats.guild_counts.partial.get() == 0
                                 && self.filling.load(Ordering::Relaxed)
-                                && ctx
-                                    .shard_states
-                                    .read()
-                                    .expect("Shard states got poisoned")
-                                    .values()
-                                    .all(|state| match state {
-                                        ShardState::Ready => true,
-                                        _ => false,
-                                    })
+                                && ctx.shard_states.read().await.values().all(|state| match state {
+                                    ShardState::Ready => true,
+                                    _ => false,
+                                })
                             {
                                 gearbot_important!("Initial cache filling completed for cluster {}!", self.cluster_id);
                                 self.filling.store(false, Ordering::SeqCst);
@@ -860,7 +855,7 @@ impl Cache {
         redis_pool: &Redis,
         todo: Vec<GuildId>,
         index: usize,
-    ) -> Result<(), Error> {
+    ) -> Result<(), DatabaseError> {
         debug!("Guild dumper {} started freezing {} guilds", index, todo.len());
         let mut to_dump = Vec::with_capacity(todo.len());
         {
@@ -885,7 +880,7 @@ impl Cache {
         redis_pool: &Redis,
         todo: Vec<UserId>,
         index: usize,
-    ) -> Result<(), Error> {
+    ) -> Result<(), DatabaseError> {
         debug!("Worker {} freezing {} users", index, todo.len());
         let mut chunk = Vec::with_capacity(todo.len());
         for key in todo {
@@ -922,7 +917,7 @@ impl Cache {
         redis_pool: &Redis,
         guild_chunks: usize,
         user_chunks: usize,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ColdResumeError> {
         let mut user_defrosters = Vec::with_capacity(user_chunks);
 
         for i in 0..user_chunks {
@@ -931,7 +926,7 @@ impl Cache {
 
         for result in future::join_all(user_defrosters).await {
             if let Err(e) = result {
-                return Err(Error::CacheError(format!("Failed to defrost users: {}", e)));
+                return Err(e);
             }
         }
         self.stats
@@ -947,7 +942,7 @@ impl Cache {
 
         for result in future::join_all(guild_defrosters).await {
             if let Err(e) = result {
-                return Err(Error::CacheError(format!("Failed to defrost guilds: {}", e)));
+                return Err(e);
             }
         }
 
@@ -965,12 +960,12 @@ impl Cache {
         Ok(())
     }
 
-    async fn defrost_users(&self, redis_pool: &Redis, index: usize) -> Result<(), Error> {
+    async fn defrost_users(&self, redis_pool: &Redis, index: usize) -> Result<(), ColdResumeError> {
         let key = format!("cb_cluster_{}_user_chunk_{}", self.cluster_id, index);
         let mut users: Vec<CachedUser> = redis_pool
             .get(&key)
             .await?
-            .ok_or(Error::CacheError("Cache structure not found!".to_string()))?;
+            .ok_or_else(|| ColdResumeError::MissingData(key.clone()))?;
         redis_pool.delete(&key).await?;
 
         debug!("Worker {} found {} users to defrost", index, users.len());
@@ -983,12 +978,12 @@ impl Cache {
         Ok(())
     }
 
-    async fn defrost_guilds(&self, redis_pool: &Redis, index: usize) -> Result<(), Error> {
+    async fn defrost_guilds(&self, redis_pool: &Redis, index: usize) -> Result<(), ColdResumeError> {
         let key = format!("cb_cluster_{}_guild_chunk_{}", self.cluster_id, index);
         let mut guilds: Vec<ColdStorageGuild> = redis_pool
             .get(&key)
             .await?
-            .ok_or(Error::CacheError("Cache structure not found!".to_string()))?;
+            .ok_or_else(|| ColdResumeError::MissingData(key.clone()))?;
         redis_pool.delete(&key).await?;
 
         debug!("Worker {} found {} guilds to defrost", index, guilds.len());
@@ -1085,7 +1080,7 @@ fn is_default<T: Default + PartialEq>(t: &T) -> bool {
 }
 
 fn is_true(t: &bool) -> bool {
-    !t
+    !*t
 }
 
 fn get_true() -> bool {

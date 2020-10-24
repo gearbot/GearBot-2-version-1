@@ -4,42 +4,158 @@ use serde::export::Formatter;
 use twilight_embed_builder::{
     EmbedAuthorNameError, EmbedBuildError, EmbedColorError, EmbedDescriptionError, EmbedFieldError, ImageSourceUrlError,
 };
-use twilight_gateway::cluster::ClusterStartError;
+use twilight_gateway::cluster::{ClusterCommandError, ClusterStartError};
 use twilight_gateway::{cluster, shard};
 use twilight_http;
 use twilight_http::request::channel::message::create_message::CreateMessageError;
 use twilight_http::request::channel::message::update_message::UpdateMessageError;
-use twilight_model::id::GuildId;
+use twilight_model::id::{ChannelId, GuildId, UserId};
 
 #[derive(Debug)]
-pub enum Error {
-    MissingToken,
+pub enum StartupError {
     NoConfig,
     InvalidConfig,
-    InvalidLoggingWebhook(String),
     NoLoggingSpec,
-    IoError(io::Error),
+    Twilight(twilight_http::Error),
+    Sqlx(sqlx::Error),
+    DarkRedis(darkredis::Error),
+    ClusterStart(ClusterStartError),
+    Io(io::Error),
+}
 
-    TwilightHttp(twilight_http::Error),
-    TwilightCluster(cluster::ClusterCommandError),
-    GatewayError(shard::CommandError),
-    ShardOrClusterError(String),
+#[derive(Debug)]
+pub enum CacheError {}
+
+impl error::Error for CacheError {}
+
+impl fmt::Display for CacheError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug)]
+pub enum ColdResumeError {
+    MissingData(String),
+    Database(DatabaseError),
+}
+
+impl error::Error for ColdResumeError {}
+
+impl fmt::Display for ColdResumeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug)]
+pub enum ApiCommunicaionError {
+    Deseralizing(serde_json::Error),
+    Serializing(serde_json::Error),
+    Redis(darkredis::Error),
+}
+
+impl error::Error for ApiCommunicaionError {}
+
+impl fmt::Display for ApiCommunicaionError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug)]
+pub enum EventHandlerError {
     InvalidSession(u64),
+    Gateway(shard::CommandError),
+    TwilightCluster(cluster::ClusterCommandError),
+    UnknownGuild(GuildId),
+    UnknownChannel(ChannelId),
+    UnknownUser(UserId),
+    Reactor(ReactorError),
+    Database(DatabaseError),
+    Twilight(twilight_http::Error),
+}
+impl error::Error for EventHandlerError {}
 
-    Database(sqlx::error::Error),
-    RedisError(darkredis::Error),
+impl fmt::Display for EventHandlerError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
 
-    Serde(serde_json::error::Error),
-    ParseError(ParseError),
-    CmdError(CommandError),
-    LogError(GuildId),
-    CreateMessageError(CreateMessageError),
-    UpdateMessageError(UpdateMessageError),
-    CacheError(String),
+#[derive(Debug)]
+pub enum ReactorError {
+    Database(DatabaseError),
+    TwilightHttp(twilight_http::Error),
+    Message(MessageError),
+}
 
-    PrometheusError(prometheus::Error),
+impl error::Error for ReactorError {}
+
+impl fmt::Display for ReactorError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug)]
+pub enum MessageError {
+    Create(CreateMessageError),
+    Update(UpdateMessageError),
+    EmbedBuild(EmbedBuildError),
+    EmbedField(EmbedFieldError),
+    EmbedDescription(EmbedDescriptionError),
+    EmbedColor(EmbedColorError),
+    EmbedAuthorName(EmbedAuthorNameError),
+    ImageSourceUrl(ImageSourceUrlError),
+}
+
+impl error::Error for MessageError {}
+
+impl fmt::Display for MessageError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug)]
+pub enum ConfigError {}
+
+impl error::Error for ConfigError {}
+
+impl fmt::Display for ConfigError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug)]
+pub enum DatabaseError {
+    Sqlx(sqlx::Error),
+    Deserializing(serde_json::Error),
+    Serializing(serde_json::Error),
+    Darkredis(darkredis::Error),
+}
+
+impl error::Error for DatabaseError {}
+
+impl fmt::Display for DatabaseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
+}
+
+#[derive(Debug)]
+pub enum EmojiError {
     UnknownEmoji(String),
-    EmbedError(String),
+}
+
+impl error::Error for EmojiError {}
+
+impl fmt::Display for EmojiError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug)]
@@ -55,9 +171,46 @@ impl fmt::Display for ApiMessageError {
 
 #[derive(Debug)]
 pub enum CommandError {
-    // WrongArgCount { expected: u8, provided: u8 },
     NoDM,
     InvalidPermissions,
+    ParseError(ParseError),
+    OtherFailure(OtherFailure),
+}
+
+impl error::Error for CommandError {}
+
+impl fmt::Display for CommandError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CommandError::NoDM => write!(f, "You can not use this command in DMs"),
+            CommandError::InvalidPermissions => write!(f, "You don't have the permissions to run this command!"),
+            CommandError::ParseError(e) => write!(f, "Failed to parse the command arguments!\n``{}``", e),
+            CommandError::OtherFailure(_) => write!(f, "Unexpected error while executing the command, please report this on the support server if it keeps happening"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum OtherFailure {
+    ShardOrCluster(String),
+    TwilightHttp(twilight_http::Error),
+    DatabaseError(DatabaseError),
+    CorruptCache,
+    Message(MessageError),
+}
+
+impl error::Error for OtherFailure {}
+
+impl fmt::Display for OtherFailure {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            OtherFailure::DatabaseError(e) => write!(f, "Database error: {}", e),
+            OtherFailure::CorruptCache => write!(f, "Cache is corrupted!"),
+            OtherFailure::ShardOrCluster(e) => write!(f, "Shard command failed: {}", e),
+            OtherFailure::TwilightHttp(e) => write!(f, "Something when wrong interacting with the discord api: {}", e),
+            OtherFailure::Message(e) => write!(f, "Failed to construct a message: {}", e),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -73,17 +226,9 @@ pub enum ParseError {
     NoChannelAccessUser(String),
     UnknownMessage,
     NSFW,
-}
-
-impl error::Error for CommandError {}
-
-impl fmt::Display for CommandError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            CommandError::NoDM => write!(f, "You can not use this command in DMs"),
-            CommandError::InvalidPermissions => write!(f, "You don't have the permissions to run this command!"),
-        }
-    }
+    CorruptCache,
+    NoDm,
+    Other(OtherFailure),
 }
 
 impl error::Error for ParseError {}
@@ -113,153 +258,277 @@ impl fmt::Display for ParseError {
                 f,
                 "That message originates in a nsfw channel while this is not a nsfw channel, unable to comply"
             ),
+            ParseError::CorruptCache => write!(f, "While processing this command cache corruption was detected, command execution was aborted and a cache reset is in progress, please try again in a few minutes"),
+            ParseError::NoDm => write!(f, "This can not be used in DMs"),
+            ParseError::Other(_) => write!(f, "An unexpected error occurred trying to parse and retrieve this")
         }
     }
 }
-
-impl error::Error for Error {}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+impl fmt::Display for StartupError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Error::CmdError(e) => write!(f, "{}", e),
-            Error::InvalidSession(shard) => write!(
-                f,
-                "The gateway invalidated our session unrecoverably for shard {}!",
-                shard
-            ),
-            // For errors that actually happen during runtime, we can have the logging macros here too
-            Error::MissingToken => write!(f, "The bot was missing its token, unable to start!"),
-            Error::NoConfig => write!(f, "The config file couldn't be found, unable to start!"),
-            Error::InvalidConfig => write!(f, "The config file was not in the correct format!"),
-            Error::InvalidLoggingWebhook(wurl) => write!(f, "The webhook URL {} was invalid", wurl),
-            Error::NoLoggingSpec => write!(f, "The logging configuration couldn't be found!"),
-            Error::IoError(e) => write!(f, "An IO error occurred during a task: {}", e),
-            Error::TwilightHttp(e) => write!(f, "An error occurred making a Discord request: {}", e),
-            Error::TwilightCluster(e) => write!(f, "An error occurred on a cluster request: {}", e),
-            Error::Database(e) => write!(f, "A database error occurred: {}", e),
-            Error::UnknownEmoji(e) => write!(f, "Unknown emoji: {}", e),
-            Error::Serde(e) => write!(f, "Serde error: {}", e),
-            Error::ParseError(e) => write!(f, "{}", e),
-            Error::LogError(guild_id) => write!(
-                f,
-                "Something went horribly wrong when trying to push to the logpump for guild {}",
-                guild_id
-            ),
-            Error::CreateMessageError(e) => write!(f, "Error creating message: {}", e),
-            Error::UpdateMessageError(e) => write!(f, "Error updating message: {}", e),
-            Error::CacheError(e) => write!(f, "An error occured with a cache task: {}", e),
-            Error::RedisError(e) => write!(f, "Error communicating with the redis cache: {}", e),
-            Error::PrometheusError(e) => write!(f, "Prometheus stat tracking failed: {}", e),
-            Error::GatewayError(e) => write!(f, "Gateway error: {}", e),
-            Error::ShardOrClusterError(e) => write!(f, "A cluster or shard error occured: {}", e),
-            Error::EmbedError(e) => write!(f, "An embed was constructed invalidly: {}", e),
+            StartupError::NoConfig => write!(f, "Unable to locate the config file"),
+            StartupError::InvalidConfig => write!(f, "Unable to load the config file"),
+            StartupError::NoLoggingSpec => write!(f, "Problem with the log spec file"),
+            StartupError::Twilight(e) => write!(f, "Twilight error during startup, unable to continue: {}", e),
+            StartupError::Sqlx(e) => write!(f, "Unable to create database pool: {:?}", e),
+            StartupError::DarkRedis(e) => write!(f, "Unable to create redis database pool: {}", e),
+            StartupError::ClusterStart(e) => write!(f, "The cluster failed to start: {}", e),
+            StartupError::Io(e) => write!(f, "IO error: {}", e),
+        }
+    }
+}
+impl From<twilight_http::Error> for StartupError {
+    fn from(e: twilight_http::Error) -> Self {
+        StartupError::Twilight(e)
+    }
+}
+
+impl From<sqlx::error::Error> for StartupError {
+    fn from(e: sqlx::error::Error) -> Self {
+        StartupError::Sqlx(e)
+    }
+}
+
+impl From<darkredis::Error> for StartupError {
+    fn from(e: darkredis::Error) -> Self {
+        StartupError::DarkRedis(e)
+    }
+}
+
+impl From<EmbedFieldError> for CommandError {
+    fn from(e: EmbedFieldError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(MessageError::EmbedField(e)))
+    }
+}
+
+impl From<EmbedBuildError> for CommandError {
+    fn from(e: EmbedBuildError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(MessageError::EmbedBuild(e)))
+    }
+}
+
+impl From<EmbedDescriptionError> for CommandError {
+    fn from(e: EmbedDescriptionError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(MessageError::EmbedDescription(e)))
+    }
+}
+
+impl From<EmbedColorError> for CommandError {
+    fn from(e: EmbedColorError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(MessageError::EmbedColor(e)))
+    }
+}
+
+impl From<EmbedAuthorNameError> for CommandError {
+    fn from(e: EmbedAuthorNameError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(MessageError::EmbedAuthorName(e)))
+    }
+}
+impl From<ImageSourceUrlError> for CommandError {
+    fn from(e: ImageSourceUrlError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(MessageError::ImageSourceUrl(e)))
+    }
+}
+
+impl From<ClusterStartError> for StartupError {
+    fn from(e: ClusterStartError) -> Self {
+        StartupError::ClusterStart(e)
+    }
+}
+
+impl From<CreateMessageError> for CommandError {
+    fn from(e: CreateMessageError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(MessageError::Create(e)))
+    }
+}
+
+impl From<twilight_http::Error> for CommandError {
+    fn from(e: twilight_http::Error) -> Self {
+        CommandError::OtherFailure(OtherFailure::TwilightHttp(e))
+    }
+}
+
+impl From<OtherFailure> for CommandError {
+    fn from(e: OtherFailure) -> Self {
+        CommandError::OtherFailure(e)
+    }
+}
+impl From<darkredis::Error> for ParseError {
+    fn from(e: darkredis::Error) -> Self {
+        ParseError::Other(OtherFailure::DatabaseError(DatabaseError::Darkredis(e)))
+    }
+}
+
+impl From<twilight_http::Error> for ParseError {
+    fn from(e: twilight_http::Error) -> Self {
+        ParseError::Other(OtherFailure::TwilightHttp(e))
+    }
+}
+
+impl From<darkredis::Error> for ApiCommunicaionError {
+    fn from(e: darkredis::Error) -> Self {
+        ApiCommunicaionError::Redis(e)
+    }
+}
+
+impl From<DatabaseError> for ParseError {
+    fn from(e: DatabaseError) -> Self {
+        ParseError::Other(OtherFailure::DatabaseError(e))
+    }
+}
+
+impl From<ClusterCommandError> for EventHandlerError {
+    fn from(e: ClusterCommandError) -> Self {
+        EventHandlerError::TwilightCluster(e)
+    }
+}
+
+impl From<ReactorError> for EventHandlerError {
+    fn from(e: ReactorError) -> Self {
+        EventHandlerError::Reactor(e)
+    }
+}
+impl From<DatabaseError> for EventHandlerError {
+    fn from(e: DatabaseError) -> Self {
+        EventHandlerError::Database(e)
+    }
+}
+
+impl From<darkredis::Error> for DatabaseError {
+    fn from(e: darkredis::Error) -> Self {
+        DatabaseError::Darkredis(e)
+    }
+}
+
+impl From<darkredis::Error> for ColdResumeError {
+    fn from(e: darkredis::Error) -> Self {
+        ColdResumeError::Database(DatabaseError::Darkredis(e))
+    }
+}
+
+impl From<UpdateMessageError> for CommandError {
+    fn from(e: UpdateMessageError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(MessageError::Update(e)))
+    }
+}
+
+impl From<sqlx::Error> for DatabaseError {
+    fn from(e: sqlx::Error) -> Self {
+        DatabaseError::Sqlx(e)
+    }
+}
+
+impl From<DatabaseError> for ReactorError {
+    fn from(e: DatabaseError) -> Self {
+        ReactorError::Database(e)
+    }
+}
+impl From<twilight_http::Error> for EventHandlerError {
+    fn from(e: twilight_http::Error) -> Self {
+        EventHandlerError::Twilight(e)
+    }
+}
+
+impl From<twilight_http::Error> for ReactorError {
+    fn from(e: twilight_http::Error) -> Self {
+        ReactorError::TwilightHttp(e)
+    }
+}
+impl From<DatabaseError> for ColdResumeError {
+    fn from(e: DatabaseError) -> Self {
+        ColdResumeError::Database(e)
+    }
+}
+
+impl From<ParseError> for CommandError {
+    fn from(e: ParseError) -> Self {
+        match e {
+            ParseError::NoDm => CommandError::NoDM,
+            e => CommandError::ParseError(e),
         }
     }
 }
 
-impl From<ParseError> for Error {
-    fn from(e: ParseError) -> Self {
-        Error::ParseError(e)
+impl From<DatabaseError> for CommandError {
+    fn from(e: DatabaseError) -> Self {
+        CommandError::OtherFailure(OtherFailure::DatabaseError(e))
     }
 }
 
-impl From<CommandError> for Error {
-    fn from(e: CommandError) -> Self {
-        Error::CmdError(e)
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Self {
-        Error::IoError(e)
-    }
-}
-
-impl From<twilight_http::Error> for Error {
-    fn from(e: twilight_http::Error) -> Self {
-        Error::TwilightHttp(e)
-    }
-}
-
-impl From<cluster::ClusterCommandError> for Error {
-    fn from(e: cluster::ClusterCommandError) -> Self {
-        Error::TwilightCluster(e)
-    }
-}
-
-impl From<sqlx::error::Error> for Error {
-    fn from(e: sqlx::error::Error) -> Self {
-        Error::Database(e)
-    }
-}
-
-impl From<serde_json::error::Error> for Error {
-    fn from(e: serde_json::error::Error) -> Self {
-        Error::Serde(e)
-    }
-}
-
-impl From<CreateMessageError> for Error {
-    fn from(e: CreateMessageError) -> Self {
-        Error::CreateMessageError(e)
-    }
-}
-
-impl From<UpdateMessageError> for Error {
+impl From<UpdateMessageError> for ReactorError {
     fn from(e: UpdateMessageError) -> Self {
-        Error::UpdateMessageError(e)
-    }
-}
-impl From<darkredis::Error> for Error {
-    fn from(e: darkredis::Error) -> Self {
-        Error::RedisError(e)
+        ReactorError::Message(MessageError::Update(e))
     }
 }
 
-impl From<shard::CommandError> for Error {
-    fn from(e: shard::CommandError) -> Self {
-        Error::GatewayError(e)
-    }
-}
-
-impl From<ClusterStartError> for Error {
-    fn from(e: ClusterStartError) -> Self {
-        Error::ShardOrClusterError(e.to_string())
-    }
-}
-
-impl From<EmbedFieldError> for Error {
+impl From<EmbedFieldError> for ReactorError {
     fn from(e: EmbedFieldError) -> Self {
-        Error::EmbedError(e.to_string())
+        ReactorError::Message(MessageError::EmbedField(e))
     }
 }
 
-impl From<EmbedBuildError> for Error {
+impl From<EmbedBuildError> for ReactorError {
     fn from(e: EmbedBuildError) -> Self {
-        Error::EmbedError(e.to_string())
+        ReactorError::Message(MessageError::EmbedBuild(e))
     }
 }
 
-impl From<EmbedDescriptionError> for Error {
+impl From<EmbedDescriptionError> for ReactorError {
     fn from(e: EmbedDescriptionError) -> Self {
-        Error::EmbedError(e.to_string())
+        ReactorError::Message(MessageError::EmbedDescription(e))
     }
 }
 
-impl From<EmbedColorError> for Error {
+impl From<EmbedColorError> for ReactorError {
     fn from(e: EmbedColorError) -> Self {
-        Error::EmbedError(e.to_string())
+        ReactorError::Message(MessageError::EmbedColor(e))
     }
 }
 
-impl From<EmbedAuthorNameError> for Error {
+impl From<EmbedAuthorNameError> for ReactorError {
     fn from(e: EmbedAuthorNameError) -> Self {
-        Error::EmbedError(e.to_string())
+        ReactorError::Message(MessageError::EmbedAuthorName(e))
     }
 }
-impl From<ImageSourceUrlError> for Error {
+impl From<ImageSourceUrlError> for ReactorError {
     fn from(e: ImageSourceUrlError) -> Self {
-        Error::EmbedError(e.to_string())
+        ReactorError::Message(MessageError::ImageSourceUrl(e))
+    }
+}
+
+impl From<MessageError> for ReactorError {
+    fn from(e: MessageError) -> Self {
+        ReactorError::Message(e)
+    }
+}
+
+impl From<MessageError> for CommandError {
+    fn from(e: MessageError) -> Self {
+        CommandError::OtherFailure(OtherFailure::Message(e))
+    }
+}
+
+impl From<ImageSourceUrlError> for MessageError {
+    fn from(e: ImageSourceUrlError) -> Self {
+        MessageError::ImageSourceUrl(e)
+    }
+}
+
+impl From<EmbedAuthorNameError> for MessageError {
+    fn from(e: EmbedAuthorNameError) -> Self {
+        MessageError::EmbedAuthorName(e)
+    }
+}
+
+impl From<EmbedDescriptionError> for MessageError {
+    fn from(e: EmbedDescriptionError) -> Self {
+        MessageError::EmbedDescription(e)
+    }
+}
+
+impl From<io::Error> for StartupError {
+    fn from(e: io::Error) -> Self {
+        StartupError::Io(e)
     }
 }

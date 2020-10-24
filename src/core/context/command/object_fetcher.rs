@@ -8,14 +8,16 @@ use twilight_model::{
 
 use crate::core::cache::CachedChannel;
 use crate::core::cache::{CachedMember, CachedRole, CachedUser};
-use crate::utils::{CommandError, ParseError};
-use crate::Error;
+use crate::utils::{CacheError, CommandError, OtherFailure, ParseError};
 
 use super::CommandContext;
 
 impl CommandContext {
-    pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, Error> {
-        self.bot_context.get_user(user_id).await
+    pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, CommandError> {
+        self.bot_context
+            .get_user(user_id)
+            .await
+            .map_err(|e| CommandError::ParseError(e))
     }
 
     pub fn get_member(&self, user_id: &UserId) -> Option<Arc<CachedMember>> {
@@ -39,18 +41,18 @@ impl CommandContext {
         }
     }
 
-    pub async fn get_ban(&self, user_id: UserId) -> Result<Option<Ban>, Error> {
+    pub async fn get_ban(&self, user_id: UserId) -> Result<Option<Ban>, CommandError> {
         match &self.guild {
             Some(g) => Ok(self.bot_context.http.ban(g.id, user_id).await?),
-            None => Err(Error::CmdError(CommandError::NoDM)),
+            None => Err(CommandError::NoDM),
         }
     }
 
-    pub async fn get_dm_for_author(&self) -> Result<Arc<CachedChannel>, Error> {
+    pub async fn get_dm_for_author(&self) -> Result<Arc<CachedChannel>, twilight_http::Error> {
         self.get_dm_for_user(self.message.author.id).await
     }
 
-    pub async fn get_dm_for_user(&self, user_id: UserId) -> Result<Arc<CachedChannel>, Error> {
+    pub async fn get_dm_for_user(&self, user_id: UserId) -> Result<Arc<CachedChannel>, twilight_http::Error> {
         match self.bot_context.cache.get_dm_channel_for(user_id) {
             Some(channel) => Ok(channel),
             None => {
@@ -60,7 +62,7 @@ impl CommandContext {
         }
     }
 
-    pub async fn get_message(&mut self) -> Result<Message, Error> {
+    pub async fn get_message(&mut self) -> Result<Message, CommandError> {
         let input = self.parser.get_next()?;
 
         let user_id = self.message.author.id;
@@ -69,16 +71,16 @@ impl CommandContext {
 
         let channel = match self.bot_context.cache.get_channel(channel_id) {
             Some(ch) => ch,
-            None => return Err(Error::ParseError(ParseError::UnknownChannel(channel_id.0))),
+            None => return Err(CommandError::ParseError(ParseError::UnknownChannel(channel_id.0))),
         };
 
-        if let CachedChannel::Category { name, id, .. } = &*channel {
+        if let CachedChannel::TextChannel { name, id, .. } = &*channel {
             let bot_has_access =
                 self.bot_has_channel_permissions(Permissions::VIEW_CHANNEL & Permissions::READ_MESSAGE_HISTORY);
 
             // Verify that the bot has access
             if !bot_has_access {
-                return Err(Error::ParseError(ParseError::NoChannelAccessBot(name.clone())));
+                return Err(CommandError::ParseError(ParseError::NoChannelAccessBot(name.clone())));
             }
 
             let user_has_access = self.has_channel_permissions(
@@ -99,9 +101,9 @@ impl CommandContext {
                 Ok(message) => Ok(message.unwrap()),
                 Err(error) => {
                     if error.to_string().contains("status: 404") {
-                        Err(Error::ParseError(ParseError::UnknownMessage))
+                        Err(CommandError::ParseError(ParseError::UnknownMessage))
                     } else {
-                        Err(Error::TwilightHttp(error))
+                        Err(CommandError::OtherFailure(OtherFailure::TwilightHttp(error)))
                     }
                 }
             }

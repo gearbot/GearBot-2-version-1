@@ -5,7 +5,8 @@ use once_cell::sync::OnceCell;
 use twilight_model::id::EmojiId;
 
 use crate::define_emoji;
-use crate::utils::errors::Error;
+use crate::utils::EmojiError;
+use std::convert::Infallible;
 use twilight_http::request::channel::reaction::RequestReactionType;
 use twilight_model::channel::ReactionType;
 
@@ -118,11 +119,11 @@ mod macros {
         }
 
         impl FromStr for Emoji {
-            type Err = Error;
+            type Err = EmojiError;
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 match s.to_uppercase().as_str() {
                     $(stringify!($name) => Ok(Emoji::$name) ,)*
-                    _ => Err(Error::UnknownEmoji(s.to_string())),
+                    _ => Err(EmojiError::UnknownEmoji(s.to_string())),
                 }
             }
         }

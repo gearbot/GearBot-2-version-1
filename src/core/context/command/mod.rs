@@ -13,8 +13,7 @@ use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};
 use crate::core::{BotContext, GuildConfig};
 use crate::parser::Parser;
 use crate::translation::GearBotString;
-use crate::utils::CommandError;
-use crate::Error;
+use crate::utils::{CommandError, OtherFailure};
 
 mod messaging;
 mod object_fetcher;
@@ -35,10 +34,10 @@ pub struct CommandMessage {
 }
 
 impl CommandMessage {
-    pub fn get_author_as_member(&self) -> Result<Arc<CachedMember>, Error> {
+    pub fn get_author_as_member(&self) -> Result<Arc<CachedMember>, CommandError> {
         match &self.author_as_member {
             Some(author_as_member) => Ok(author_as_member.clone()),
-            None => Err(Error::CmdError(CommandError::NoDM)),
+            None => Err(CommandError::NoDM),
         }
     }
 }
@@ -100,26 +99,30 @@ impl CommandContext {
             .replace("\\n", "\n")
     }
 
-    pub async fn set_config(&self, new_config: GuildConfig) -> Result<(), Error> {
+    pub async fn set_config(&self, new_config: GuildConfig) -> Result<(), CommandError> {
         // This updates it both in the DB and handles our element guard
         match &self.guild {
-            Some(g) => self.bot_context.set_config(g.id, new_config).await,
-            None => Err(Error::CmdError(CommandError::NoDM)),
+            Some(g) => self
+                .bot_context
+                .set_config(g.id, new_config)
+                .await
+                .map_err(|e| CommandError::OtherFailure(OtherFailure::DatabaseError(e))),
+            None => Err(CommandError::NoDM),
         }
     }
 
-    pub fn get_config(&self) -> Result<Arc<GuildConfig>, Error> {
+    pub fn get_config(&self) -> Result<Arc<GuildConfig>, CommandError> {
         if self.message.channel.is_dm() {
-            Err(Error::CmdError(CommandError::NoDM))
+            Err(CommandError::NoDM)
         } else {
             Ok(self.config.clone())
         }
     }
 
-    pub fn get_guild(&self) -> Result<Arc<CachedGuild>, Error> {
+    pub fn get_guild(&self) -> Result<Arc<CachedGuild>, CommandError> {
         match &self.guild {
             Some(guild) => Ok(guild.clone()),
-            None => Err(Error::CmdError(CommandError::NoDM)),
+            None => Err(CommandError::NoDM),
         }
     }
 }

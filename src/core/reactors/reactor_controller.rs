@@ -3,9 +3,9 @@ use std::sync::Arc;
 use twilight_model::channel::Reaction;
 
 use crate::core::{BotContext, Reactor};
-use crate::utils::Error;
+use crate::utils::ReactorError;
 
-pub async fn process_reaction(bot_context: &Arc<BotContext>, reaction: &Reaction) -> Result<(), Error> {
+pub async fn process_reaction(bot_context: &Arc<BotContext>, reaction: &Reaction) -> Result<(), ReactorError> {
     if reaction.user_id != bot_context.bot_user.id {
         if let Some(reactor) = bot_context
             .redis_cache

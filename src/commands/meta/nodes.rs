@@ -8,9 +8,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use twilight_model::guild::Permissions;
 
 use crate::core::CommandContext;
-use crate::utils::Error;
+use crate::utils::CommandError;
 
-pub type CommandResult = Result<(), Error>;
+pub type CommandResult = Result<(), CommandError>;
 pub type CommandResultOuter = Pin<Box<dyn Future<Output = CommandResult> + Send>>;
 pub type CommandHandler = Box<dyn Fn(CommandContext) -> CommandResultOuter + Send + Sync>;
 
