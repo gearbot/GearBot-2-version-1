@@ -59,15 +59,14 @@ pub async fn run(
 
     let cache = Cache::new(scheme_info.cluster_id, stats.clone());
 
-    let mut cb = Cluster::builder(&config.tokens.discord)
+    let mut cb = Cluster::builder(&config.tokens.discord, intents)
         .shard_scheme(sharding_scheme)
-        .intents(intents)
         .presence(UpdateStatusInfo::new(
-            true,
-            bot_status::generate_activity(
+            vec![bot_status::generate_activity(
                 ActivityType::Listening,
                 String::from("to the modem screeching as I connect to the gateway"),
-            ),
+            )],
+            true,
             None,
             Status::Idle,
         ));
