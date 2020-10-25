@@ -4,7 +4,6 @@ pub use emoji::*;
 pub use emoji::*;
 pub use errors::*;
 pub use errors::*;
-pub use log_types::*;
 
 // TODO: Remove this when they are all used.
 #[allow(dead_code)]
@@ -13,8 +12,6 @@ pub mod matchers;
 pub mod emoji;
 mod errors;
 pub mod pattern;
-
-mod log_types;
 
 const MARKDOWN_REPALCEMENTS: &[&str; 7] = &["\\", "*", "_", "~", "|", "{", ">"];
 const DISCORD_EPOCH: i64 = 1_420_070_400_000;

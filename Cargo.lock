@@ -358,16 +358,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dashmap"
-version = "4.0.0-rc6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "308a6703be2d759cb5fb7b80a23547fe73a8d5ebf70d3a4ca7f0ef4c0bfc2265"
-dependencies = [
- "once_cell",
- "serde",
-]
-
-[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -656,7 +646,6 @@ dependencies = [
  "chrono",
  "ctrlc",
  "darkredis",
- "dashmap 4.0.0-rc6",
  "flexi_logger",
  "fluent-bundle",
  "futures-util",
@@ -2247,7 +2236,7 @@ checksum = "e4f4eeea1d51691a6412a0eb9099e9963836eb4688ee9ae656fab0b27c090578"
 dependencies = [
  "async-tungstenite",
  "bitflags",
- "dashmap 3.11.10",
+ "dashmap",
  "flate2",
  "futures-channel",
  "futures-util",

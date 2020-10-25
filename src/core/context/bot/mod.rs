@@ -19,6 +19,7 @@ pub(crate) mod status;
 pub use stats::BotStats;
 
 use crate::core::cache::Cache;
+use crate::core::logpump::LogData;
 use crate::core::GuildConfig;
 use crate::crypto::EncryptionKey;
 use crate::database::api_structs::{RawTeamMembers, TeamInfo, TeamMember};
@@ -29,6 +30,7 @@ use fluent_bundle::FluentArgs;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::RwLock;
 use unic_langid::LanguageIdentifier;
 
@@ -62,6 +64,7 @@ pub struct BotContext {
     pub start_time: DateTime<Utc>,
     pub global_admins: Vec<UserId>,
     team_info: RawTeamMembers,
+    logpump_sender: UnboundedSender<LogData>,
 }
 
 impl BotContext {
@@ -72,6 +75,7 @@ impl BotContext {
         translations: Translations,
         config_ops: (Option<Vec<u8>>, Vec<u64>),
         stats: Arc<BotStats>,
+        logpump_sender: UnboundedSender<LogData>,
     ) -> Self {
         let scheme_info = bot_core.2;
         let mut shard_states = HashMap::with_capacity(scheme_info.shards_per_cluster as usize);
@@ -112,6 +116,7 @@ impl BotContext {
             start_time: Utc::now(),
             global_admins,
             team_info,
+            logpump_sender,
         }
     }
 
@@ -160,5 +165,9 @@ impl BotContext {
         }
 
         TeamInfo { members }
+    }
+
+    pub fn log(&self, data: LogData) {
+        self.logpump_sender.send(data);
     }
 }

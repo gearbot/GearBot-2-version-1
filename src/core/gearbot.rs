@@ -21,11 +21,12 @@ use twilight_model::{
 use crate::core::cache::Cache;
 use crate::core::context::bot::status as bot_status;
 use crate::core::handlers::{commands, general, modlog};
-use crate::core::{BotConfig, BotContext, BotStats, ColdRebootData};
+use crate::core::{logpump, BotConfig, BotContext, BotStats, ColdRebootData};
 use crate::database::Redis;
 use crate::translation::Translations;
 use crate::utils::{EventHandlerError, StartupError};
 use crate::{gearbot_error, gearbot_important, gearbot_info, SchemeInfo};
+use tokio::sync::mpsc::unbounded_channel;
 
 pub async fn run(
     scheme_info: SchemeInfo,
@@ -120,6 +121,9 @@ pub async fn run(
     }
 
     let cluster = cb.build().await?;
+
+    let (sender, receiver) = unbounded_channel();
+
     let context = Arc::new(BotContext::new(
         (cache, cluster, scheme_info),
         (http, bot_user),
@@ -127,7 +131,10 @@ pub async fn run(
         translations,
         (config.__main_encryption_key, config.global_admins),
         stats,
+        sender,
     ));
+    let ctx = context.clone();
+    let mut logpump_task = tokio::spawn(logpump::run(ctx, receiver));
 
     //establish api connection
     let c = context.clone();
@@ -165,6 +172,9 @@ pub async fn run(
         });
     }
     context.cluster.down();
+
+    //TODO: enable when we move to tokio 0.3
+    // logpump_task.abort();
 
     Ok(())
 }

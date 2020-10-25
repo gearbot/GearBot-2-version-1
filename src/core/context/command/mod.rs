@@ -10,10 +10,11 @@ use twilight_model::{id::MessageId, user::CurrentUser};
 
 use crate::commands::meta::nodes::GearBotPermissions;
 use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};
-use crate::core::{BotContext, GuildConfig};
+use crate::core::{BotContext, GuildConfig, LogData, LogType};
 use crate::parser::Parser;
 use crate::translation::GearBotString;
 use crate::utils::{CommandError, OtherFailure};
+use twilight_model::id::{ChannelId, UserId};
 
 mod messaging;
 mod object_fetcher;
@@ -124,5 +125,21 @@ impl CommandContext {
             Some(guild) => Ok(guild.clone()),
             None => Err(CommandError::NoDM),
         }
+    }
+
+    pub fn log(
+        &self,
+        log_type: LogType,
+        source_channel: Option<ChannelId>,
+        source_user: Option<UserId>,
+    ) -> Result<(), CommandError> {
+        log::debug!("Logging {:?}", log_type);
+        self.bot_context.log(LogData {
+            log_type,
+            guild: self.get_guild()?.id,
+            source_channel,
+            source_user,
+        });
+        Ok(())
     }
 }

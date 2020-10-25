@@ -1,44 +1,12 @@
 // use twilight_model::channel::{Reaction, ReactionType};
 // use twilight_model::id::GuildId;
 
-use crate::core::CommandContext;
+use crate::core::{CommandContext, LogType};
 use crate::CommandResult;
 use twilight_model::id::UserId;
 
-pub async fn test(ctx: CommandContext) -> CommandResult {
-    // let reactor = Reactors::new_emoji_list();
-    // let reaction = Reaction {
-    //     channel_id: Default::default(),
-    //     emoji: ReactionType::Unicode { name: "".to_string() },
-    //     guild_id: None,
-    //     member: None,
-    //     message_id: Default::default(),
-    //     user_id: Default::default(),
-    // };
-    // if reactor.processes(&reaction) {
-    //     reactor
-    //         .do_your_thing(ctx.bot_context, &reaction, ctx.message.get_author_as_member()?)
-    //         .await;
-    // }
-
-    // let out = Pattern::new(ctx.parser.parts.len() - 1)
-    //     .arrange(
-    //         ctx.parser
-    //             .parts
-    //             .iter()
-    //             .skip(1)
-    //             .map(String::from)
-    //             .collect::<Vec<String>>(),
-    //     )
-    //     .iter()
-    //     .map(|inner| inner.join("").to_string())
-    //     .collect::<Vec<String>>()
-    //     .join("\n");
-    //
-    // ctx.reply_raw(out).await?;
-    ctx.bot_context
-        .http
-        .delete_ban(ctx.get_guild()?.id, UserId(366972849258496000))
-        .await?;
+pub async fn test(mut ctx: CommandContext) -> CommandResult {
+    let arg = ctx.parser.get_remaining();
+    ctx.log(LogType::TEST(arg), None, None);
     Ok(())
 }

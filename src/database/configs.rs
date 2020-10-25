@@ -11,7 +11,7 @@ pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<Option<
         .await?;
 
     let config = if let Some(c_val) = row {
-        let mut config: GuildConfig = serde_json::from_value(c_val.0).unwrap();
+        let mut config: GuildConfig = serde_json::from_value(c_val.0).map_err(|e| DatabaseError::Deserializing(e))?;
         //CRITICAL: make sure permissions are propertly sorted
         config.permission_groups.sort_by(|a, b| a.priority.cmp(&b.priority));
         Some(config)

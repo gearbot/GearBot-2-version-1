@@ -13,7 +13,6 @@ bitflags = "1.2"
 chrono = "0.4"
 ctrlc = { version = "3", features = ["termination"] }
 darkredis = "0.7"
-dashmap = { version = "4.0.0-rc6", features=["serde"] }
 flexi_logger = { version = "0.15", default-features = false, features = ["colors", "specfile", "ziplogs"] }
 fluent-bundle = "0.12"
 futures-util = { version = "0.3", default-features = false }

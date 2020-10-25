@@ -12,6 +12,9 @@ pub mod gearbot;
 mod guild_config;
 mod handlers;
 pub mod logging;
+mod logpump;
+
+pub use logpump::*;
 
 pub mod cache;
 pub mod reactors;

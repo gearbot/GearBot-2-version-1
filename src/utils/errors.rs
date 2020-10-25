@@ -293,6 +293,12 @@ impl fmt::Display for StartupError {
         }
     }
 }
+
+pub enum LogError {
+    Database(DatabaseError),
+    Twilight,
+}
+
 impl From<twilight_http::Error> for StartupError {
     fn from(e: twilight_http::Error) -> Self {
         StartupError::Twilight(e)
@@ -545,5 +551,11 @@ impl From<EmbedDescriptionError> for MessageError {
 impl From<io::Error> for StartupError {
     fn from(e: io::Error) -> Self {
         StartupError::Io(e)
+    }
+}
+
+impl From<EmbedBuildError> for MessageError {
+    fn from(e: EmbedBuildError) -> Self {
+        MessageError::EmbedBuild(e)
     }
 }

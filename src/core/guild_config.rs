@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 use twilight_model::guild::Permissions;
-use twilight_model::id::{RoleId, UserId};
+use twilight_model::id::{ChannelId, RoleId, UserId};
 use unic_langid::LanguageIdentifier;
 
 use crate::commands::meta::nodes::GearBotPermissions;
+use crate::core::{DataLessLogType, LogFilter, LogType};
 use crate::translation::DEFAULT_LANG;
+use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GuildConfig {
@@ -13,6 +15,7 @@ pub struct GuildConfig {
     pub message_logs: MessageLogs,
     pub language: LanguageIdentifier,
     pub permission_groups: Vec<PermissionGroup>,
+    pub log_channels: HashMap<ChannelId, LogChannelConfig>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -40,15 +43,18 @@ pub enum LogStyle {
     Text,
     Embed,
 }
+#[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
+pub enum LogCategory {
+    TEST,
+}
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct LogChannelConfig {}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub enum LogCategories {}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub enum LogSubCategory {}
+pub struct LogChannelConfig {
+    pub categories: Vec<LogCategory>,
+    pub disabled_keys: Vec<DataLessLogType>,
+    pub style: LogStyle,
+    pub filters: Vec<LogFilter>,
+}
 
 impl Default for GuildConfig {
     fn default() -> Self {
@@ -100,6 +106,7 @@ impl Default for GuildConfig {
                     users: vec![],
                 },
             ],
+            log_channels: HashMap::new(),
         }
     }
 }
