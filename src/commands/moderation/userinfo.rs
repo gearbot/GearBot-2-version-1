@@ -176,9 +176,7 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
 
     builder = builder.description(content)?;
 
-    let args = FluArgs::with_capacity(1)
-        .insert("userid", user.id.to_string())
-        .generate();
+    let args = FluArgs::with_capacity(1).add("userid", user.id.to_string()).generate();
 
     ctx.reply_with_embed(GearBotString::UserinfoHeader, args, builder.build()?)
         .await?;

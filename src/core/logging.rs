@@ -75,7 +75,7 @@ pub fn initialize(http: HttpClient, config: &BotConfig, user: CurrentUser) -> Re
             .rotate(
                 Criterion::Age(Age::Day),
                 Naming::Timestamps,
-                Cleanup::KeepLogAndZipFiles(10, 30),
+                Cleanup::KeepLogAndCompressedFiles(10, 30),
             )
             .add_writer("gearbot_important", gearbot_important)
             .add_writer("gearbot_info", gearbot_info)

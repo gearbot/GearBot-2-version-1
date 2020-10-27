@@ -26,11 +26,11 @@ impl<'a> FluArgs<'a> {
         Self(FluentArgs::with_capacity(cap))
     }
 
-    pub fn insert<P>(mut self, key: &'a str, value: P) -> Self
+    pub fn add<P>(mut self, key: &'a str, value: P) -> Self
     where
         P: Into<FluentValue<'a>>,
     {
-        self.0.insert(key, value.into());
+        self.0.add(key, value.into());
         self
     }
 

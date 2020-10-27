@@ -184,9 +184,7 @@ impl Parser {
 
         //don't execute commands you are not allowed to execute
         if !permissions.contains(node.command_permission) {
-            let args = FluArgs::with_capacity(1)
-                .insert("gearno", Emoji::No.for_chat())
-                .generate();
+            let args = FluArgs::with_capacity(1).add("gearno", Emoji::No.for_chat()).generate();
             let _ = context.reply(GearBotString::MissingPermissions, args).await; //ignore result as there is nothing we can do if this fails
             return Ok(());
         }
@@ -213,7 +211,7 @@ impl Parser {
             };
 
             let args = FluArgs::with_capacity(1)
-                .insert("channel", msg.channel.get_name())
+                .add("channel", msg.channel.get_name())
                 .generate();
 
             let translated = context.translate_with_args(key, &args);

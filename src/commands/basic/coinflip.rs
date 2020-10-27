@@ -30,7 +30,7 @@ pub async fn coinflip(ctx: CommandContext) -> CommandResult {
         GearBotString::CoinflipNo
     };
 
-    let args = FluArgs::with_capacity(1).insert("input", thing_todo).generate();
+    let args = FluArgs::with_capacity(1).add("input", thing_todo).generate();
 
     ctx.reply(key, args).await?;
 

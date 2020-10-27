@@ -60,7 +60,7 @@ pub async fn gen_emoji_page(
     }
     Ok(if page == 0 {
         let header_args = FluArgs::with_capacity(1)
-            .insert("guild_name", guild.name.clone())
+            .add("guild_name", guild.name.clone())
             .generate();
         author_builder = author_builder
             //can not panic since server names are only 100 chars long
@@ -77,10 +77,11 @@ pub async fn gen_emoji_page(
         let gear_yes = Emoji::Yes.for_chat();
 
         let header_args = FluArgs::with_capacity(3)
-            .insert("guild_name", guild.name.clone())
-            .insert("page", page)
-            .insert("pages", pages - 1)
+            .add("guild_name", guild.name.clone())
+            .add("page", page)
+            .add("pages", pages - 1)
             .generate();
+
         //can not panic since server names are only 100 long
         author_builder =
             author_builder.name(ctx.translate_with_args(lang, GearBotString::EmojiPageHeader, &header_args))?;
@@ -99,15 +100,15 @@ pub async fn gen_emoji_page(
         };
 
         let info_arguments = FluArgs::with_capacity(3)
-            .insert("emoji_name", emoji.name.clone())
-            .insert("id", emoji.id.to_string())
-            .insert(
+            .add("emoji_name", emoji.name.clone())
+            .add("id", emoji.id.to_string())
+            .add(
                 "requires_colons",
                 if emoji.requires_colons { gear_yes } else { gear_no },
             )
-            .insert("animated", if emoji.animated { gear_yes } else { gear_no })
-            .insert("managed", if emoji.managed { gear_yes } else { gear_no })
-            .insert("role_requirement", role_info)
+            .add("animated", if emoji.animated { gear_yes } else { gear_no })
+            .add("managed", if emoji.managed { gear_yes } else { gear_no })
+            .add("role_requirement", role_info)
             .generate();
 
         EmbedBuilder::new()

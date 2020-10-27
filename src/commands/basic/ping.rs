@@ -21,8 +21,8 @@ pub async fn ping(ctx: CommandContext) -> CommandResult {
         .as_millis();
 
     let args = FluArgs::with_capacity(2)
-        .insert("rest", rest_time)
-        .insert("latency", ws_time_avg)
+        .add("rest", rest_time)
+        .add("latency", ws_time_avg)
         .generate();
 
     let edited_msg = ctx.translate_with_args(GearBotString::PingPong, &args);
