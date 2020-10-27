@@ -11,6 +11,8 @@ use twilight_http::request::channel::message::create_message::CreateMessageError
 use twilight_http::request::channel::message::update_message::UpdateMessageError;
 use twilight_model::id::{ChannelId, GuildId, UserId};
 
+pub type CommandResult = Result<(), CommandError>;
+
 #[derive(Debug)]
 pub enum StartupError {
     NoConfig,

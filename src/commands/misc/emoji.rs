@@ -1,7 +1,7 @@
 use crate::core::reactors::gen_emoji_page;
 use crate::core::{CommandContext, Reactor};
+use crate::error::CommandResult;
 use crate::utils::Emoji;
-use crate::CommandResult;
 
 pub async fn emoji_list(ctx: CommandContext) -> CommandResult {
     let reactor = Reactor::new_emoji_list();

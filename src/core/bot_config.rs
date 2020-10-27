@@ -4,7 +4,8 @@ use std::fs;
 use serde::Deserialize;
 use twilight_model::id::EmojiId;
 
-use crate::utils::{emoji, matchers, EmojiOverride, StartupError};
+use crate::error::StartupError;
+use crate::utils::{emoji, matchers, EmojiOverride};
 
 #[derive(Deserialize, Debug)]
 pub struct BotConfig {

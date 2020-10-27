@@ -1,6 +1,5 @@
 use crate::core::{CommandContext, GuildConfig};
-use crate::utils::DatabaseError;
-use crate::CommandResult;
+use crate::error::{CommandResult, DatabaseError};
 
 pub async fn get_config(ctx: CommandContext) -> CommandResult {
     let stringified_config = serde_json::to_string(&ctx.get_config()?).map_err(|e| DatabaseError::Deserializing(e))?;

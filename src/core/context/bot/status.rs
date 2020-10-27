@@ -2,7 +2,7 @@ use twilight_model::gateway::payload::UpdateStatus;
 use twilight_model::gateway::presence::{Activity, ActivityType, Status};
 
 use crate::core::BotContext;
-use crate::utils::EventHandlerError;
+use crate::error::EventHandlerError;
 use std::time::{SystemTime, UNIX_EPOCH};
 use twilight_gateway::cluster::ClusterCommandError;
 

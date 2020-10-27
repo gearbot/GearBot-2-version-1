@@ -1,5 +1,5 @@
-use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
+use crate::error::CommandResult;
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils;
 

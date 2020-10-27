@@ -5,8 +5,8 @@ use log::{debug, trace};
 use twilight_gateway::Event;
 
 use crate::core::BotContext;
+use crate::error::EventHandlerError;
 use crate::parser::Parser;
-use crate::utils::EventHandlerError;
 
 pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>) -> Result<(), EventHandlerError> {
     match event {

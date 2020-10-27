@@ -7,7 +7,7 @@ use twilight_model::{
 use crate::translation::GearBotString;
 
 use super::CommandContext;
-use crate::utils::CommandError;
+use crate::error::CommandError;
 
 impl CommandContext {
     pub async fn send_message(

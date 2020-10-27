@@ -1,9 +1,5 @@
-// use twilight_model::channel::{Reaction, ReactionType};
-// use twilight_model::id::GuildId;
-
 use crate::core::{CommandContext, LogType};
-use crate::CommandResult;
-use twilight_model::id::UserId;
+use crate::error::CommandResult;
 
 pub async fn test(mut ctx: CommandContext) -> CommandResult {
     let arg = ctx.parser.get_remaining();

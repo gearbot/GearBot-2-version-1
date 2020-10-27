@@ -12,8 +12,9 @@ use twilight_http::Client as HttpClient;
 use twilight_model::user::CurrentUser;
 
 use crate::core::BotConfig;
+use crate::error::StartupError;
 use crate::gearbot_error;
-use crate::utils::{Emoji, StartupError};
+use crate::utils::Emoji;
 use std::sync::RwLock;
 use std::time::Duration;
 

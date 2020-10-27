@@ -1,6 +1,6 @@
-use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
-use crate::utils::{matchers, ParseError};
+use crate::error::{CommandResult, ParseError};
+use crate::utils::matchers;
 
 pub async fn uid(mut ctx: CommandContext) -> CommandResult {
     let user_id = {

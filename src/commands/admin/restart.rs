@@ -1,6 +1,6 @@
 use crate::core::CommandContext;
+use crate::error::CommandResult;
 use crate::gearbot_important;
-use crate::CommandResult;
 
 pub async fn restart(ctx: CommandContext) -> CommandResult {
     ctx.bot_context

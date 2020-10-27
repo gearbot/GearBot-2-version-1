@@ -7,8 +7,9 @@ use twilight_model::channel::Reaction;
 use crate::core::cache::{CachedGuild, CachedMember};
 use crate::core::reactors::{get_emoji, scroll_page};
 use crate::core::{BotContext, GuildConfig};
+use crate::error::{MessageError, ReactorError};
 use crate::translation::{FluArgs, GearBotString};
-use crate::utils::{Emoji, MessageError, ReactorError};
+use crate::utils::Emoji;
 use twilight_embed_builder::{EmbedAuthorBuilder, EmbedBuilder, ImageSource};
 use twilight_model::channel::embed::Embed;
 

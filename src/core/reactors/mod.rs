@@ -6,7 +6,8 @@ use twilight_model::id::MessageId;
 
 use crate::core::reactors::emoji_list_reactor::EmojiListReactor;
 use crate::core::BotContext;
-use crate::utils::{DatabaseError, Emoji, ReactorError};
+use crate::error::{DatabaseError, ReactorError};
+use crate::utils::Emoji;
 
 mod emoji_list_reactor;
 mod help_reactor;

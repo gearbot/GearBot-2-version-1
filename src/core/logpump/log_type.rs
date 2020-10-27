@@ -1,5 +1,5 @@
 use crate::core::guild_config::LogCategory;
-use crate::utils::MessageError;
+use crate::error::MessageError;
 use serde::{Deserialize, Serialize};
 use twilight_embed_builder::{EmbedBuildError, EmbedBuilder};
 use twilight_model::channel::embed::Embed;

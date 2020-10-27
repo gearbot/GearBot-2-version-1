@@ -3,8 +3,8 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::core::BotContext;
 use crate::database::redis::api_structs::{ApiRequest, Reply, Request};
+use crate::error::{ApiCommunicaionError, DatabaseError};
 use crate::gearbot_error;
-use crate::utils::{ApiCommunicaionError, DatabaseError};
 use futures_util::StreamExt;
 use std::sync::Arc;
 use team_info::get_team_info;

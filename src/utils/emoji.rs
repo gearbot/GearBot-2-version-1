@@ -5,7 +5,7 @@ use once_cell::sync::OnceCell;
 use twilight_model::id::EmojiId;
 
 use crate::define_emoji;
-use crate::utils::EmojiError;
+use crate::error::EmojiError;
 use twilight_http::request::channel::reaction::RequestReactionType;
 use twilight_model::channel::ReactionType;
 

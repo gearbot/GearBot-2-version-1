@@ -23,8 +23,8 @@ use crate::core::context::bot::status as bot_status;
 use crate::core::handlers::{commands, general, modlog};
 use crate::core::{logpump, BotConfig, BotContext, BotStats, ColdRebootData};
 use crate::database::Redis;
+use crate::error::{EventHandlerError, StartupError};
 use crate::translation::Translations;
-use crate::utils::{EventHandlerError, StartupError};
 use crate::{gearbot_error, gearbot_important, gearbot_info, SchemeInfo};
 use tokio::sync::mpsc::unbounded_channel;
 

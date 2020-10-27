@@ -21,7 +21,7 @@ pub use user::CachedUser;
 use crate::core::context::bot::ShardState;
 use crate::core::{BotContext, BotStats};
 use crate::database::Redis;
-use crate::utils::{ColdResumeError, DatabaseError};
+use crate::error::{ColdResumeError, DatabaseError};
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
 
 pub struct Cache {

@@ -5,7 +5,7 @@ use crate::core::{BotContext, GuildConfig};
 use crate::database::{self, configs as dbconfig, structures::UserMessage};
 
 use crate::crypto::{self, EncryptionKey};
-use crate::utils::DatabaseError;
+use crate::error::DatabaseError;
 use std::sync::Arc;
 
 impl BotContext {

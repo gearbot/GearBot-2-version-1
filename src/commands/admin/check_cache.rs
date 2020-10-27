@@ -6,7 +6,7 @@ use twilight_embed_builder::{EmbedBuilder, EmbedFieldBuilder};
 use twilight_model::id::{GuildId, UserId};
 
 use crate::core::CommandContext;
-use crate::CommandResult;
+use crate::error::CommandResult;
 
 pub async fn check_cache(ctx: CommandContext) -> CommandResult {
     let mut counts: HashMap<UserId, Vec<GuildId>> = HashMap::new();

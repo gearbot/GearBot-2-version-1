@@ -13,11 +13,11 @@ use crate::commands::{
 };
 use crate::core::cache::{CachedGuild, CachedMember, CachedUser};
 use crate::core::{BotContext, CommandContext, CommandMessage, GuildConfig};
+use crate::error::{CommandError, EventHandlerError, ParseError};
 use crate::gearbot_error;
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::matchers::split_name;
-use crate::utils::{matchers, EventHandlerError, ParseError};
-use crate::utils::{CommandError, Emoji};
+use crate::utils::{matchers, Emoji};
 
 lazy_static! {
     static ref BLANK_CONFIG: Arc<GuildConfig> = Arc::new(GuildConfig::default());

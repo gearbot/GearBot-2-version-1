@@ -1,10 +1,9 @@
 use twilight_model::id::MessageId;
 
 use crate::core::CommandContext;
+use crate::error::{CommandResult, ParseError};
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils;
-use crate::utils::ParseError;
-use crate::CommandResult;
 
 pub async fn quote(mut ctx: CommandContext) -> CommandResult {
     let msg_id = ctx

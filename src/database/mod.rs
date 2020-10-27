@@ -13,7 +13,7 @@ use twilight_model::id::{ChannelId, GuildId, MessageId, UserId};
 use log::info;
 
 use crate::crypto::{self, EncryptionKey};
-use crate::utils::DatabaseError;
+use crate::error::DatabaseError;
 
 pub async fn insert_message(
     pool: &sqlx::PgPool,

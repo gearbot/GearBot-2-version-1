@@ -4,10 +4,10 @@ use std::time::Duration;
 use chrono::Utc;
 use twilight_embed_builder::{EmbedBuilder, EmbedFieldBuilder};
 
-use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
+use crate::error::{CommandResult, OtherFailure};
 use crate::translation::{FluArgs, GearBotString};
-use crate::utils::{age, Emoji, OtherFailure};
+use crate::utils::{self, Emoji};
 
 const ABOUT_EMBED_COLOR: u32 = 0x00_cea2;
 
@@ -45,7 +45,7 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
         .add("gearGold", Emoji::GearGold.for_chat())
         .add("gearIron", Emoji::GearIron.for_chat())
         .add("cluster_id", ctx.bot_context.scheme_info.cluster_id)
-        .add("uptime", age(ctx.bot_context.start_time, Utc::now(), 4))
+        .add("uptime", utils::age(ctx.bot_context.start_time, Utc::now(), 4))
         .add("start_time", ctx.bot_context.start_time.to_rfc2822())
         .add("version", stats.version)
         .add("shards", ctx.bot_context.scheme_info.total_shards)

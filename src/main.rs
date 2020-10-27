@@ -15,13 +15,14 @@ use translation::load_translations;
 
 use crate::core::gearbot;
 use crate::core::{logging, BotConfig};
-use crate::utils::{CommandError, StartupError};
+use crate::error::StartupError;
 use std::env;
 
 mod commands;
 mod core;
 mod crypto;
 mod database;
+mod error;
 mod parser;
 
 mod translation;
@@ -29,8 +30,6 @@ mod utils;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const GIT_VERSION: &str = git_version!();
-
-pub type CommandResult = Result<(), CommandError>;
 
 #[derive(Debug, Copy, Clone)]
 pub struct SchemeInfo {

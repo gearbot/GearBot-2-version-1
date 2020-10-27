@@ -1,5 +1,5 @@
 use crate::core::CommandContext;
-use crate::CommandResult;
+use crate::error::CommandResult;
 
 pub async fn get_perms(mut ctx: CommandContext) -> CommandResult {
     let member = ctx.parser.get_member_or(ctx.message.get_author_as_member()?)?;

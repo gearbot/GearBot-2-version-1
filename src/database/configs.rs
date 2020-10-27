@@ -2,7 +2,7 @@ use log::info;
 
 use crate::core::{BotContext, GuildConfig};
 use crate::crypto::{self, EncryptionKey};
-use crate::utils::DatabaseError;
+use crate::error::DatabaseError;
 
 pub async fn get_guild_config(ctx: &BotContext, guild_id: u64) -> Result<Option<GuildConfig>, DatabaseError> {
     let row: Option<(serde_json::Value,)> = sqlx::query_as("SELECT config from guildconfig where id=$1")

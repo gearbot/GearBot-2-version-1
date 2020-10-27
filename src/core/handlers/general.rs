@@ -5,7 +5,7 @@ use twilight_gateway::Event;
 
 use crate::core::reactors::reactor_controller;
 use crate::core::BotContext;
-use crate::utils::EventHandlerError;
+use crate::error::EventHandlerError;
 use crate::{gearbot_info, gearbot_warn};
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), EventHandlerError> {

@@ -4,10 +4,9 @@ use twilight_model::guild::Permissions;
 use twilight_model::user::UserFlags;
 
 use crate::core::CommandContext;
+use crate::error::{CommandError, CommandResult};
 use crate::translation::{FluArgs, GearBotString};
-use crate::utils::CommandError;
-use crate::utils::Emoji;
-use crate::{utils, CommandResult};
+use crate::utils::{self, Emoji};
 
 const USER_INFO_COLOR: u32 = 0x00_cea2;
 

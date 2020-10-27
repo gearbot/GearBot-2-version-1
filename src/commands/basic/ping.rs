@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
-use crate::commands::meta::nodes::CommandResult;
 use crate::core::CommandContext;
+use crate::error::CommandResult;
 use crate::translation::{FluArgs, GearBotString};
 
 pub async fn ping(ctx: CommandContext) -> CommandResult {

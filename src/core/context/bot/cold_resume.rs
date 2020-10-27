@@ -4,8 +4,8 @@ use log::info;
 use twilight_model::gateway::presence::{ActivityType, Status};
 
 use crate::core::{BotContext, ColdRebootData};
+use crate::error::ColdResumeError;
 use crate::gearbot_important;
-use crate::utils::ColdResumeError;
 
 impl BotContext {
     pub async fn initiate_cold_resume(&self) -> Result<(), ColdResumeError> {

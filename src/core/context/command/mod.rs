@@ -11,9 +11,9 @@ use twilight_model::{id::MessageId, user::CurrentUser};
 use crate::commands::meta::nodes::GearBotPermissions;
 use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};
 use crate::core::{BotContext, GuildConfig, LogData, LogType};
+use crate::error::{CommandError, OtherFailure};
 use crate::parser::Parser;
 use crate::translation::GearBotString;
-use crate::utils::{CommandError, OtherFailure};
 use twilight_model::id::{ChannelId, UserId};
 
 mod messaging;
