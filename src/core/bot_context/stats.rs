@@ -3,12 +3,10 @@ use std::sync::atomic::AtomicU64;
 use chrono::{DateTime, Utc};
 use twilight_model::channel::Message;
 
-use git_version::git_version;
-
-use crate::core::BotContext;
+use super::{BotContext, ShardState};
+use crate::GIT_VERSION;
 use prometheus::{IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry};
 
-use crate::core::context::bot::ShardState;
 use log::info;
 use std::collections::HashMap;
 use twilight_model::gateway::event::Event;
@@ -125,7 +123,7 @@ impl BotStats {
         BotStats {
             registry,
             start_time: Utc::now(),
-            version: git_version!(),
+            version: GIT_VERSION,
             event_counts: EventStats {
                 ban_add: event_counter.get_metric_with_label_values(&["BanAdd"]).unwrap(),
                 ban_remove: event_counter.get_metric_with_label_values(&["BanRemove"]).unwrap(),

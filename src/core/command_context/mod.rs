@@ -8,11 +8,12 @@ use twilight_model::channel::message::{MessageFlags, MessageType};
 use twilight_model::channel::Attachment;
 use twilight_model::{id::MessageId, user::CurrentUser};
 
+use super::bot_context::BotContext;
+use super::parser::Parser;
 use crate::commands::meta::nodes::GearBotPermissions;
 use crate::core::cache::{CachedChannel, CachedGuild, CachedMember, CachedUser};
-use crate::core::{BotContext, GuildConfig, LogData, LogType};
+use crate::core::{GuildConfig, LogData, LogType};
 use crate::error::{CommandError, OtherFailure};
-use crate::parser::Parser;
 use crate::translation::GearBotString;
 use twilight_model::id::{ChannelId, UserId};
 

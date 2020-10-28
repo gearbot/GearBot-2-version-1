@@ -7,10 +7,9 @@ pub use log_filter::LogFilter;
 pub use log_type::DataLessLogType;
 pub use log_type::LogType;
 
+use crate::core::bot_context::BotContext;
 use crate::core::guild_config::LogStyle;
-use crate::core::BotContext;
 use crate::gearbot_error;
-use futures_util::SinkExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;

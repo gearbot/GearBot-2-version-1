@@ -12,6 +12,7 @@ mod data_access;
 mod logpump;
 mod permissions;
 mod stats;
+
 pub(crate) mod status;
 
 pub use stats::BotStats;

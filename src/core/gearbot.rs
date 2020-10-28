@@ -18,10 +18,10 @@ use twilight_model::{
     user::CurrentUser,
 };
 
+use crate::core::bot_context::{status as bot_status, BotContext, BotStats};
 use crate::core::cache::Cache;
-use crate::core::context::bot::status as bot_status;
 use crate::core::handlers::{commands, general, modlog};
-use crate::core::{logpump, BotConfig, BotContext, BotStats, ColdRebootData};
+use crate::core::{logpump, BotConfig, ColdRebootData};
 use crate::database::DataStorage;
 use crate::error::{EventHandlerError, StartupError};
 use crate::translation::Translations;

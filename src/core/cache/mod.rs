@@ -18,8 +18,7 @@ pub use member::CachedMember;
 pub use role::CachedRole;
 pub use user::CachedUser;
 
-use crate::core::context::bot::ShardState;
-use crate::core::{BotContext, BotStats};
+use super::bot_context::{BotContext, BotStats, ShardState};
 use crate::database::Redis;
 use crate::error::{ColdResumeError, DatabaseError};
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};

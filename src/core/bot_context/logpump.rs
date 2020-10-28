@@ -1,4 +1,4 @@
-use crate::core::BotContext;
+use super::BotContext;
 
 impl BotContext {
     // pub fn log(&self, guild_id: GuildId, log: LogType) -> Result<(), Error> {

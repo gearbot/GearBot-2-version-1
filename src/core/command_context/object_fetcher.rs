@@ -6,11 +6,10 @@ use twilight_model::{
     id::{ChannelId, MessageId, RoleId, UserId},
 };
 
+use super::CommandContext;
 use crate::core::cache::CachedChannel;
 use crate::core::cache::{CachedMember, CachedRole, CachedUser};
 use crate::error::{CommandError, OtherFailure, ParseError};
-
-use super::CommandContext;
 
 impl CommandContext {
     pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, CommandError> {

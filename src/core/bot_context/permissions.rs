@@ -3,11 +3,11 @@ use std::sync::Arc;
 use twilight_model::guild::Permissions;
 use twilight_model::id::UserId;
 
+use super::BotContext;
 use crate::commands::meta::nodes::{CommandNode, GearBotPermissions};
 use crate::commands::ROOT_NODE;
 use crate::core::cache::{CachedGuild, CachedMember};
-use crate::core::guild_config::PermissionGroup;
-use crate::core::{BotContext, GuildConfig};
+use crate::core::guild_config::{GuildConfig, PermissionGroup};
 
 impl BotContext {
     pub fn get_guild_permissions_for(&self, member: &Arc<CachedMember>, guild: &Arc<CachedGuild>) -> Permissions {

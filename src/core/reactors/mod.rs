@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use twilight_model::channel::Reaction;
 use twilight_model::id::MessageId;
 
+use crate::core::bot_context::BotContext;
 use crate::core::reactors::emoji_list_reactor::EmojiListReactor;
-use crate::core::BotContext;
 use crate::error::{DatabaseError, ReactorError};
 use crate::utils::Emoji;
 

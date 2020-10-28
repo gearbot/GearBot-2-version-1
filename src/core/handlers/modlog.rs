@@ -4,7 +4,7 @@ use log::debug;
 use twilight_gateway::Event;
 use twilight_model::gateway::payload::RequestGuildMembers;
 
-use crate::core::BotContext;
+use crate::core::bot_context::BotContext;
 use crate::error::EventHandlerError;
 
 pub async fn handle_event(shard_id: u64, event: &Event, ctx: Arc<BotContext>) -> Result<(), EventHandlerError> {

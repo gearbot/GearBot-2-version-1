@@ -1,10 +1,10 @@
+use twilight_gateway::cluster::ClusterCommandError;
 use twilight_model::gateway::payload::UpdateStatus;
 use twilight_model::gateway::presence::{Activity, ActivityType, Status};
 
-use crate::core::BotContext;
+use super::BotContext;
 use crate::error::EventHandlerError;
 use std::time::{SystemTime, UNIX_EPOCH};
-use twilight_gateway::cluster::ClusterCommandError;
 
 impl BotContext {
     pub async fn set_cluster_activity(

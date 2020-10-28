@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use log::info;
 use twilight_model::gateway::presence::{ActivityType, Status};
 
-use crate::core::{BotContext, ColdRebootData};
+use super::BotContext;
+use crate::core::ColdRebootData;
 use crate::error::ColdResumeError;
 use crate::gearbot_important;
 

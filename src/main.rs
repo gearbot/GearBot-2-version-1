@@ -23,7 +23,6 @@ mod core;
 mod crypto;
 mod database;
 mod error;
-mod parser;
 
 mod translation;
 mod utils;
