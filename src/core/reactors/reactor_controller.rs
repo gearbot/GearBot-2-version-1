@@ -8,7 +8,8 @@ use crate::error::ReactorError;
 pub async fn process_reaction(bot_context: &Arc<BotContext>, reaction: &Reaction) -> Result<(), ReactorError> {
     if reaction.user_id != bot_context.bot_user.id {
         if let Some(reactor) = bot_context
-            .redis_cache
+            .datastore
+            .cache_pool
             .get::<Reactor>(&format!("reactor:{}", reaction.message_id))
             .await?
         {

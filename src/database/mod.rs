@@ -12,90 +12,165 @@ use twilight_model::id::{ChannelId, GuildId, MessageId, UserId};
 
 use log::info;
 
-use crate::crypto::{self, EncryptionKey};
-use crate::error::DatabaseError;
+use crate::error::{DatabaseError, StartupError};
+use crate::BotConfig;
+use crate::{
+    crypto::{self, EncryptionKey},
+    gearbot_error, gearbot_info,
+};
 
-pub async fn insert_message(
-    pool: &sqlx::PgPool,
-    msg: &Message,
-    guild_key: &EncryptionKey,
-) -> Result<(), DatabaseError> {
-    let start = std::time::Instant::now();
-
-    let ciphertext = {
-        let plaintext = msg.content.as_bytes();
-
-        crypto::encrypt_bytes(plaintext, &guild_key, msg.id.0)
-    };
-
-    info!("It took {}us to encrypt the user message!", start.elapsed().as_micros());
-
-    sqlx::query(
-        "INSERT INTO message (id, encrypted_content, author_id, channel_id, guild_id, kind, pinned)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)",
-    )
-    .bind(msg.id.0 as i64)
-    .bind(ciphertext)
-    .bind(msg.author.id.0 as i64)
-    .bind(msg.channel_id.0 as i64)
-    .bind(msg.guild_id.unwrap().0 as i64)
-    .bind(msg.kind.clone() as i16)
-    .bind(msg.pinned)
-    .execute(pool)
-    .await?;
-
-    Ok(())
+/// An abstraction over the persistent backing storage of the Bot (SQL) and the Redis cache that lives inbetween.
+///
+/// All database access should go through here.
+pub struct DataStorage {
+    persistent_pool: sqlx::PgPool,
+    pub cache_pool: Redis,
 }
 
-pub async fn insert_attachment(
-    pool: &sqlx::PgPool,
-    message_id: MessageId,
-    attachment: &Attachment,
-) -> Result<(), DatabaseError> {
-    sqlx::query(
-        "INSERT INTO attachment (id, name, image, message_id)
-        VALUES ($1, $2, $3, $4)",
-    )
-    .bind(attachment.id.0 as i64)
-    .bind(&attachment.filename)
-    .bind(attachment.width.is_some())
-    .bind(message_id.0 as i64)
-    .execute(pool)
-    .await?;
+impl DataStorage {
+    /// Initalizes the storage subsystem of GearBot.
+    ///
+    /// Creates a connection pool with the SQL server and the Redis
+    /// in-memory cache.
+    ///
+    /// While connecting to the SQL server, any required migrations will be ran
+    /// before returning.
+    pub async fn initalize(config: &BotConfig) -> Result<Self, StartupError> {
+        let postgres_pool = match sqlx::Pool::connect(&config.database.postgres).await {
+            Ok(pool) => pool,
+            Err(e) => {
+                gearbot_error!("Failed to connect to the Postgres server: {}", e);
+                return Err(StartupError::Sqlx(e));
+            }
+        };
 
-    Ok(())
-}
+        info!("Connected to Postgres!");
 
-pub async fn get_full_message(
-    pool: &sqlx::PgPool,
-    message_id: MessageId,
-    guild_key: &EncryptionKey,
-) -> Result<Option<UserMessage>, DatabaseError> {
-    let stored_message: Option<StoredUserMessage> = sqlx::query_as("SELECT * from message where id=$1")
-        .bind(message_id.0 as i64)
-        .fetch_optional(pool)
+        info!("Handling database migrations...");
+        if let Err(e) = sqlx::migrate!("./migrations").run(&postgres_pool).await {
+            gearbot_error!("Failed to run SQL migrations: {}", e);
+            return Err(StartupError::Sqlx(e.into()));
+        }
+
+        info!("Finished migrations!");
+
+        let redis_pool = match Redis::new(&config.database.redis).await {
+            Ok(pool) => pool,
+            Err(e) => {
+                gearbot_error!("Failed to connect to the Redis cache: {}", e);
+                return Err(StartupError::DarkRedis(e));
+            }
+        };
+
+        info!("Connected to Redis");
+
+        gearbot_info!("Database connections established");
+
+        Ok(Self {
+            persistent_pool: postgres_pool,
+            cache_pool: redis_pool,
+        })
+    }
+
+    pub async fn insert_message(
+        &self,
+        message: &Message,
+        guild_id: GuildId,
+        main_ek: &EncryptionKey,
+    ) -> Result<(), DatabaseError> {
+        let start = std::time::Instant::now();
+
+        let ciphertext = {
+            let plaintext = message.content.as_bytes();
+
+            let guild_key = self.get_guild_encryption_key(guild_id, main_ek).await?;
+            crypto::encrypt_bytes(plaintext, &guild_key, message.id.0)
+        };
+
+        info!("It took {}us to encrypt the user message!", start.elapsed().as_micros());
+
+        sqlx::query(
+            "INSERT INTO message (id, encrypted_content, author_id, channel_id, guild_id, kind, pinned)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        )
+        .bind(message.id.0 as i64)
+        .bind(ciphertext)
+        .bind(message.author.id.0 as i64)
+        .bind(message.channel_id.0 as i64)
+        .bind(message.guild_id.unwrap().0 as i64)
+        .bind(message.kind.clone() as i16)
+        .bind(message.pinned)
+        .execute(&self.persistent_pool)
         .await?;
 
-    let user_msg = match stored_message {
-        Some(sm) => {
-            let start = std::time::Instant::now();
+        Ok(())
+    }
 
-            let guild_id = sm.guild_id as u64;
-            let decrypted_content = crypto::decrypt_bytes(&sm.encrypted_content, &guild_key, message_id.0);
+    pub async fn insert_attachment(&self, message_id: MessageId, attachment: &Attachment) -> Result<(), DatabaseError> {
+        sqlx::query(
+            "INSERT INTO attachment (id, name, image, message_id)
+            VALUES ($1, $2, $3, $4)",
+        )
+        .bind(attachment.id.0 as i64)
+        .bind(&attachment.filename)
+        .bind(attachment.width.is_some())
+        .bind(message_id.0 as i64)
+        .execute(&self.persistent_pool)
+        .await?;
 
-            info!("It took {}us to decrypt a user message!", start.elapsed().as_micros());
+        Ok(())
+    }
 
-            Some(UserMessage {
-                content: String::from_utf8(decrypted_content).unwrap(),
-                author: UserId(sm.author_id as u64),
-                channel: ChannelId(sm.channel_id as u64),
-                guild: GuildId(guild_id),
-                kind: sm.kind(),
-                pinned: sm.pinned,
-            })
-        }
-        None => None,
-    };
+    pub async fn get_full_message(
+        &self,
+        message_id: MessageId,
+        guild_id: GuildId,
+        main_ek: &EncryptionKey,
+    ) -> Result<Option<UserMessage>, DatabaseError> {
+        let stored_message: Option<StoredUserMessage> = sqlx::query_as("SELECT * from message where id=$1")
+            .bind(message_id.0 as i64)
+            .fetch_optional(&self.persistent_pool)
+            .await?;
 
-    Ok(user_msg)
+        let user_msg = match stored_message {
+            Some(sm) => {
+                let start = std::time::Instant::now();
+
+                let guild_key = self.get_guild_encryption_key(guild_id, main_ek).await?;
+                let decrypted_content = crypto::decrypt_bytes(&sm.encrypted_content, &guild_key, message_id.0);
+
+                info!("It took {}us to decrypt a user message!", start.elapsed().as_micros());
+
+                Some(UserMessage {
+                    content: String::from_utf8(decrypted_content).unwrap(),
+                    author: UserId(sm.author_id as u64),
+                    channel: ChannelId(sm.channel_id as u64),
+                    guild: GuildId(sm.guild_id as u64),
+                    kind: sm.kind(),
+                    pinned: sm.pinned,
+                })
+            }
+            None => None,
+        };
+
+        Ok(user_msg)
+    }
+
+    async fn get_guild_encryption_key(
+        &self,
+        guild_id: GuildId,
+        main_ek: &EncryptionKey,
+    ) -> Result<EncryptionKey, DatabaseError> {
+        let ek_bytes: (Vec<u8>,) = sqlx::query_as("SELECT encryption_key from guildconfig where id=$1")
+            .bind(guild_id.0 as i64)
+            .fetch_one(&self.persistent_pool)
+            .await?;
+
+        let guild_key = {
+            let decrypted_gk_bytes = crypto::decrypt_bytes(&ek_bytes.0, main_ek, guild_id.0);
+            EncryptionKey::clone_from_slice(&decrypted_gk_bytes)
+        };
+
+        Ok(guild_key)
+    }
 }

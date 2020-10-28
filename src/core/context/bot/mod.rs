@@ -8,9 +8,8 @@ use twilight_model::{
     user::CurrentUser,
 };
 
-mod cache;
 mod cold_resume;
-mod database;
+mod data_access;
 mod logpump;
 mod permissions;
 mod stats;
@@ -23,7 +22,7 @@ use crate::core::logpump::LogData;
 use crate::core::GuildConfig;
 use crate::crypto::EncryptionKey;
 use crate::database::api_structs::{RawTeamMembers, TeamInfo, TeamMember};
-use crate::database::Redis;
+use crate::database::DataStorage;
 use crate::translation::{GearBotString, Translations};
 use crate::SchemeInfo;
 use fluent_bundle::FluentArgs;
@@ -55,10 +54,9 @@ pub struct BotContext {
     pub status_text: RwLock<String>,
     pub bot_user: CurrentUser,
     configs: RwLock<HashMap<GuildId, Arc<GuildConfig>>>,
-    pub backing_database: sqlx::PgPool,
+    pub datastore: DataStorage,
     pub translations: Translations,
     __main_encryption_key: Option<Vec<u8>>,
-    pub redis_cache: Redis,
     pub scheme_info: SchemeInfo,
     pub shard_states: RwLock<HashMap<u64, ShardState>>,
     pub start_time: DateTime<Utc>,
@@ -71,7 +69,7 @@ impl BotContext {
     pub fn new(
         bot_core: (Cache, Cluster, SchemeInfo),
         http_info: (HttpClient, CurrentUser),
-        databases: (sqlx::PgPool, Redis),
+        datastore: DataStorage,
         translations: Translations,
         config_ops: (Option<Vec<u8>>, Vec<u64>),
         stats: Arc<BotStats>,
@@ -107,10 +105,9 @@ impl BotContext {
             status_text: RwLock::new(String::from("the commands turn")),
             bot_user: http_info.1,
             configs: RwLock::new(HashMap::new()),
-            backing_database: databases.0,
+            datastore,
             translations,
             __main_encryption_key: config_ops.0,
-            redis_cache: databases.1,
             scheme_info,
             shard_states: RwLock::new(shard_states),
             start_time: Utc::now(),

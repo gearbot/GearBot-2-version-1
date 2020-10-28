@@ -66,7 +66,8 @@ impl Reactor {
     }
 
     pub async fn save(&self, ctx: &Arc<BotContext>, message_id: MessageId) -> Result<(), DatabaseError> {
-        ctx.redis_cache
+        ctx.datastore
+            .cache_pool
             .set(&format!("reactor:{}", message_id), self, Some(self.get_expiry()))
             .await
     }

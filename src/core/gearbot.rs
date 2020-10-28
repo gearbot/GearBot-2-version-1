@@ -22,7 +22,7 @@ use crate::core::cache::Cache;
 use crate::core::context::bot::status as bot_status;
 use crate::core::handlers::{commands, general, modlog};
 use crate::core::{logpump, BotConfig, BotContext, BotStats, ColdRebootData};
-use crate::database::Redis;
+use crate::database::DataStorage;
 use crate::error::{EventHandlerError, StartupError};
 use crate::translation::Translations;
 use crate::{gearbot_error, gearbot_important, gearbot_info, SchemeInfo};
@@ -33,8 +33,7 @@ pub async fn run(
     config: BotConfig,
     http: HttpClient,
     bot_user: CurrentUser,
-    postgres_pool: sqlx::PgPool,
-    redis_pool: Redis,
+    datastore: DataStorage,
     translations: Translations,
 ) -> Result<(), StartupError> {
     let sharding_scheme = ShardScheme::try_from((
@@ -74,14 +73,13 @@ pub async fn run(
 
     // Check for resume data, pass to builder if present
     let key = format!("cb_cluster_data_{}", scheme_info.cluster_id);
-    match redis_pool.get::<ColdRebootData>(&key).await {
+    let cache_pool = &datastore.cache_pool;
+    match cache_pool.get::<ColdRebootData>(&key).await {
         Ok(result) => {
             if let Some(cold_cache) = result {
                 debug!("ColdRebootData: {:?}", cold_cache);
 
-                redis_pool
-                    .delete(&format!("cb_cluster_data_{}", scheme_info.cluster_id))
-                    .await?;
+                cache_pool.delete(&key).await?;
 
                 if (cold_cache.total_shards == scheme_info.total_shards)
                     && (cold_cache.shard_count == scheme_info.shards_per_cluster)
@@ -102,7 +100,7 @@ pub async fn run(
 
                     let start = Instant::now();
                     let result = cache
-                        .restore_cold_resume(&redis_pool, cold_cache.guild_chunks, cold_cache.user_chunks)
+                        .restore_cold_resume(cache_pool, cold_cache.guild_chunks, cold_cache.user_chunks)
                         .await;
 
                     if let Err(e) = result {
@@ -127,7 +125,7 @@ pub async fn run(
     let context = Arc::new(BotContext::new(
         (cache, cluster, scheme_info),
         (http, bot_user),
-        (postgres_pool, redis_pool),
+        datastore,
         translations,
         (config.__main_encryption_key, config.global_admins),
         stats,
@@ -140,7 +138,7 @@ pub async fn run(
     let c = context.clone();
     log::debug!("spawning api link");
     tokio::spawn(async move {
-        c.redis_cache.establish_api_link(c.clone()).await;
+        c.datastore.cache_pool.establish_api_link(c.clone()).await;
     });
 
     let shutdown_ctx = context.clone();

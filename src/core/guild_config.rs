@@ -4,7 +4,7 @@ use twilight_model::id::{ChannelId, RoleId, UserId};
 use unic_langid::LanguageIdentifier;
 
 use crate::commands::meta::nodes::GearBotPermissions;
-use crate::core::{DataLessLogType, LogFilter, LogType};
+use crate::core::{DataLessLogType, LogFilter};
 use crate::translation::DEFAULT_LANG;
 use std::collections::HashMap;
 

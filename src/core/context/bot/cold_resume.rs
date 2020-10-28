@@ -26,8 +26,10 @@ impl BotContext {
 
         info!("Resume data acquired");
 
+        let redis_cache = &self.datastore.cache_pool;
+
         let resume_data = self.cluster.down_resumable();
-        let (guild_chunks, user_chunks) = self.cache.prepare_cold_resume(&self.redis_cache).await;
+        let (guild_chunks, user_chunks) = self.cache.prepare_cold_resume(&redis_cache).await;
 
         // prepare resume data
         let mut map = HashMap::with_capacity(resume_data.len());
@@ -43,7 +45,7 @@ impl BotContext {
             user_chunks,
         };
 
-        self.redis_cache
+        redis_cache
             .set(
                 &format!("cb_cluster_data_{}", self.scheme_info.cluster_id),
                 &data,

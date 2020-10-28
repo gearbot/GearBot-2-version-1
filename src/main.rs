@@ -69,13 +69,13 @@ async fn real_main() -> Result<(), StartupError> {
 
     let http = builder.build()?;
     // Validate token and figure out who we are
-    let user = http.current_user().await?;
+    let bot_user = http.current_user().await?;
     info!(
         "Token validated, connecting to discord as {}#{}",
-        user.name, user.discriminator
+        bot_user.name, bot_user.discriminator
     );
 
-    if let Err(e) = logging::initialize(http.clone(), &config, user.clone()) {
+    if let Err(e) = logging::initialize(http.clone(), &config, bot_user.clone()) {
         gearbot_error!("{}", e);
         return Err(e);
     }
@@ -85,30 +85,7 @@ async fn real_main() -> Result<(), StartupError> {
     let translations = load_translations();
     gearbot_info!("Loaded translations!");
 
-    //connect to the database
-    let postgres_pool = sqlx::Pool::connect(&config.database.postgres).await?;
-
-    info!("Connected to postgres!");
-
-    info!("Handling database migrations...");
-    sqlx::migrate!("./migrations")
-        .run(&postgres_pool)
-        .await
-        .expect("Failed to run database migrations!");
-
-    info!("Finished migrations!");
-
-    let redis_pool = match database::Redis::new(&config.database.redis).await {
-        Ok(pool) => pool,
-        Err(e) => {
-            gearbot_error!("Failed to connect to the redis database! {}", e);
-            return Err(StartupError::DarkRedis(e));
-        }
-    };
-
-    info!("Connected to redis!");
-
-    gearbot_info!("Database connections established");
+    let datastore = database::DataStorage::initalize(&config).await?;
 
     {
         info!("Populating command list");
@@ -134,7 +111,7 @@ async fn real_main() -> Result<(), StartupError> {
         total_shards,
     };
 
-    if let Err(e) = gearbot::run(scheme_info, config, http, user, postgres_pool, redis_pool, translations).await {
+    if let Err(e) = gearbot::run(scheme_info, config, http, bot_user, datastore, translations).await {
         gearbot_error!("Failed to start the bot: {}", e)
     }
 
