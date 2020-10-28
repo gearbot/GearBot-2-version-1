@@ -7,7 +7,8 @@ use twilight_model::{
 };
 
 use super::BotContext;
-use crate::core::{cache::CachedUser, GuildConfig};
+use crate::cache::CachedUser;
+use crate::core::GuildConfig;
 use crate::database::structures::UserMessage;
 use crate::error::{DatabaseError, ParseError};
 

@@ -4,9 +4,7 @@ use serde::{Deserialize, Serialize};
 use twilight_model::guild::Member;
 use twilight_model::id::{RoleId, UserId};
 
-use crate::core::cache::{Cache, CachedUser};
-
-use super::is_default;
+use super::{is_default, Cache, CachedUser};
 use twilight_model::gateway::payload::MemberUpdate;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

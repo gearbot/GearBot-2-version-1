@@ -3,8 +3,7 @@ use twilight_model::channel::permission_overwrite::PermissionOverwrite;
 use twilight_model::channel::{ChannelType, GuildChannel, PrivateChannel};
 use twilight_model::id::{ChannelId, GuildId};
 
-use super::is_default;
-use crate::core::cache::{Cache, CachedUser};
+use super::{is_default, Cache, CachedUser};
 use std::sync::Arc;
 
 const NO_PERMISSIONS: &[PermissionOverwrite] = &[];

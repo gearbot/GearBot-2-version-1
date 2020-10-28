@@ -6,9 +6,7 @@ use serde::{Deserialize, Serialize};
 use twilight_model::guild::{DefaultMessageNotificationLevel, Guild, PartialGuild, PremiumTier, VerificationLevel};
 use twilight_model::id::{ChannelId, GuildId, RoleId, UserId};
 
-use crate::core::cache::{Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole};
-
-use super::is_default;
+use super::{is_default, Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole};
 
 #[derive(Debug)]
 pub struct CachedGuild {

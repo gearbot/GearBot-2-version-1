@@ -25,7 +25,6 @@ use twilight_model::{
 
 use prometheus::{Encoder, TextEncoder};
 
-use crate::core::cache::Cache;
 use crate::core::{logging, logpump, status as bot_status, BotConfig, BotContext, BotStats, ColdRebootData};
 use crate::error::{EventHandlerError, StartupError};
 use commands::ROOT_NODE;
@@ -34,6 +33,9 @@ use translation::Translations;
 mod commands;
 mod core;
 mod crypto;
+
+pub mod cache;
+use cache::Cache;
 
 mod parser;
 pub use parser::Parser;

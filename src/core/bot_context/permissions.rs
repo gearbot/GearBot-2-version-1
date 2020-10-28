@@ -4,9 +4,9 @@ use twilight_model::guild::Permissions;
 use twilight_model::id::UserId;
 
 use super::BotContext;
+use crate::cache::{CachedGuild, CachedMember};
 use crate::commands::meta::nodes::{CommandNode, GearBotPermissions};
 use crate::commands::ROOT_NODE;
-use crate::core::cache::{CachedGuild, CachedMember};
 use crate::core::guild_config::{GuildConfig, PermissionGroup};
 
 impl BotContext {

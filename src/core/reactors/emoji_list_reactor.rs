@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 use twilight_model::channel::Reaction;
 // use twilight_model::id::MessageId;
 
+use crate::cache::{CachedGuild, CachedMember};
 use crate::core::bot_context::BotContext;
-use crate::core::cache::{CachedGuild, CachedMember};
 use crate::core::reactors::{get_emoji, scroll_page};
 use crate::core::GuildConfig;
 use crate::error::{MessageError, ReactorError};

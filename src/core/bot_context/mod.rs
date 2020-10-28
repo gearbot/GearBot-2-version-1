@@ -17,7 +17,7 @@ pub mod status;
 
 pub use stats::BotStats;
 
-use crate::core::cache::Cache;
+use crate::cache::Cache;
 use crate::core::logpump::LogData;
 use crate::core::GuildConfig;
 use crate::database::api_structs::{RawTeamMembers, TeamInfo, TeamMember};

@@ -11,6 +11,13 @@ use twilight_model::gateway::presence::{ActivityType, Status};
 use twilight_model::id::{ChannelId, EmojiId, GuildId, UserId};
 use twilight_model::user::User;
 
+mod channel;
+mod emoji;
+mod guild;
+mod member;
+mod role;
+mod user;
+
 pub use channel::CachedChannel;
 pub use emoji::CachedEmoji;
 pub use guild::{CachedGuild, ColdStorageGuild};
@@ -18,7 +25,7 @@ pub use member::CachedMember;
 pub use role::CachedRole;
 pub use user::CachedUser;
 
-use super::bot_context::{BotContext, BotStats, ShardState};
+use crate::core::{BotContext, BotStats, ShardState};
 use crate::database::Redis;
 use crate::error::{ColdResumeError, DatabaseError};
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
@@ -1043,18 +1050,6 @@ impl Cache {
         }
     }
 }
-
-mod guild;
-
-mod role;
-
-mod emoji;
-
-mod member;
-
-mod channel;
-
-mod user;
 
 fn update_user_with_user(old: Arc<CachedUser>, new: Arc<CachedUser>) -> CachedUser {
     let public_flags = match new.public_flags {

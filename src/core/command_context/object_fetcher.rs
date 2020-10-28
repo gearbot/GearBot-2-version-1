@@ -7,8 +7,7 @@ use twilight_model::{
 };
 
 use super::CommandContext;
-use crate::core::cache::CachedChannel;
-use crate::core::cache::{CachedMember, CachedRole, CachedUser};
+use crate::cache::{CachedChannel, CachedMember, CachedRole, CachedUser};
 use crate::error::{CommandError, OtherFailure, ParseError};
 
 impl CommandContext {
