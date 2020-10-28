@@ -2,7 +2,7 @@ use log::info;
 
 use super::DataStorage;
 use crate::core::GuildConfig;
-use crate::crypto::{self, EncryptionKey};
+use crate::crypto;
 use crate::error::DatabaseError;
 
 impl DataStorage {
@@ -25,14 +25,11 @@ impl DataStorage {
         Ok(config)
     }
 
-    pub async fn create_new_guild_config(
-        &self,
-        guild_id: u64,
-        master_ek: &EncryptionKey,
-    ) -> Result<GuildConfig, DatabaseError> {
+    pub async fn create_new_guild_config(&self, guild_id: u64) -> Result<GuildConfig, DatabaseError> {
         info!("No config found for {}, inserting blank one", guild_id);
         let new_config = GuildConfig::default();
 
+        let master_ek = &self.primary_encryption_key;
         let guild_encryption_key = crypto::generate_guild_encryption_key(master_ek, guild_id);
 
         sqlx::query("INSERT INTO guildconfig (id, config, encryption_key) VALUES ($1, $2, $3)")

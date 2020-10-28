@@ -53,10 +53,6 @@ async fn real_main() -> Result<(), StartupError> {
     let config = BotConfig::new(&env::var("CONFIG_FILE").unwrap_or("config.toml".to_string()))?;
     println!("Loaded config file");
 
-    if config.__main_encryption_key.is_none() {
-        panic!("The KMS needs built before GearBot can work without a static main encryption key!");
-    }
-
     let mut builder = HttpClient::builder()
         .token(&config.tokens.discord)
         .default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());

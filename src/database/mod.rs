@@ -25,6 +25,7 @@ use crate::{
 pub struct DataStorage {
     persistent_pool: sqlx::PgPool,
     pub cache_pool: Redis,
+    primary_encryption_key: EncryptionKey<'static>,
 }
 
 impl DataStorage {
@@ -69,21 +70,17 @@ impl DataStorage {
         Ok(Self {
             persistent_pool: postgres_pool,
             cache_pool: redis_pool,
+            primary_encryption_key: EncryptionKey::construct_owned(&config.main_encryption_key),
         })
     }
 
-    pub async fn insert_message(
-        &self,
-        message: &Message,
-        guild_id: GuildId,
-        main_ek: &EncryptionKey,
-    ) -> Result<(), DatabaseError> {
+    pub async fn insert_message(&self, message: &Message, guild_id: GuildId) -> Result<(), DatabaseError> {
         let start = std::time::Instant::now();
 
         let ciphertext = {
             let plaintext = message.content.as_bytes();
 
-            let guild_key = self.get_guild_encryption_key(guild_id, main_ek).await?;
+            let guild_key = self.get_guild_encryption_key(guild_id).await?;
             crypto::encrypt_bytes(plaintext, &guild_key, message.id.0)
         };
 
@@ -125,7 +122,6 @@ impl DataStorage {
         &self,
         message_id: MessageId,
         guild_id: GuildId,
-        main_ek: &EncryptionKey,
     ) -> Result<Option<UserMessage>, DatabaseError> {
         let stored_message: Option<StoredUserMessage> = sqlx::query_as("SELECT * from message where id=$1")
             .bind(message_id.0 as i64)
@@ -136,7 +132,7 @@ impl DataStorage {
             Some(sm) => {
                 let start = std::time::Instant::now();
 
-                let guild_key = self.get_guild_encryption_key(guild_id, main_ek).await?;
+                let guild_key = self.get_guild_encryption_key(guild_id).await?;
                 let decrypted_content = crypto::decrypt_bytes(&sm.encrypted_content, &guild_key, message_id.0);
 
                 info!("It took {}us to decrypt a user message!", start.elapsed().as_micros());
@@ -156,19 +152,16 @@ impl DataStorage {
         Ok(user_msg)
     }
 
-    async fn get_guild_encryption_key(
-        &self,
-        guild_id: GuildId,
-        main_ek: &EncryptionKey,
-    ) -> Result<EncryptionKey, DatabaseError> {
+    async fn get_guild_encryption_key(&self, guild_id: GuildId) -> Result<EncryptionKey<'_>, DatabaseError> {
         let ek_bytes: (Vec<u8>,) = sqlx::query_as("SELECT encryption_key from guildconfig where id=$1")
             .bind(guild_id.0 as i64)
             .fetch_one(&self.persistent_pool)
             .await?;
 
         let guild_key = {
+            let main_ek = &self.primary_encryption_key;
             let decrypted_gk_bytes = crypto::decrypt_bytes(&ek_bytes.0, main_ek, guild_id.0);
-            EncryptionKey::clone_from_slice(&decrypted_gk_bytes)
+            EncryptionKey::construct_owned(&decrypted_gk_bytes)
         };
 
         Ok(guild_key)

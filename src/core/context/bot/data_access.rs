@@ -69,10 +69,7 @@ impl BotContext {
                 let datastore = &self.datastore;
                 let config = match datastore.get_guild_config(guild_id.0).await? {
                     Some(c) => c,
-                    None => {
-                        let master_ek = self.__get_main_encryption_key();
-                        datastore.create_new_guild_config(guild_id.0, master_ek).await?
-                    }
+                    None => datastore.create_new_guild_config(guild_id.0).await?,
                 };
 
                 let config = Arc::new(config);
@@ -94,18 +91,16 @@ impl BotContext {
         message_id: MessageId,
         guild_id: GuildId,
     ) -> Result<Option<UserMessage>, DatabaseError> {
-        let main_ek = self.__get_main_encryption_key();
-        self.datastore.get_full_message(message_id, guild_id, main_ek).await
+        self.datastore.get_full_message(message_id, guild_id).await
     }
 
     pub async fn insert_message(&self, message: &Message, guild_id: GuildId) -> Result<(), DatabaseError> {
         // All guilds need to have a config before anything can happen thanks to encryption.
         let _ = self.get_config(guild_id).await?;
-        let main_ek = self.__get_main_encryption_key();
 
         let datastore = &self.datastore;
 
-        datastore.insert_message(&message, guild_id, main_ek).await?;
+        datastore.insert_message(&message, guild_id).await?;
 
         for attachment in &message.attachments {
             datastore.insert_attachment(message.id, attachment).await?;

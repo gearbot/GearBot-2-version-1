@@ -1,4 +1,3 @@
-use aes_gcm::aead::generic_array::GenericArray;
 use chrono::{DateTime, Utc};
 use twilight_gateway::Cluster;
 use twilight_http::Client as HttpClient;
@@ -20,7 +19,6 @@ pub use stats::BotStats;
 use crate::core::cache::Cache;
 use crate::core::logpump::LogData;
 use crate::core::GuildConfig;
-use crate::crypto::EncryptionKey;
 use crate::database::api_structs::{RawTeamMembers, TeamInfo, TeamMember};
 use crate::database::DataStorage;
 use crate::translation::{GearBotString, Translations};
@@ -56,7 +54,6 @@ pub struct BotContext {
     configs: RwLock<HashMap<GuildId, Arc<GuildConfig>>>,
     pub datastore: DataStorage,
     pub translations: Translations,
-    __main_encryption_key: Option<Vec<u8>>,
     pub scheme_info: SchemeInfo,
     pub shard_states: RwLock<HashMap<u64, ShardState>>,
     pub start_time: DateTime<Utc>,
@@ -71,7 +68,7 @@ impl BotContext {
         http_info: (HttpClient, CurrentUser),
         datastore: DataStorage,
         translations: Translations,
-        config_ops: (Option<Vec<u8>>, Vec<u64>),
+        global_admins: Vec<u64>,
         stats: Arc<BotStats>,
         logpump_sender: UnboundedSender<LogData>,
     ) -> Self {
@@ -89,7 +86,7 @@ impl BotContext {
                 .insert(i, AtomicU64::new(0));
         }
 
-        let global_admins = config_ops.1.into_iter().map(UserId).collect();
+        let global_admins = global_admins.into_iter().map(UserId).collect();
 
         stats.shard_counts.pending.set(scheme_info.shards_per_cluster as i64);
 
@@ -107,7 +104,6 @@ impl BotContext {
             configs: RwLock::new(HashMap::new()),
             datastore,
             translations,
-            __main_encryption_key: config_ops.0,
             scheme_info,
             shard_states: RwLock::new(shard_states),
             start_time: Utc::now(),
@@ -120,16 +116,6 @@ impl BotContext {
     /// Returns if a message was sent by us.
     pub fn is_own(&self, other: &Message) -> bool {
         self.bot_user.id == other.author.id
-    }
-
-    fn __get_main_encryption_key(&self) -> &EncryptionKey {
-        if let Some(mk_bytes) = &self.__main_encryption_key {
-            GenericArray::from_slice(mk_bytes)
-        } else {
-            // It will always be returned, but the other location it could come from
-            // is not implemented as of yet.
-            unreachable!()
-        }
     }
 
     pub fn translate(&self, language: &LanguageIdentifier, key: GearBotString) -> String {

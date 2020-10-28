@@ -127,7 +127,7 @@ pub async fn run(
         (http, bot_user),
         datastore,
         translations,
-        (config.__main_encryption_key, config.global_admins),
+        config.global_admins,
         stats,
         sender,
     ));
