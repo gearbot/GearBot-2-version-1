@@ -7,14 +7,14 @@ use twilight_model::gateway::payload::MessageCreate;
 use twilight_model::guild::Permissions;
 use twilight_model::id::{GuildId, UserId};
 
-use super::bot_context::BotContext;
-use super::cache::{CachedGuild, CachedMember, CachedUser};
-use super::GuildConfig;
 use crate::commands::{
     meta::nodes::{CommandNode, GearBotPermissions},
     ROOT_NODE,
 };
-use crate::core::command_context::{CommandContext, CommandMessage};
+use crate::core::cache::{CachedGuild, CachedMember, CachedUser};
+use crate::core::BotContext;
+use crate::core::GuildConfig;
+use crate::core::{CommandContext, CommandMessage};
 use crate::error::{CommandError, EventHandlerError, ParseError};
 use crate::gearbot_error;
 use crate::translation::{FluArgs, GearBotString};

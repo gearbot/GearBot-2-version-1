@@ -1,4 +1,5 @@
-use crate::core::{CommandContext, LogType};
+use crate::core::logpump::LogType;
+use crate::core::CommandContext;
 use crate::error::CommandResult;
 
 pub async fn test(mut ctx: CommandContext) -> CommandResult {

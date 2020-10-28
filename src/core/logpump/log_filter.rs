@@ -1,4 +1,4 @@
-use crate::core::{DataLessLogType, LogData, LogType};
+use super::{DataLessLogType, LogData, LogType};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use twilight_model::id::{ChannelId, UserId};

@@ -3,8 +3,8 @@ use std::sync::Arc;
 use log::debug;
 use twilight_gateway::Event;
 
-use crate::core::bot_context::BotContext;
 use crate::core::reactors::reactor_controller;
+use crate::core::BotContext;
 use crate::error::EventHandlerError;
 use crate::{gearbot_info, gearbot_warn};
 

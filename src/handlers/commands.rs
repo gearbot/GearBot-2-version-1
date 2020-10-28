@@ -4,9 +4,9 @@ use std::sync::Arc;
 use log::{debug, trace};
 use twilight_gateway::Event;
 
-use crate::core::bot_context::BotContext;
-use crate::core::parser::Parser;
+use crate::core::BotContext;
 use crate::error::EventHandlerError;
+use crate::Parser;
 
 pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>) -> Result<(), EventHandlerError> {
     match event {
