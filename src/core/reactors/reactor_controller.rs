@@ -15,7 +15,7 @@ pub async fn process_reaction(bot_context: &Arc<BotContext>, reaction: &Reaction
             .await?
         {
             if let Some(emoji) = reactor.processes(reaction) {
-                reactor.do_your_thing(emoji, bot_context, reaction).await?;
+                reactor.do_your_thing(&emoji, bot_context, reaction).await?;
             }
         }
     }

@@ -95,7 +95,7 @@ impl DataStorage {
         .bind(message.author.id.0 as i64)
         .bind(message.channel_id.0 as i64)
         .bind(message.guild_id.unwrap().0 as i64)
-        .bind(message.kind.clone() as i16)
+        .bind(message.kind as i16)
         .bind(message.pinned)
         .execute(&self.persistent_pool)
         .await?;

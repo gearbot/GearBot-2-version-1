@@ -26,13 +26,13 @@ impl EmojiListReactor {
 
     pub async fn do_the_thing(
         &mut self,
-        emoji: Emoji,
+        emoji: &Emoji,
         ctx: &Arc<BotContext>,
         member: Option<Arc<CachedMember>>,
         reaction: &Reaction,
     ) -> Result<(), ReactorError> {
-        if let Some(_) = member {
-            //if we have a cached member, we have a guildid
+        if member.is_some() {
+            // If we have a cached member, we have a guild id
             if let Some(guild) = ctx.cache.get_guild(&reaction.guild_id.unwrap()) {
                 let pages = guild.emoji.len() as u8 + 1;
                 self.page = scroll_page(pages, self.page, &emoji);
@@ -90,7 +90,7 @@ pub async fn gen_emoji_page(
 
         let emoji = guild.emoji.get(page as usize - 1).unwrap();
 
-        let role_info = if emoji.roles.len() == 0 {
+        let role_info = if emoji.roles.is_empty() {
             gear_no.to_string()
         } else {
             let temp = emoji

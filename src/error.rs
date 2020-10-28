@@ -6,7 +6,6 @@ use twilight_embed_builder::{
 };
 use twilight_gateway::cluster::{ClusterCommandError, ClusterStartError};
 use twilight_gateway::{cluster, shard};
-use twilight_http;
 use twilight_http::request::channel::message::create_message::CreateMessageError;
 use twilight_http::request::channel::message::update_message::UpdateMessageError;
 use twilight_model::id::{ChannelId, GuildId, UserId};

@@ -71,7 +71,7 @@ fn main() -> Result<(), StartupError> {
 async fn real_main() -> Result<(), StartupError> {
     println!("Gearbot v{} starting!", VERSION);
     // Read config file
-    let config = BotConfig::new(&env::var("CONFIG_FILE").unwrap_or("config.toml".to_string()))?;
+    let config = BotConfig::new(&env::var("CONFIG_FILE").unwrap_or_else(|_| String::from("config.toml")))?;
     println!("Loaded config file");
 
     let mut builder = HttpClient::builder()
@@ -239,7 +239,7 @@ async fn run(
         sender,
     ));
     let ctx = context.clone();
-    let mut logpump_task = tokio::spawn(logpump::run(ctx, receiver));
+    let mut _logpump_task = tokio::spawn(logpump::run(ctx, receiver));
 
     //establish api connection
     let c = context.clone();

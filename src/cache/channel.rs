@@ -200,10 +200,7 @@ impl CachedChannel {
     }
 
     pub fn is_dm(&self) -> bool {
-        match self {
-            CachedChannel::DM { .. } => true,
-            _ => false,
-        }
+        matches!(self, CachedChannel::DM { .. })
     }
 }
 

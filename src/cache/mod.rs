@@ -270,10 +270,12 @@ impl Cache {
                             // if we where at 1 we are now at 0
                             if self.stats.guild_counts.partial.get() == 0
                                 && self.filling.load(Ordering::Relaxed)
-                                && ctx.shard_states.read().await.values().all(|state| match state {
-                                    ShardState::Ready => true,
-                                    _ => false,
-                                })
+                                && ctx
+                                    .shard_states
+                                    .read()
+                                    .await
+                                    .values()
+                                    .all(|state| matches!(state, ShardState::Ready))
                             {
                                 gearbot_important!("Initial cache filling completed for cluster {}!", self.cluster_id);
                                 self.filling.store(false, Ordering::SeqCst);

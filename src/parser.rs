@@ -1,3 +1,4 @@
+use std::cmp;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
@@ -56,12 +57,11 @@ impl Parser {
                     }
                 }
             }
-            match part.strip_prefix('"') {
-                Some(new_part) => match new_part.strip_suffix('"') {
-                    Some(new_part) => part = new_part.to_string(),
-                    None => {}
-                },
-                None => {}
+
+            if let Some(new_part) = part.strip_prefix('"') {
+                if let Some(new_part) = new_part.strip_suffix('"') {
+                    part = new_part.to_string()
+                }
             }
 
             parts.push(part);
@@ -265,11 +265,9 @@ impl Parser {
                     Ok(metric) => {
                         metric.inc();
                     }
-                    Err(_) => {
-                        //TODO: log error properly
-                        // Err(Error::PrometheusError(e))
-                    }
+                    Err(e) => log::error!("Failed to increment the command count metric: {}", e),
                 }
+
                 Ok(())
             }
             None => Ok(()), // TODO: Show help for subcommand
@@ -338,7 +336,7 @@ impl Parser {
                         //nope, might be a (partial) name
 
                         //remove @ if there is one at the start
-                        let to_search = if input.starts_with("@") {
+                        let to_search = if input.starts_with('@') {
                             input
                                 .char_indices()
                                 .nth(1)
@@ -385,13 +383,11 @@ impl Parser {
                             }
                         }
 
-                        // if we only have one match or work here is done
-                        if matches.len() == 1 {
-                            Ok(matches.remove(0).clone())
-                        } else if matches.len() > 1 {
-                            Err(ParseError::MultipleMembersByName(input.to_string()))
-                        } else {
-                            Err(ParseError::MemberNotFoundByName(input.to_string()))
+                        // if we only have one match our work here is done
+                        match matches.len().cmp(&1) {
+                            cmp::Ordering::Equal => Ok(Arc::clone(&matches.remove(0))),
+                            cmp::Ordering::Greater => Err(ParseError::MultipleMembersByName(input.to_string())),
+                            cmp::Ordering::Less => Err(ParseError::MemberNotFoundByName(input.to_string())),
                         }
                     }
                 }

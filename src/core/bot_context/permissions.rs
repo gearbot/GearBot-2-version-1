@@ -54,10 +54,8 @@ impl BotContext {
                 if group.roles.iter().all(|role_id| member.roles.contains(role_id)) {
                     apply(&mut permissions, &mut not_negated_denies, &group);
                 }
-            } else {
-                if group.roles.iter().any(|role_id| member.roles.contains(role_id)) {
-                    apply(&mut permissions, &mut not_negated_denies, &group);
-                }
+            } else if group.roles.iter().any(|role_id| member.roles.contains(role_id)) {
+                apply(&mut permissions, &mut not_negated_denies, &group);
             }
 
             if group.users.iter().any(|user_id| member.user_id == *user_id) {

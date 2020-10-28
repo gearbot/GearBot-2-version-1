@@ -31,12 +31,7 @@ pub async fn about(ctx: CommandContext) -> CommandResult {
         .cluster
         .info()
         .values()
-        .map(|info| {
-            info.latency()
-                .average()
-                .unwrap_or_else(|| Duration::default())
-                .as_millis()
-        })
+        .map(|info| info.latency().average().unwrap_or_default().as_millis())
         .sum::<u128>()
         / ctx.bot_context.scheme_info.shards_per_cluster as u128;
 

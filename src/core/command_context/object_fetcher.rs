@@ -15,7 +15,7 @@ impl CommandContext {
         self.bot_context
             .get_user(user_id)
             .await
-            .map_err(|e| CommandError::ParseError(e))
+            .map_err(CommandError::ParseError)
     }
 
     pub fn get_member(&self, user_id: &UserId) -> Option<Arc<CachedMember>> {
@@ -32,7 +32,7 @@ impl CommandContext {
     pub fn get_role(&self, role_id: &RoleId) -> Option<Arc<CachedRole>> {
         match &self.guild {
             Some(g) => match g.get_role(role_id) {
-                Some(guard) => Some(guard.clone()),
+                Some(guard) => Some(guard),
                 None => None,
             },
             None => None,

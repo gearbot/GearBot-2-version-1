@@ -37,7 +37,7 @@ impl Reactor {
 
     pub async fn do_your_thing(
         self,
-        emoji: Emoji,
+        emoji: &Emoji,
         ctx: &Arc<BotContext>,
         reaction: &Reaction,
     ) -> Result<Self, ReactorError> {
@@ -48,7 +48,7 @@ impl Reactor {
         let new = match self {
             Reactor::Help => self,
             Reactor::EmojiList(mut inner) => {
-                inner.do_the_thing(emoji.clone(), ctx, member, reaction).await?;
+                inner.do_the_thing(emoji, ctx, member, reaction).await?;
                 Reactor::EmojiList { 0: inner }
             }
         };
@@ -59,7 +59,7 @@ impl Reactor {
                 reaction.channel_id,
                 reaction.message_id,
                 emoji.to_reaction(),
-                reaction.user_id.clone(),
+                reaction.user_id,
             )
             .await?;
         Ok(new)
@@ -73,9 +73,7 @@ impl Reactor {
     }
 
     fn get_expiry(&self) -> u32 {
-        match self {
-            _ => 60 * 60 * 24,
-        }
+        60 * 60 * 24
     }
 }
 

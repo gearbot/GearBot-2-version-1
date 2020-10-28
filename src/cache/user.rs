@@ -25,6 +25,21 @@ pub struct CachedUser {
     pub mutual_servers: AtomicU64,
 }
 
+impl Clone for CachedUser {
+    fn clone(&self) -> Self {
+        CachedUser {
+            id: self.id,
+            username: self.username.clone(),
+            discriminator: self.discriminator.clone(),
+            avatar: self.avatar.clone(),
+            bot_user: self.bot_user,
+            system_user: self.system_user,
+            public_flags: self.public_flags,
+            mutual_servers: AtomicU64::new(0),
+        }
+    }
+}
+
 impl CachedUser {
     pub(crate) fn from_user(user: &User) -> Self {
         CachedUser {
@@ -35,19 +50,6 @@ impl CachedUser {
             bot_user: user.bot,
             system_user: user.system.unwrap_or(false),
             public_flags: user.public_flags,
-            mutual_servers: AtomicU64::new(0),
-        }
-    }
-
-    pub fn clone(&self) -> Self {
-        CachedUser {
-            id: self.id,
-            username: self.username.clone(),
-            discriminator: self.discriminator.clone(),
-            avatar: self.avatar.clone(),
-            bot_user: self.bot_user,
-            system_user: self.system_user,
-            public_flags: self.public_flags,
             mutual_servers: AtomicU64::new(0),
         }
     }

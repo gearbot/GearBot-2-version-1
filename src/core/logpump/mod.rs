@@ -24,10 +24,10 @@ pub async fn run(ctx: Arc<BotContext>, mut receiver: UnboundedReceiver<LogData>)
         let log = receiver.recv().await.unwrap();
         log::debug!("log data received: {:?}", log);
         let log_type = Arc::new(log.log_type);
-        let guild_id = log.guild.clone();
+        let guild_id = log.guild;
         match ctx.get_config(guild_id).await {
             Ok(config) => {
-                for (channel_id, log_config) in config.log_channels.iter() {
+                for (channel_id, log_config) in &config.log_channels {
                     //check if it could go to this channel
                     if log_config.categories.contains(&log_type.get_category())
                         && !log_config.disabled_keys.contains(&log_type.dataless())
@@ -49,16 +49,16 @@ pub async fn run(ctx: Arc<BotContext>, mut receiver: UnboundedReceiver<LogData>)
                             if let Err(e) = owned_sender.send(log_type.clone()) {
                                 // fail, channel must have expired, setup a new one
                                 let (sender, receiver) = unbounded_channel();
-                                tokio::spawn(pump(ctx.clone(), receiver, log.guild.clone(), channel_id.clone()));
+                                tokio::spawn(pump(ctx.clone(), receiver, log.guild, *channel_id));
                                 let _ = sender.send(log_type.clone());
-                                outputs.insert(channel_id.clone(), sender);
+                                outputs.insert(*channel_id, sender);
                             }
                         } else {
                             //we do not, create a new one and send the log
                             let (sender, receiver) = unbounded_channel();
-                            tokio::spawn(pump(ctx.clone(), receiver, guild_id, channel_id.clone()));
+                            tokio::spawn(pump(ctx.clone(), receiver, guild_id, *channel_id));
                             let _ = sender.send(log_type.clone());
-                            outputs.insert(channel_id.clone(), sender);
+                            outputs.insert(*channel_id, sender);
                         }
                     }
                 }

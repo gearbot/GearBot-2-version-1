@@ -45,7 +45,7 @@ impl Pattern {
             // go with a in complete 3 ratio rectangle
             let height = ((count as f32) / 3.0).sqrt().ceil() as usize;
             let width = 3 * height;
-            return Pattern::Rectangle(width, height);
+            Pattern::Rectangle(width, height)
         }
     }
 
@@ -116,7 +116,7 @@ fn triangular_base(count: usize) -> Option<usize> {
     let big_number = (8 * count) + 1;
     let smaller_number = big_number.sqrt();
     if big_number == smaller_number.pow(2) {
-        return Some((smaller_number - 1) / 2);
+        Some((smaller_number - 1) / 2)
     } else {
         None
     }

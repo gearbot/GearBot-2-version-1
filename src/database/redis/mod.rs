@@ -26,7 +26,7 @@ impl Redis {
         let mut conn = self.pool.get().await;
 
         if let Some(value) = conn.get(key).await? {
-            let value = serde_json::from_slice(&value).map_err(|e| DatabaseError::Deserializing(e))?;
+            let value = serde_json::from_slice(&value).map_err(DatabaseError::Deserializing)?;
             Ok(Some(value))
         } else {
             Ok(None)
@@ -36,7 +36,7 @@ impl Redis {
     pub async fn set<T: Serialize>(&self, key: &str, value: &T, expiry: Option<u32>) -> Result<(), DatabaseError> {
         let mut conn = self.pool.get().await;
 
-        let data = serde_json::to_string(value).map_err(|e| DatabaseError::Serializing(e))?;
+        let data = serde_json::to_string(value).map_err(DatabaseError::Serializing)?;
 
         match expiry {
             Some(ttl) => conn.set_and_expire_seconds(key, data, ttl).await?,
@@ -105,7 +105,7 @@ impl Redis {
             .await
             .publish(
                 "gearbot-out",
-                serde_json::to_string(&reply).map_err(|e| ApiCommunicaionError::Serializing(e))?,
+                serde_json::to_string(&reply).map_err(ApiCommunicaionError::Serializing)?,
             )
             .await?;
         Ok(())

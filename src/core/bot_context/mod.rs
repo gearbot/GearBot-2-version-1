@@ -142,7 +142,7 @@ impl BotContext {
                 username: user.username.clone(),
                 discriminator: user.discriminator.clone(),
                 id: m.id.to_string(),
-                avatar: user.avatar.clone().unwrap_or("".to_string()),
+                avatar: user.avatar.clone().unwrap_or_default(),
                 team: m.team.clone(),
                 socials: m.socials.clone(),
             });
