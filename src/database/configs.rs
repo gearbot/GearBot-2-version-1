@@ -1,12 +1,13 @@
 use log::info;
 
-use super::DataStorage;
+use super::{crypto, DataStorage};
 use crate::core::GuildConfig;
-use crate::crypto;
 use crate::error::DatabaseError;
 
 impl DataStorage {
-    /// Fetches a guild configuration from the database.
+    /// Fetches a guild configuration from the database, returning it if it existed.
+    ///
+    /// The permissions inside the config are guaranteed to be in the correct order.
     pub async fn get_guild_config(&self, guild_id: u64) -> Result<Option<GuildConfig>, DatabaseError> {
         let row: Option<(serde_json::Value,)> = sqlx::query_as("SELECT config from guildconfig where id=$1")
             .bind(guild_id as i64)
@@ -25,6 +26,7 @@ impl DataStorage {
         Ok(config)
     }
 
+    /// Creates a new guild configuration for the specified guild and inserts it into the database.
     pub async fn create_new_guild_config(&self, guild_id: u64) -> Result<GuildConfig, DatabaseError> {
         info!("No config found for {}, inserting blank one", guild_id);
         let new_config = GuildConfig::default();
@@ -42,6 +44,9 @@ impl DataStorage {
         Ok(new_config)
     }
 
+    /// Updates a guild config for the specified guild with the provided new value.
+    ///
+    /// Errors if the guild doesn't exist already.
     pub async fn set_guild_config(&self, guild_id: u64, config: &GuildConfig) -> Result<(), DatabaseError> {
         sqlx::query("UPDATE guildconfig set config=$1 WHERE id=$2")
             .bind(serde_json::to_value(config).map_err(DatabaseError::Serializing)?)

@@ -32,7 +32,6 @@ use translation::Translations;
 
 mod commands;
 mod core;
-mod crypto;
 
 pub mod cache;
 use cache::Cache;

@@ -12,16 +12,25 @@ use team_info::get_team_info;
 pub mod api_structs;
 mod team_info;
 
+/// An abstraction layer around a connection to Redis.
+///
+/// All interactions with Redis should go through this.
 pub struct Redis {
     pool: ConnectionPool,
 }
 
 impl Redis {
+    /// Creates a new connection pool using the specified addresss.
+    ///
+    /// 5 connections are opened by default.
     pub async fn new(conn_addr: &str) -> Result<Self, darkredis::Error> {
-        let pool = darkredis::ConnectionPool::create(conn_addr.to_owned(), None, 5).await?;
+        let pool = ConnectionPool::create(conn_addr.to_owned(), None, 5).await?;
         Ok(Self { pool })
     }
 
+    /// Retrieves a value from Redis.
+    ///
+    /// Returns `None` if the key didn't exist.
     pub async fn get<D: DeserializeOwned>(&self, key: &str) -> Result<Option<D>, DatabaseError> {
         let mut conn = self.pool.get().await;
 
@@ -33,6 +42,9 @@ impl Redis {
         }
     }
 
+    /// Inserts a value into Redis.
+    ///
+    /// The value will automatically expire at the optionally provided time.
     pub async fn set<T: Serialize>(&self, key: &str, value: &T, expiry: Option<u32>) -> Result<(), DatabaseError> {
         let mut conn = self.pool.get().await;
 
@@ -46,6 +58,7 @@ impl Redis {
         Ok(())
     }
 
+    /// Deletes a value from Redis.
     pub async fn delete(&self, key: &str) -> Result<(), darkredis::Error> {
         let mut conn = self.pool.get().await;
 
@@ -62,7 +75,9 @@ impl Redis {
                 panic!("error");
             }
         };
+
         log::debug!("establishing api connection");
+
         con.subscribe(&["api-out"])
             .await
             .unwrap()

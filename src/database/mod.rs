@@ -1,23 +1,20 @@
 pub mod configs;
+
+mod crypto;
+use crypto::EncryptionKey;
+
 mod redis;
-pub use redis::api_structs;
-pub use redis::Redis;
+pub use redis::{api_structs, Redis};
 
 pub mod structures;
-
 use structures::{StoredUserMessage, UserMessage};
 
 use twilight_model::channel::{Attachment, Message};
 use twilight_model::id::{ChannelId, GuildId, MessageId, UserId};
 
-use log::info;
-
 use crate::error::{DatabaseError, StartupError};
 use crate::BotConfig;
-use crate::{
-    crypto::{self, EncryptionKey},
-    gearbot_error, gearbot_info,
-};
+use crate::{gearbot_error, gearbot_info};
 
 /// An abstraction over the persistent backing storage of the Bot (SQL) and the Redis cache that lives inbetween.
 ///
@@ -45,15 +42,15 @@ impl DataStorage {
             }
         };
 
-        info!("Connected to Postgres!");
+        log::info!("Connected to Postgres!");
 
-        info!("Handling database migrations...");
+        log::info!("Handling database migrations...");
         if let Err(e) = sqlx::migrate!("./migrations").run(&postgres_pool).await {
             gearbot_error!("Failed to run SQL migrations: {}", e);
             return Err(StartupError::Sqlx(e.into()));
         }
 
-        info!("Finished migrations!");
+        log::info!("Finished migrations!");
 
         let redis_pool = match Redis::new(&config.database.redis).await {
             Ok(pool) => pool,
@@ -63,7 +60,7 @@ impl DataStorage {
             }
         };
 
-        info!("Connected to Redis");
+        log::info!("Connected to Redis");
 
         gearbot_info!("Database connections established");
 
@@ -74,6 +71,10 @@ impl DataStorage {
         })
     }
 
+    /// Inserts a message into the database.
+    ///
+    /// The guild ID provided *must* be the same guild that the message was recieved in, otherwise
+    /// it will fail to decrypt upon retrieval.
     pub async fn insert_message(&self, message: &Message, guild_id: GuildId) -> Result<(), DatabaseError> {
         let start = std::time::Instant::now();
 
@@ -84,7 +85,7 @@ impl DataStorage {
             crypto::encrypt_bytes(plaintext, &guild_key, message.id.0)
         };
 
-        info!("It took {}us to encrypt the user message!", start.elapsed().as_micros());
+        log::debug!("It took {}us to encrypt the user message!", start.elapsed().as_micros());
 
         sqlx::query(
             "INSERT INTO message (id, encrypted_content, author_id, channel_id, guild_id, kind, pinned)
@@ -103,6 +104,7 @@ impl DataStorage {
         Ok(())
     }
 
+    /// Inserts a message attachment into the database.
     pub async fn insert_attachment(&self, message_id: MessageId, attachment: &Attachment) -> Result<(), DatabaseError> {
         sqlx::query(
             "INSERT INTO attachment (id, name, image, message_id)
@@ -118,6 +120,10 @@ impl DataStorage {
         Ok(())
     }
 
+    /// Retrieves a user's message from the database, if it existed.
+    ///
+    /// The guild ID provided *must* be the same guild that the message was recieved in, otherwise
+    /// it will fail to decrypt upon retrieval.
     pub async fn get_full_message(
         &self,
         message_id: MessageId,
@@ -135,7 +141,7 @@ impl DataStorage {
                 let guild_key = self.get_guild_encryption_key(guild_id).await?;
                 let decrypted_content = crypto::decrypt_bytes(&sm.encrypted_content, &guild_key, message_id.0);
 
-                info!("It took {}us to decrypt a user message!", start.elapsed().as_micros());
+                log::debug!("It took {}us to decrypt a user message!", start.elapsed().as_micros());
 
                 Some(UserMessage {
                     content: String::from_utf8(decrypted_content).unwrap(),
@@ -152,6 +158,7 @@ impl DataStorage {
         Ok(user_msg)
     }
 
+    /// Fetches the encryption key for a guild out of its config.
     async fn get_guild_encryption_key(&self, guild_id: GuildId) -> Result<EncryptionKey<'_>, DatabaseError> {
         let ek_bytes: (Vec<u8>,) = sqlx::query_as("SELECT encryption_key from guildconfig where id=$1")
             .bind(guild_id.0 as i64)
