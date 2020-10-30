@@ -30,10 +30,10 @@ serde_json = "1"
 sqlx =  { version = "0.4.0-beta.1", default-features = false, features = ["postgres", "json", "runtime-tokio", "macros", "migrate"] }
 tokio = { version = "0.2", default-features = false, features = ["macros", "sync", "rt-core"] }
 toml = "0.5"
-twilight-embed-builder = "0.2.0-beta.0"
-twilight-gateway = {version="0.2.0-beta.0", default-features=false, features=["rustls", "simd-json", "simd-zlib"]}
-twilight-http = "0.2.0-beta.1"
-twilight-model = "0.2.0-beta.1"
+twilight-embed-builder = "0.2"
+twilight-gateway = {version="0.2", default-features=false, features=["rustls", "simd-json", "simd-zlib"]}
+twilight-http = "0.2"
+twilight-model = "0.2"
 url = "2.1"
 unic-langid = { version = "0.9", features = ["macros", "serde"] }
 uuid = { version = "0.8", features = ["serde", "v4"], default_features = false }
