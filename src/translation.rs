@@ -164,6 +164,13 @@ pub enum GearBotString {
     EmojiOverviewHeader,
     EmojiInfo,
 
+    //General logs (Text)
+    CommandUsedText,
+
+    //General logs (embed)
+    CommandUsedEmbed,
+    CommandUsedFooter,
+
     //Errors
     MissingPermissions,
 
@@ -189,6 +196,9 @@ impl GearBotString {
             GearBotString::EmojiPageHeader => "basic__emoji_page_header",
             GearBotString::EmojiOverviewHeader => "basic__emoji_overview_header",
             GearBotString::EmojiInfo => "basic__emoji_info",
+            GearBotString::CommandUsedText => "command_used_text",
+            GearBotString::CommandUsedEmbed => "command_used_embed",
+            GearBotString::CommandUsedFooter => "command_used_footer",
         }
     }
 
@@ -252,7 +262,7 @@ mod tests {
     use std::fs;
 
     lazy_static! {
-        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 14] = [
+        static ref ALL_TRANSLATION_STR_KEYS: [&'static str; 17] = [
             GearBotString::PingPong.as_str(),
             GearBotString::CoinflipDefault.as_str(),
             GearBotString::CoinflipYes.as_str(),
@@ -267,6 +277,9 @@ mod tests {
             GearBotString::EmojiPageHeader.as_str(),
             GearBotString::EmojiOverviewHeader.as_str(),
             GearBotString::EmojiInfo.as_str(),
+            GearBotString::CommandUsedText.as_str(),
+            GearBotString::CommandUsedEmbed.as_str(),
+            GearBotString::CommandUsedFooter.as_str(),
         ];
     }
 

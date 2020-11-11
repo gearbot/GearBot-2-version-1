@@ -155,7 +155,10 @@ async fn send_webhook(
         }
     };
 
-    executor.await.map(|_| ())
+    if let Err(e) = executor.await {
+        log::error!("Log failure: {}", e);
+    }
+    Ok(())
 }
 
 fn get_emoji(level: Level) -> Emoji {

@@ -7,6 +7,7 @@ use super::{BotContext, ShardState};
 use crate::GIT_VERSION;
 use prometheus::{IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry};
 
+use crate::core::guild_config::{LogCategory, LogStyle};
 use log::info;
 use std::collections::HashMap;
 use twilight_model::gateway::event::Event;
@@ -79,6 +80,17 @@ pub struct ShardStats {
     pub disconnected: IntGauge,
 }
 
+pub struct LogpumpStats {
+    pub active_pumps: IntGauge,
+    pub pending_logs: IntGauge,
+    pub embed: LogTypeCounters,
+    pub text: LogTypeCounters,
+}
+
+pub struct LogTypeCounters {
+    pub general: IntCounter,
+}
+
 pub struct BotStats {
     pub registry: Registry,
     pub start_time: DateTime<Utc>,
@@ -93,13 +105,14 @@ pub struct BotStats {
     pub role_count: IntGauge,
     pub command_counts: IntCounterVec,
     pub total_command_counts: AtomicU64,
+    pub logpump_stats: LogpumpStats,
 }
 
 impl BotStats {
     #[rustfmt::skip]
     pub fn new(cluster_id: u64) -> Self {
         let event_counter = IntCounterVec::new(Opts::new("gateway_events", "Events received from the gateway"), &["events"]).unwrap();
-        let message_counter = IntCounterVec::new(Opts::new("messages", "Recieved messages"), &["sender_type"]).unwrap();
+        let message_counter = IntCounterVec::new(Opts::new("messages", "Received messages"), &["sender_type"]).unwrap();
         let channel_count = IntGauge::with_opts(Opts::new("channels", "Channel count")).unwrap();
         let emoji_count = IntGauge::with_opts(Opts::new("emoji", "Emoji count")).unwrap();
         let role_count = IntGauge::with_opts(Opts::new("roles", "Role count")).unwrap();
@@ -107,6 +120,9 @@ impl BotStats {
         let user_counter = IntGaugeVec::new(Opts::new("user_counts", "User counts"), &["type"]).unwrap();
         let shard_counter = IntGaugeVec::new(Opts::new("shard_counts", "State counts for our shards"), &["state"]).unwrap();
         let command_counts = IntCounterVec::new(Opts::new("commands", "Executed commands"), &["name"]).unwrap();
+        let active_pumps = IntGauge::with_opts(Opts::new("active_pumps", "Active logpumps")).unwrap();
+        let pending_logs = IntGauge::with_opts(Opts::new("pending_logs", "Pending log messages")).unwrap();
+        let pumped_logs = IntCounterVec::new(Opts::new("pumped_logs", "Successfully send logs"), &["type", "category"]).unwrap();
 
         let mut static_labels = HashMap::new();
         static_labels.insert(String::from("cluster"), cluster_id.to_string());
@@ -120,6 +136,10 @@ impl BotStats {
         registry.register(Box::new(user_counter.clone())).unwrap();
         registry.register(Box::new(shard_counter.clone())).unwrap();
         registry.register(Box::new(command_counts.clone())).unwrap();
+        registry.register(Box::new(active_pumps.clone())).unwrap();
+        registry.register(Box::new(pending_logs.clone())).unwrap();
+        registry.register(Box::new(pumped_logs.clone())).unwrap();
+
         BotStats {
             registry,
             start_time: Utc::now(),
@@ -188,10 +208,20 @@ impl BotStats {
                 ready: shard_counter.get_metric_with_label_values(&["ready"]).unwrap(),
                 resuming: shard_counter.get_metric_with_label_values(&["resuming"]).unwrap(),
                 reconnecting: shard_counter.get_metric_with_label_values(&["reconnecting"]).unwrap(),
-                disconnected: shard_counter.get_metric_with_label_values(&["disconnected"]).unwrap()
+                disconnected: shard_counter.get_metric_with_label_values(&["disconnected"]).unwrap(),
             },
             command_counts,
             total_command_counts: AtomicU64::new(0),
+            logpump_stats: LogpumpStats {
+                active_pumps,
+                pending_logs,
+                embed: LogTypeCounters {
+                    general: pumped_logs.get_metric_with_label_values(&["embed", "general"]).unwrap()
+                },
+                text: LogTypeCounters {
+                    general: pumped_logs.get_metric_with_label_values(&["text", "general"]).unwrap()
+                }
+            },
         }
     }
 
@@ -208,6 +238,13 @@ impl BotStats {
             }
         } else {
             self.message_counts.user_messages.inc()
+        }
+    }
+
+    pub async fn logpump_logged(&self, log_style: &LogStyle, category: &LogCategory) {
+        match (log_style, category) {
+            (LogStyle::Text, LogCategory::GENERAL) => self.logpump_stats.text.general.inc(),
+            (LogStyle::Embed, LogCategory::GENERAL) => self.logpump_stats.embed.general.inc(),
         }
     }
 }

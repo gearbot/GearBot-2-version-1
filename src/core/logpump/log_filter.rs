@@ -1,6 +1,5 @@
-use super::{DataLessLogType, LogData, LogType};
+use super::DataLessLogType;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use twilight_model::id::{ChannelId, UserId};
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -15,7 +14,7 @@ impl LogFilter {
         &self,
         log_type: &DataLessLogType,
         source_channel: &Option<ChannelId>,
-        source_user: &Option<UserId>,
+        source_user: &UserId,
     ) -> bool {
         if self.log_types.contains(log_type) {
             return true;
@@ -26,10 +25,8 @@ impl LogFilter {
             }
         }
 
-        if let Some(user) = source_user {
-            if self.source_users.contains(user) {
-                return true;
-            }
+        if self.source_users.contains(source_user) {
+            return true;
         }
         false
     }

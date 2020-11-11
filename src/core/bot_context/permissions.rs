@@ -1,16 +1,21 @@
 use std::sync::Arc;
 
 use twilight_model::guild::Permissions;
-use twilight_model::id::UserId;
+use twilight_model::id::{ChannelId, GuildId, UserId};
 
 use super::BotContext;
 use crate::cache::{CachedGuild, CachedMember};
 use crate::commands::meta::nodes::{CommandNode, GearBotPermissions};
 use crate::commands::ROOT_NODE;
 use crate::core::guild_config::{GuildConfig, PermissionGroup};
+use twilight_model::channel::permission_overwrite::PermissionOverwriteType;
 
 impl BotContext {
-    pub fn get_guild_permissions_for(&self, member: &Arc<CachedMember>, guild: &Arc<CachedGuild>) -> Permissions {
+    pub fn get_guild_permissions_for_member(
+        &self,
+        member: &Arc<CachedMember>,
+        guild: &Arc<CachedGuild>,
+    ) -> Permissions {
         //owners can do whatever they want
         if guild.owner_id == member.user_id {
             return Permissions::all();
@@ -31,6 +36,76 @@ impl BotContext {
         }
     }
 
+    pub fn get_guild_permissions_for(&self, guild_id: &GuildId, user_id: &UserId) -> Permissions {
+        match self.cache.get_guild(guild_id) {
+            Some(guild) => match self.cache.get_member(guild_id, user_id) {
+                Some(member) => self.get_guild_permissions_for_member(&member, &guild),
+                None => Permissions::empty(),
+            },
+            None => Permissions::empty(),
+        }
+    }
+
+    pub fn get_channel_permissions_for(&self, user_id: UserId, channel_id: ChannelId) -> Permissions {
+        if let Some(channel) = self.cache.get_channel(channel_id) {
+            if channel.is_dm() {
+                return Permissions::SEND_MESSAGES
+                    | Permissions::EMBED_LINKS
+                    | Permissions::ATTACH_FILES
+                    | Permissions::USE_EXTERNAL_EMOJIS
+                    | Permissions::ADD_REACTIONS
+                    | Permissions::READ_MESSAGE_HISTORY;
+            }
+
+            let mut permissions = self.get_guild_permissions_for(&channel.get_guild_id().unwrap(), &user_id);
+            //admins don't give a **** about overrides
+            if permissions.contains(Permissions::ADMINISTRATOR) {
+                return Permissions::all();
+            }
+            if let Some(member) = &self.cache.get_member(&channel.get_guild_id().unwrap(), &user_id) {
+                let overrides = channel.get_permission_overrides();
+                let mut everyone_allowed = Permissions::empty();
+                let mut everyone_denied = Permissions::empty();
+                let mut user_allowed = Permissions::empty();
+                let mut user_denied = Permissions::empty();
+                let mut role_allowed = Permissions::empty();
+                let mut role_denied = Permissions::empty();
+                for o in overrides {
+                    match o.kind {
+                        PermissionOverwriteType::Member(member_id) => {
+                            if member_id == user_id {
+                                user_allowed |= o.allow;
+                                user_denied |= o.deny;
+                            }
+                        }
+                        PermissionOverwriteType::Role(role_id) => {
+                            if role_id.0 == channel.get_guild_id().unwrap().0 {
+                                everyone_allowed |= o.allow;
+                                everyone_denied |= o.deny
+                            } else if member.roles.contains(&role_id) {
+                                role_allowed |= o.allow;
+                                role_denied |= o.deny;
+                            }
+                        }
+                    }
+                }
+
+                permissions &= !everyone_denied;
+                permissions |= everyone_allowed;
+
+                permissions &= !role_denied;
+                permissions |= role_allowed;
+
+                permissions &= !user_denied;
+                permissions |= user_allowed;
+            };
+
+            permissions
+        } else {
+            Permissions::empty()
+        }
+    }
+
     pub fn get_permissions_for(
         &self,
         guild: &Arc<CachedGuild>,
@@ -40,7 +115,7 @@ impl BotContext {
         let mut permissions = GearBotPermissions::empty();
         let mut not_negated_denies = GearBotPermissions::empty();
 
-        let discord_permissions = self.get_guild_permissions_for(member, guild);
+        let discord_permissions = self.get_guild_permissions_for_member(member, guild);
 
         //these are already sorted by priority upon loading
         for group in &config.permission_groups {
@@ -120,7 +195,7 @@ fn cascade_node(
     // also when the parent is not available
     // unless we have an explicit grant
     let denied = not_negated_denies.contains(node.command_permission)
-        || !parent_available && !permissions.contains(node.command_permission);
+        || !parent_available & &!permissions.contains(node.command_permission);
 
     if !denied {
         permissions.insert(node.command_permission)
@@ -133,7 +208,7 @@ fn cascade_node(
         }
     }
     // we did not have this command, we do have one of it's subcommands and this command does not do anything itself, grant access as it only gives help info
-    if denied && !not_negated_denies.contains(node.command_permission) && any_granted && node.handler.is_none() {
+    if denied & &!not_negated_denies.contains(node.command_permission) & &any_granted & &node.handler.is_none() {
         permissions.insert(node.command_permission)
     }
 }

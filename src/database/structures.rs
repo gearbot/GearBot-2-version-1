@@ -30,6 +30,13 @@ pub struct StoredAttachment {
     message_id: i64,
 }
 
+#[derive(Debug, sqlx::FromRow)]
+pub struct WebhookInfo {
+    pub channel_id: i64,
+    pub id: i64,
+    pub token: String,
+}
+
 impl StoredUserMessage {
     pub fn kind(&self) -> MessageType {
         // TODO: This should exist in twilight via a TryFrom

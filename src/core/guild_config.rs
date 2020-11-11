@@ -38,14 +38,15 @@ pub struct MessageLogs {
     pub ignore_bots: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum LogStyle {
     Text,
     Embed,
 }
+
 #[derive(Deserialize, Serialize, Debug, Eq, PartialEq)]
 pub enum LogCategory {
-    TEST,
+    GENERAL,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -54,6 +55,7 @@ pub struct LogChannelConfig {
     pub disabled_keys: Vec<DataLessLogType>,
     pub style: LogStyle,
     pub filters: Vec<LogFilter>,
+    pub timestamps: bool,
 }
 
 impl Default for GuildConfig {

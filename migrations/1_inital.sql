@@ -86,3 +86,10 @@ create table guildConfig
     config jsonb not null,
     encryption_key bytea not null
 );
+
+create table webhook
+(
+    channel_id bigint primary key not null,
+    id bigint not null,
+    token varchar(255) not null
+)

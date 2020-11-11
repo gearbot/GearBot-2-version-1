@@ -6,5 +6,5 @@ pub struct LogData {
     pub log_type: LogType,
     pub guild: GuildId,
     pub source_channel: Option<ChannelId>,
-    pub source_user: Option<UserId>,
+    pub source_user: UserId,
 }

@@ -133,7 +133,7 @@ impl CommandContext {
         &self,
         log_type: LogType,
         source_channel: Option<ChannelId>,
-        source_user: Option<UserId>,
+        source_user: UserId,
     ) -> Result<(), CommandError> {
         log::debug!("Logging {:?}", log_type);
         self.bot_context.log(LogData {

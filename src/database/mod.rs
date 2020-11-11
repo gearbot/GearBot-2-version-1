@@ -10,8 +10,9 @@ pub mod structures;
 use structures::{StoredUserMessage, UserMessage};
 
 use twilight_model::channel::{Attachment, Message};
-use twilight_model::id::{ChannelId, GuildId, MessageId, UserId};
+use twilight_model::id::{ChannelId, GuildId, MessageId, UserId, WebhookId};
 
+use crate::database::structures::WebhookInfo;
 use crate::error::{DatabaseError, StartupError};
 use crate::BotConfig;
 use crate::{gearbot_error, gearbot_info};
@@ -156,6 +157,42 @@ impl DataStorage {
         };
 
         Ok(user_msg)
+    }
+
+    pub async fn get_webhook_parts(&self, channel_id: ChannelId) -> Result<Option<(WebhookId, String)>, DatabaseError> {
+        let data: Option<WebhookInfo> = sqlx::query_as("SELECT * from webhook where channel_id=$1")
+            .bind(channel_id.0 as i64)
+            .fetch_optional(&self.persistent_pool)
+            .await?;
+        match data {
+            Some(data) => Ok(Some((WebhookId(data.id as u64), data.token))),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn insert_webhook(
+        &self,
+        channel_id: ChannelId,
+        id: WebhookId,
+        token: String,
+    ) -> Result<(), DatabaseError> {
+        sqlx::query("INSERT INTO webhook (channel_id, id, token) VALUES ($1, $2, $3)")
+            .bind(channel_id.0 as i64)
+            .bind(id.0 as i64)
+            .bind(token)
+            .execute(&self.persistent_pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn remove_webhook(&self, channel_id: ChannelId) -> Result<(), DatabaseError> {
+        sqlx::query("DELETE FROM webhook where channel_id = $1")
+            .bind(channel_id.0 as i64)
+            .execute(&self.persistent_pool)
+            .await?;
+
+        Ok(())
     }
 
     /// Fetches the encryption key for a guild out of its config.

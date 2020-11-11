@@ -24,6 +24,7 @@ define_emoji!(
     GearWood => "⚙️",
     Left => "⬅️",
     Right => "➡️",
+    Online => "🟢",
 
     StaffBadge => "",
     PartnerBadge => "",
@@ -113,6 +114,18 @@ mod macros {
                     RequestReactionType::Custom{id: o.id, name: Some(o.name.clone())}
                 } else {
                     RequestReactionType::Unicode{name: self.get_fallback().to_string()}
+                }
+            }
+
+            pub fn url(&self) -> String {
+                let o = match EMOJI_OVERRIDES.get() {
+                        Some(overrides) => overrides.get(&self.to_string()),
+                        None => None
+                    };
+                if let Some(o) = o {
+                    format!("https://cdn.discordapp.com/emojis/{}.png", o.id)
+                } else {
+                    String::from("https://cdn.discordapp.com/emojis/529008659498270721.png")
                 }
             }
         }

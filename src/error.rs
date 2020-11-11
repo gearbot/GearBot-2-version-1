@@ -2,7 +2,8 @@ use std::{error, fmt, io};
 
 use serde::export::Formatter;
 use twilight_embed_builder::{
-    EmbedAuthorNameError, EmbedBuildError, EmbedColorError, EmbedDescriptionError, EmbedFieldError, ImageSourceUrlError,
+    EmbedAuthorNameError, EmbedBuildError, EmbedColorError, EmbedDescriptionError, EmbedFieldError,
+    EmbedFooterTextError, ImageSourceUrlError,
 };
 use twilight_gateway::cluster::{ClusterCommandError, ClusterStartError};
 use twilight_gateway::{cluster, shard};
@@ -119,6 +120,7 @@ pub enum MessageError {
     EmbedColor(EmbedColorError),
     EmbedAuthorName(EmbedAuthorNameError),
     ImageSourceUrl(ImageSourceUrlError),
+    EmbedFooter(EmbedFooterTextError),
 }
 
 impl error::Error for MessageError {}
@@ -134,6 +136,7 @@ impl fmt::Display for MessageError {
             MessageError::EmbedColor(e) => write!(f, "Failed to set embed color: {}", e),
             MessageError::EmbedAuthorName(e) => write!(f, "Failed to set embed author name: {}", e),
             MessageError::ImageSourceUrl(e) => write!(f, "Failed to set embed image url: {}", e),
+            MessageError::EmbedFooter(e) => write!(f, "Failed to set embed footer: {}", e),
         }
     }
 }
@@ -558,5 +561,23 @@ impl From<io::Error> for StartupError {
 impl From<EmbedBuildError> for MessageError {
     fn from(e: EmbedBuildError) -> Self {
         MessageError::EmbedBuild(e)
+    }
+}
+
+impl From<EmbedFooterTextError> for MessageError {
+    fn from(e: EmbedFooterTextError) -> Self {
+        MessageError::EmbedFooter(e)
+    }
+}
+
+impl From<DatabaseError> for OtherFailure {
+    fn from(e: DatabaseError) -> Self {
+        OtherFailure::DatabaseError(e)
+    }
+}
+
+impl From<twilight_http::Error> for OtherFailure {
+    fn from(e: twilight_http::Error) -> Self {
+        OtherFailure::TwilightHttp(e)
     }
 }

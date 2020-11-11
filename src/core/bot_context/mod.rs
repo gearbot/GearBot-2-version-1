@@ -152,6 +152,8 @@ impl BotContext {
     }
 
     pub fn log(&self, data: LogData) {
-        self.logpump_sender.send(data);
+        // can only error if the other side is closed, and we never close the main receiver
+        let _ = self.logpump_sender.send(data);
+        self.stats.logpump_stats.pending_logs.inc();
     }
 }

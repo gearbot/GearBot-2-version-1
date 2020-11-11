@@ -63,4 +63,31 @@ impl CachedUser {
             && self.system_user == user.system.unwrap_or(false)
             && self.public_flags == user.public_flags
     }
+
+    pub fn full_name(&self) -> String {
+        format!("{}#{}", self.username, self.discriminator)
+    }
+
+    pub fn full_name_with_id(&self) -> String {
+        format!("{}#{} ({})", self.username, self.discriminator, self.id)
+    }
+
+    pub fn profile_link(&self) -> String {
+        format!("https://discord.com/users/{}", self.id)
+    }
+
+    pub fn avatar_url(&self) -> String {
+        match &self.avatar {
+            Some(avatar) => format!(
+                "https://cdn.discordapp.com/avatars/{}/{}.{}",
+                self.id,
+                avatar,
+                if avatar.starts_with("a_") { "gif" } else { "png" }
+            ),
+            None => format!(
+                "https://cdn.discordapp.com/embed/avatar/{}.png",
+                &self.discriminator.parse::<u16>().unwrap() % 5
+            ),
+        }
+    }
 }
