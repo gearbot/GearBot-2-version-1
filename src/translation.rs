@@ -307,7 +307,9 @@ mod tests {
         let translation_data = load_translations("en_US");
 
         for t_var in ALL_TRANSLATION_STR_KEYS.iter() {
-            assert!(translation_data.get(*t_var).is_some());
+            if translation_data.get(*t_var).is_none() {
+                panic!("missing translation key: {}", *t_var)
+            }
         }
     }
 
@@ -318,8 +320,12 @@ mod tests {
         let mut covered = 0;
 
         for (t_key, _) in translation_data {
-            ALL_TRANSLATION_STR_KEYS.contains(&t_key.as_str());
-            covered += 1;
+            let key = t_key.as_str();
+            if ALL_TRANSLATION_STR_KEYS.contains(&key) {
+                covered += 1;
+            } else {
+                println!("uncovered translation string: {}", key)
+            }
         }
 
         // Make sure we exhausted everything
