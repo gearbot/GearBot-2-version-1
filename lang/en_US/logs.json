@@ -1,0 +1,5 @@
+{
+  "command_used_text": "{ $name } (``{ $user_id}``) used a command in <#{ $channel_id }>: ``{ $command }``",
+  "command_used_embed": "Used a command in <#{ $channel_id }>\\n\\n**Command**\\n { $command }",
+  "command_used_footer": "Command used"
+}
