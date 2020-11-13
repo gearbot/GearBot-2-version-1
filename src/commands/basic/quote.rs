@@ -11,7 +11,8 @@ pub async fn quote(mut ctx: CommandContext) -> CommandResult {
         .get_next()?
         .parse::<u64>()
         .map_err(|_| ParseError::MissingArgument)?;
-    let guild_id = ctx.guild.as_ref().unwrap().id;
+
+    let guild_id = ctx.get_guild().id;
 
     match ctx.bot_context.fetch_user_message(MessageId(msg_id), guild_id).await? {
         Some(msg) => {

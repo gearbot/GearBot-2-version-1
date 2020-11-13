@@ -2,6 +2,8 @@ mod log_data;
 mod log_filter;
 mod log_type;
 
+const GEARBOT_LOGO: &str = include_str!("../../../assets/logo");
+
 pub use log_data::LogData;
 pub use log_filter::LogFilter;
 pub use log_type::DataLessLogType;
@@ -10,7 +12,7 @@ pub use log_type::LogType;
 use crate::core::bot_context::BotContext;
 use crate::core::guild_config::LogStyle;
 use crate::error::OtherFailure;
-use crate::{gearbot_error, GEARBOT_LOGO};
+use crate::gearbot_error;
 use hyper::StatusCode;
 use std::collections::HashMap;
 use std::sync::Arc;

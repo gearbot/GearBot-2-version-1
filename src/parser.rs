@@ -13,23 +13,19 @@ use crate::commands::{
     meta::nodes::{CommandNode, GearBotPermissions},
     ROOT_NODE,
 };
-use crate::core::BotContext;
-use crate::core::GuildConfig;
-use crate::core::{CommandContext, CommandMessage};
+use crate::core::{BotContext, CommandContext, CommandMessage, GuildConfig};
 use crate::error::{CommandError, EventHandlerError, ParseError};
 use crate::gearbot_error;
 use crate::translation::{FluArgs, GearBotString};
-use crate::utils::matchers::split_name;
 use crate::utils::{matchers, Emoji};
 
 lazy_static! {
     static ref BLANK_CONFIG: Arc<GuildConfig> = Arc::new(GuildConfig::default());
 }
 
-#[derive(Clone)]
 pub struct Parser {
     pub parts: Vec<String>,
-    pub index: usize,
+    index: usize,
     ctx: Arc<BotContext>,
     shard_id: u64,
     guild_id: Option<GuildId>,
@@ -39,6 +35,7 @@ impl Parser {
     fn new(content: &str, ctx: Arc<BotContext>, shard_id: u64, guild_id: Option<GuildId>) -> Self {
         let temp = content.split_whitespace().collect::<Vec<&str>>();
         let mut parts = vec![];
+
         let mut index = 0;
         while index < temp.len() {
             let mut part = temp[index].to_string();
@@ -102,56 +99,46 @@ impl Parser {
     ) -> Result<(), EventHandlerError> {
         let message = (*message).0;
 
-        //Create parser to process message
+        // TODO: This doesn't account for Unicode prefixes
         let mut parser = Parser::new(&message.content[prefix.len()..], ctx, shard_id, message.guild_id);
-        trace!("Parser processing message: {:?}", &message.content);
+        trace!("Parser processing message: {:?}", message.content);
 
-        //parse the message to get the nodes
+        // Parse the message to get the nodes
         let command_nodes = parser.get_command();
 
-        //Do we even have a node to execute?
+        // Is there a valid node to execute?
         let node = match command_nodes.last() {
             Some(node) => node,
             None => return Ok(()),
         };
 
-        //assemble the name
-        //TODO: do we need this here for anything else then debugging?
+        // Assemble the command's name
         let mut name = String::new();
         for node in command_nodes.iter().skip(1) {
             name += "__";
             name += &node.name
         }
 
-        //grab our own clone of the ctx we can move around
-        let ctx = parser.ctx.clone();
+        let ctx = Arc::clone(&parser.ctx);
 
-        //grab channel info
         let channel_id = message.channel_id;
-
-        let channel = match ctx.cache.get_channel(message.channel_id) {
+        let channel = match ctx.cache.get_channel(channel_id) {
             Some(channel) => channel,
-            None => {
-                return Err(EventHandlerError::UnknownChannel(message.channel_id));
-            }
+            None => return Err(EventHandlerError::UnknownChannel(channel_id)),
         };
 
-        //author
         let author = match ctx.cache.get_user(message.author.id) {
             Some(author) => author,
-            None => {
-                return Err(EventHandlerError::UnknownUser(message.author.id));
-            }
+            None => return Err(EventHandlerError::UnknownUser(message.author.id)),
         };
 
         //get optional guild and member, as well as a config and calculate user permissions
         let (guild, member, config, permissions) = if !channel.is_dm() {
             let guild = match ctx.cache.get_guild(&message.guild_id.unwrap()) {
                 Some(guild) => guild,
-                None => {
-                    return Err(EventHandlerError::UnknownGuild(message.guild_id.unwrap()));
-                }
+                None => return Err(EventHandlerError::UnknownGuild(message.guild_id.unwrap())),
             };
+
             let member = match ctx.cache.get_member(&guild.id, &message.author.id) {
                 Some(member) => member,
                 None => return Err(EventHandlerError::UnknownUser(message.author.id)),
@@ -163,9 +150,16 @@ impl Parser {
 
             (Some(guild), Some(member), config, permissions)
         } else {
-            let mut perms = GearBotPermissions::empty() | BLANK_CONFIG.permission_groups.get(0).unwrap().granted_perms;
+            let mut perms = GearBotPermissions::empty() | BLANK_CONFIG.permission_groups[0].granted_perms;
             ctx.apply_admin_perms(&message.author.id, &mut perms);
-            (None, None, BLANK_CONFIG.clone(), perms)
+            (None, None, Arc::clone(&BLANK_CONFIG), perms)
+        };
+
+        // Silently ignore any DMs
+        // TODO: Maybe return an error?
+        let guild = match guild {
+            Some(g) => g,
+            None => return Ok(()),
         };
 
         let cmdm = CommandMessage {
@@ -182,9 +176,8 @@ impl Parser {
             tts: message.tts,
         };
 
-        let context = CommandContext::new(ctx.clone(), config, cmdm, guild, shard_id, parser, permissions);
+        let context = CommandContext::new(Arc::clone(&ctx), config, cmdm, guild, shard_id, parser, permissions);
 
-        //don't execute commands you are not allowed to execute
         if !permissions.contains(node.command_permission) {
             let args = FluArgs::with_capacity(1).add("gearno", Emoji::No.for_chat()).generate();
             let _ = context.reply(GearBotString::MissingPermissions, args).await; //ignore result as there is nothing we can do if this fails
@@ -224,6 +217,7 @@ impl Parser {
                 .content(translated)
                 .unwrap()
                 .await;
+
             return Ok(());
         }
 
@@ -253,6 +247,7 @@ impl Parser {
                             ctx.http.create_message(channel_id)
                                 .content(format!("{} Something went very wrong trying to execute that command, please try again later or report this on the support server {}", Emoji::Bug.for_chat(), Emoji::Bug.for_chat())).unwrap()
                                 .await?;
+
                             //TODO: better logging
                             gearbot_error!("Command error: {}", e);
                             return Ok(());
@@ -262,9 +257,7 @@ impl Parser {
 
                 ctx.stats.total_command_counts.fetch_add(1, Ordering::Relaxed);
                 match ctx.stats.command_counts.get_metric_with_label_values(&[&name]) {
-                    Ok(metric) => {
-                        metric.inc();
-                    }
+                    Ok(metric) => metric.inc(),
                     Err(e) => log::error!("Failed to increment the command count metric: {}", e),
                 }
 
@@ -292,105 +285,73 @@ impl Parser {
         self.index < self.parts.len()
     }
 
-    /// Parses what comes next as discord user
-    pub async fn get_user(&mut self) -> Result<Arc<CachedUser>, ParseError> {
-        let input = self.get_next()?;
-        let mention = matchers::get_mention(input);
-        match mention {
-            // we got a mention
-            Some(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
+    fn get_member(&mut self) -> Result<Arc<CachedMember>, ParseError> {
+        let cache = &Arc::clone(&self.ctx).cache;
+        let guild = self.get_guild()?;
+
+        match self.get_affected_user()? {
+            Some(id) => cache
+                .get_member(&guild.id, &UserId(id))
+                .ok_or(ParseError::MemberNotFoundById(id)),
             None => {
-                // is it a userid?
-                match input.parse::<u64>() {
-                    Ok(uid) => Ok(self.ctx.get_user(UserId(uid)).await?),
-                    Err(_) => {
-                        // reverse our get_next and make the member getter deal with it
-                        self.index -= 1;
-                        Ok(self.get_member()?.user(&self.ctx.cache))
+                // Might be a (partial) name
+                let input = self.get_next()?;
+
+                //remove @ if there is one at the start
+                let to_search = input.trim_start_matches('@');
+
+                let (name, discriminator) = match matchers::split_name(to_search) {
+                    Some((name, discrim)) => (name, Some(discrim)),
+                    None => (to_search, None),
+                };
+
+                let mut matches = vec![];
+
+                let members = guild.members.read().unwrap();
+                for member in members.values() {
+                    // If we have a discriminator, we have a full name, don't accept partials.
+                    // note that this does not mean there can only be 1 match as # is valid for nicknames (but not usernames)
+                    if let Some(nickname) = &member.nickname {
+                        if nickname.starts_with(to_search) {
+                            matches.push(member);
+                            // Pass early and don't incur a user lock below.
+                            continue;
+                        }
                     }
+
+                    let user = member.user(cache);
+                    match discriminator {
+                        Some(discriminator) => {
+                            if user.username == name && user.discriminator == discriminator {
+                                matches.push(member)
+                            }
+                        }
+                        None => {
+                            if user.username.starts_with(name) {
+                                matches.push(member);
+                            }
+                        }
+                    }
+                }
+
+                match matches.len().cmp(&1) {
+                    cmp::Ordering::Equal => Ok(Arc::clone(matches.remove(0))),
+                    cmp::Ordering::Greater => Err(ParseError::MultipleMembersByName(input.to_string())),
+                    cmp::Ordering::Less => Err(ParseError::MemberNotFoundByName(input.to_string())),
                 }
             }
         }
     }
 
-    pub fn get_member(&mut self) -> Result<Arc<CachedMember>, ParseError> {
-        let cache = &self.ctx.clone().cache;
-        let guild = self.get_guild()?;
+    fn get_affected_user(&mut self) -> Result<Option<u64>, ParseError> {
         let input = self.get_next()?;
-        let mention = matchers::get_mention(input);
-        match mention {
-            // we got a mention
-            Some(uid) => match self.ctx.cache.get_member(&guild.id, &UserId(uid)) {
-                Some(member) => Ok(member),
-                None => Err(ParseError::MemberNotFoundById(uid)),
-            },
+
+        match matchers::get_mention(input) {
+            // A user was mentioned
+            Some(mention) => Ok(Some(mention)),
             None => {
-                // is it a userid?
-                match input.parse::<u64>() {
-                    Ok(uid) => match self.ctx.cache.get_member(&guild.id, &UserId(uid)) {
-                        Some(member) => Ok(member),
-                        None => Err(ParseError::MemberNotFoundById(uid)),
-                    },
-                    Err(_) => {
-                        //TODO: finish this
-                        //nope, might be a (partial) name
-
-                        //remove @ if there is one at the start
-                        let to_search = if input.starts_with('@') {
-                            input
-                                .char_indices()
-                                .nth(1)
-                                .and_then(|(i, _)| input.get(i..))
-                                .unwrap_or("")
-                        } else {
-                            input
-                        };
-
-                        let mut name = to_search;
-                        let mut discriminator = None;
-                        if let Some((n, d)) = split_name(to_search) {
-                            name = n;
-                            discriminator = Some(d);
-                        }
-                        let mut matches = vec![];
-
-                        //grab user lock so we don't need to grab one each iteration
-                        let users = cache.users.read().expect("Global user cache got poisoned");
-
-                        //loop over the members and collect those that match
-                        //some duplicated cause hashmaps don't give value only iterators
-                        let members = guild.members.read().expect("Guild inner members cache got poisoned!");
-                        for member in members.values() {
-                            //if we have a discriminator we have a full name, don't accept partials
-                            //note that this does not mean there can only be 1 match as # is valid for nicknames (but not usernames)
-                            if let Some(nickname) = &member.nickname {
-                                if nickname.starts_with(to_search) {
-                                    matches.push(member);
-                                }
-                            }
-                            let user = users.get(&member.user_id).ok_or(ParseError::CorruptCache)?;
-                            match discriminator {
-                                Some(discriminator) => {
-                                    if user.username == name && user.discriminator == discriminator {
-                                        matches.push(member)
-                                    }
-                                }
-                                None => {
-                                    if user.username.starts_with(name) {
-                                        matches.push(member);
-                                    }
-                                }
-                            }
-                        }
-
-                        // if we only have one match our work here is done
-                        match matches.len().cmp(&1) {
-                            cmp::Ordering::Equal => Ok(Arc::clone(&matches.remove(0))),
-                            cmp::Ordering::Greater => Err(ParseError::MultipleMembersByName(input.to_string())),
-                            cmp::Ordering::Less => Err(ParseError::MemberNotFoundByName(input.to_string())),
-                        }
-                    }
-                }
+                // Did they provide a user ID?
+                Ok(input.parse().ok())
             }
         }
     }
@@ -407,6 +368,18 @@ impl Parser {
             .cache
             .get_guild(&self.get_guild_id()?)
             .ok_or(ParseError::CorruptCache)
+    }
+
+    /// Parses what comes next as discord user
+    async fn get_user(&mut self) -> Result<Arc<CachedUser>, ParseError> {
+        match self.get_affected_user()? {
+            Some(id) => Ok(self.ctx.get_user(UserId(id)).await?),
+            None => {
+                // reverse our get_next and make the member getter deal with it
+                self.index -= 1;
+                Ok(self.get_member()?.user(&self.ctx.cache))
+            }
+        }
     }
 
     pub async fn get_user_or(&mut self, alternative: Arc<CachedUser>) -> Result<Arc<CachedUser>, ParseError> {

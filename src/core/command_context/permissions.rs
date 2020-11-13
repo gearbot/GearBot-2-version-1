@@ -16,11 +16,7 @@ impl CommandContext {
     }
 
     pub fn get_guild_permissions_for(&self, user_id: &UserId) -> Permissions {
-        if let Some(guild) = &self.guild {
-            self.bot_context.get_guild_permissions_for(&guild.id, user_id)
-        } else {
-            Permissions::empty()
-        }
+        self.bot_context.get_guild_permissions_for(&self.guild.id, user_id)
     }
 
     pub fn get_bot_channel_permissions(&self) -> Permissions {

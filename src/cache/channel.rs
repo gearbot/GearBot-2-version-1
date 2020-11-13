@@ -98,8 +98,9 @@ pub enum CachedChannel {
 }
 
 impl CachedChannel {
-    /// returns the channel ID
-    /// Note this is different from userid when DMing users
+    /// Returns the channel ID
+    ///
+    /// Note this is different from `userid` when DMing users
     pub fn get_id(&self) -> ChannelId {
         match self {
             CachedChannel::TextChannel { id, .. } => *id,
@@ -112,7 +113,7 @@ impl CachedChannel {
         }
     }
 
-    ///Returns the guild id
+    /// Returns the guild id
     pub fn get_guild_id(&self) -> Option<GuildId> {
         match self {
             CachedChannel::TextChannel { guild_id, .. } => Some(*guild_id),
@@ -126,7 +127,8 @@ impl CachedChannel {
     }
 
     /// Gets the position of this channel
-    /// returns 0 for DM (group) channels
+    ///
+    /// Returns 0 for DM (group) channels
     pub fn get_position(&self) -> i64 {
         match self {
             CachedChannel::TextChannel { position, .. } => *position,
@@ -163,8 +165,9 @@ impl CachedChannel {
         }
     }
 
-    /// get permission overrides
-    /// will be empty for
+    /// Get permission overrides.
+    ///
+    /// DMs and DM groups will have empty permissions.
     pub fn get_permission_overrides(&self) -> &[PermissionOverwrite] {
         match self {
             CachedChannel::TextChannel {

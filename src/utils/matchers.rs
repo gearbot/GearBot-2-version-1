@@ -173,6 +173,7 @@ lazy_static! {
     static ref USERNAME_WITH_DISCRIMINATOR: Regex = Regex::new(r"([!#]*)#(\d{4})").unwrap();
 }
 
+/// Takes a string and returns `(username, #discriminator)`
 pub fn split_name(input: &str) -> Option<(&str, &str)> {
     match USERNAME_WITH_DISCRIMINATOR.captures(input) {
         Some(captures) => Some((captures.get(1).unwrap().as_str(), captures.get(2).unwrap().as_str())),

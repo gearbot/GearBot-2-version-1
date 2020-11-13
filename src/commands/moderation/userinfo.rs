@@ -4,17 +4,13 @@ use twilight_model::guild::Permissions;
 use twilight_model::user::UserFlags;
 
 use crate::core::CommandContext;
-use crate::error::{CommandError, CommandResult};
+use crate::error::CommandResult;
 use crate::translation::{FluArgs, GearBotString};
 use crate::utils::{self, Emoji};
 
 const USER_INFO_COLOR: u32 = 0x00_cea2;
 
 pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
-    if ctx.guild.is_none() {
-        return Err(CommandError::NoDM);
-    }
-
     let user = ctx.parser.get_user_or(ctx.message.author.clone()).await?;
 
     //set some things that are the same regardless

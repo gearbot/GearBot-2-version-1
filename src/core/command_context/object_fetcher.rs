@@ -19,10 +19,7 @@ impl CommandContext {
     }
 
     pub fn get_member(&self, user_id: &UserId) -> Option<Arc<CachedMember>> {
-        match &self.guild {
-            Some(g) => self.bot_context.cache.get_member(&g.id, user_id),
-            None => None,
-        }
+        self.bot_context.cache.get_member(&self.guild.id, user_id)
     }
 
     pub fn get_channel(&self, channel_id: ChannelId) -> Option<Arc<CachedChannel>> {
@@ -30,20 +27,14 @@ impl CommandContext {
     }
 
     pub fn get_role(&self, role_id: &RoleId) -> Option<Arc<CachedRole>> {
-        match &self.guild {
-            Some(g) => match g.get_role(role_id) {
-                Some(guard) => Some(guard),
-                None => None,
-            },
+        match self.guild.get_role(role_id) {
+            Some(guard) => Some(guard),
             None => None,
         }
     }
 
     pub async fn get_ban(&self, user_id: UserId) -> Result<Option<Ban>, CommandError> {
-        match &self.guild {
-            Some(g) => Ok(self.bot_context.http.ban(g.id, user_id).await?),
-            None => Err(CommandError::NoDM),
-        }
+        Ok(self.bot_context.http.ban(self.guild.id, user_id).await?)
     }
 
     pub async fn get_dm_for_author(&self) -> Result<Arc<CachedChannel>, twilight_http::Error> {

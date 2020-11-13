@@ -184,7 +184,7 @@ impl error::Error for ApiMessageError {}
 
 impl fmt::Display for ApiMessageError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        f.write_str("An error occured getting a message from the API!")
     }
 }
 

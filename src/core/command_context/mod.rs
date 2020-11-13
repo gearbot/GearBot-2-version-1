@@ -51,7 +51,7 @@ pub struct CommandContext {
     pub bot_context: Arc<BotContext>,
     config: Arc<GuildConfig>,
     pub message: CommandMessage,
-    pub guild: Option<Arc<CachedGuild>>,
+    guild: Arc<CachedGuild>,
     pub shard: u64,
     pub parser: Parser,
     pub permissions: GearBotPermissions,
@@ -62,7 +62,7 @@ impl CommandContext {
         ctx: Arc<BotContext>,
         config: Arc<GuildConfig>,
         message: CommandMessage,
-        guild: Option<Arc<CachedGuild>>,
+        guild: Arc<CachedGuild>,
         shard: u64,
         parser: Parser,
         permissions: GearBotPermissions,
@@ -104,14 +104,10 @@ impl CommandContext {
 
     pub async fn set_config(&self, new_config: GuildConfig) -> Result<(), CommandError> {
         // This updates it both in the DB and handles our element guard
-        match &self.guild {
-            Some(g) => self
-                .bot_context
-                .set_config(g.id, new_config)
-                .await
-                .map_err(|e| CommandError::OtherFailure(OtherFailure::DatabaseError(e))),
-            None => Err(CommandError::NoDM),
-        }
+        self.bot_context
+            .set_config(self.guild.id, new_config)
+            .await
+            .map_err(|e| CommandError::OtherFailure(OtherFailure::DatabaseError(e)))
     }
 
     pub fn get_config(&self) -> Result<Arc<GuildConfig>, CommandError> {
@@ -122,26 +118,17 @@ impl CommandContext {
         }
     }
 
-    pub fn get_guild(&self) -> Result<Arc<CachedGuild>, CommandError> {
-        match &self.guild {
-            Some(guild) => Ok(guild.clone()),
-            None => Err(CommandError::NoDM),
-        }
+    pub fn get_guild(&self) -> &Arc<CachedGuild> {
+        &self.guild
     }
 
-    pub fn log(
-        &self,
-        log_type: LogType,
-        source_channel: Option<ChannelId>,
-        source_user: UserId,
-    ) -> Result<(), CommandError> {
+    pub fn log(&self, log_type: LogType, source_channel: Option<ChannelId>, source_user: UserId) {
         log::debug!("Logging {:?}", log_type);
         self.bot_context.log(LogData {
             log_type,
-            guild: self.get_guild()?.id,
+            guild: self.guild.id,
             source_channel,
             source_user,
         });
-        Ok(())
     }
 }
