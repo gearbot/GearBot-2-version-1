@@ -9,6 +9,8 @@ use crate::error::EmojiError;
 use twilight_http::request::channel::reaction::RequestReactionType;
 use twilight_model::channel::ReactionType;
 
+pub(super) const ANIMATED_EMOTE_KEY: &str = "a";
+
 define_emoji!(
     Yes => "✅",
     No => "🚫",
@@ -43,6 +45,12 @@ pub struct EmojiOverride {
     pub for_chat: String,
     pub id: EmojiId,
     pub name: String,
+}
+
+pub struct EmojiInfo {
+    pub animated: bool,
+    pub name: String,
+    pub id: u64,
 }
 
 pub static EMOJI_OVERRIDES: OnceCell<HashMap<String, EmojiOverride>> = OnceCell::new();

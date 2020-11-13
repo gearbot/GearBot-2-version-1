@@ -63,6 +63,7 @@ impl Parser {
 
             parts.push(part);
         }
+
         Parser {
             parts,
             index: 0,

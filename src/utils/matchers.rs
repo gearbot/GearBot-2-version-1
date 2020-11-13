@@ -1,3 +1,4 @@
+use super::emoji::{EmojiInfo, ANIMATED_EMOTE_KEY};
 use regex::{Match, Regex, RegexBuilder};
 use url::{Host, Url};
 
@@ -29,17 +30,10 @@ pub fn contains_mention(msg: &str) -> bool {
 }
 
 pub fn get_mention(msg: &str) -> Option<u64> {
-    let captures = MENTION_MATCHER_SOLO.captures(msg);
-    match captures {
-        Some(c) => Some(
-            c.get(1)
-                .map_or(Some(""), |m| Some(m.as_str()))
-                .unwrap()
-                .parse::<u64>()
-                .unwrap(),
-        ),
-        None => None,
-    }
+    MENTION_MATCHER_SOLO
+        .captures(msg)
+        .and_then(|c| c.get(1))
+        .and_then(|m| m.as_str().parse().ok())
 }
 
 pub fn contains_url(msg: &str) -> bool {
@@ -63,91 +57,66 @@ pub fn contains_jump_link(msg: &str) -> bool {
 }
 
 pub fn starts_with_number(msg: &str) -> bool {
-    START_WITH_NUMBER_MATCHER.is_match(msg)
+    msg.chars().next().map(|c| c.is_numeric()).unwrap_or(false)
 }
 
 pub fn contains_invite_link(msg: &str) -> bool {
-    if let Some(captures) = URL_MATCHER.captures(msg) {
-        match captures.get(0) {
-            Some(url) => {
-                let parsed = Url::parse(url.as_str()).unwrap();
-                let host = match parsed.host().unwrap() {
-                    Host::Domain(host) => host,
-                    // If it doesn't have a domain type host, then its not an invite link
-                    _ => return false,
+    if let Some(url) = URL_MATCHER.captures(msg).and_then(|caps| caps.get(0)) {
+        let parsed = Url::parse(url.as_str()).unwrap();
+        let host = match parsed.host().unwrap() {
+            Host::Domain(host) => host,
+            // If it doesn't have a domain type host, then its not an invite link
+            _ => return false,
+        };
+
+        if KNOWN_INVITE_DOMAINS.contains(&host) {
+            // discordapp.com and discord.com
+            if host == KNOWN_INVITE_DOMAINS[0] || host == KNOWN_INVITE_DOMAINS[1] {
+                let mut segments = match parsed.path_segments() {
+                    Some(segs) => segs,
+                    None => return false,
                 };
 
-                if KNOWN_INVITE_DOMAINS.contains(&host) {
-                    // discordapp.com and discord.com
-                    if host == KNOWN_INVITE_DOMAINS[0] || host == KNOWN_INVITE_DOMAINS[1] {
-                        let segments = match parsed.path_segments() {
-                            Some(segs) => segs,
-                            None => return false,
-                        };
-
-                        for seg in segments {
-                            if seg.contains("invite") {
-                                return true;
-                            }
-                        }
-                    } else {
-                        // The other links are used solely for inviting people to a server
-                        // in one form or another
-                        return true;
-                    }
-                } else {
-                    return false;
+                if segments.any(|s| s.contains("invite")) {
+                    return true;
                 }
+            } else {
+                // The other links are used solely for inviting people to a server
+                // in one form or another
+                return true;
             }
-            None => return false,
         }
     }
 
     false
 }
 
-pub struct EmojiInfo {
-    pub animated: bool,
-    pub name: String,
-    pub id: u64,
-}
-
 pub fn get_emoji_parts(msg: &str) -> Vec<EmojiInfo> {
     if !contains_emote(msg) {
         return vec![];
     }
-    let mut results: Vec<EmojiInfo> = vec![];
-    for m in EMOJI_MATCHER.captures_iter(msg) {
-        results.push(EmojiInfo {
-            animated: &m[1] == "a",
+
+    EMOJI_MATCHER
+        .captures_iter(msg)
+        .into_iter()
+        .map(|m| EmojiInfo {
+            animated: &m[1] == ANIMATED_EMOTE_KEY,
             name: m[2].to_owned(),
             id: m[3].parse::<u64>().unwrap(),
-        });
-    }
-    results
+        })
+        .collect()
 }
 
 lazy_static! {
     static ref ID_MATCHER: Regex = Regex::new(r"<@!?([0-9]+)>").unwrap();
-}
-
-lazy_static! {
     static ref ROLE_ID_MATCHER: Regex = Regex::new(r"<@&([0-9]+)>").unwrap();
-}
-
-lazy_static! {
     static ref CHANNEL_ID_MATCHER: Regex = Regex::new(r"<#([0-9]+)>").unwrap();
-}
-
-lazy_static! {
     static ref MENTION_MATCHER: Regex = Regex::new(r"<@!?\d+>").unwrap();
-}
-
-lazy_static! {
     static ref MENTION_MATCHER_SOLO: Regex = Regex::new(r"^<@!?(\d+)>$").unwrap();
-}
-
-lazy_static! {
+    static ref EMOJI_MATCHER: Regex = Regex::new(r"<(a?):([^:\n]+):([0-9]+)>").unwrap();
+    static ref USERNAME_WITH_DISCRIMINATOR: Regex = Regex::new(r"([!#]*)#(\d{4})").unwrap();
+    static ref JUMP_LINK_MATCHER: Regex =
+        Regex::new(r"https://(?:canary|ptb)?\.?discordapp.com/channels/\d*/(\d*)/(\d*)").unwrap();
     static ref URL_MATCHER: Regex = {
         RegexBuilder::new(r"((?:https?://)[a-z0-9]+(?:[-._][a-z0-9]+)*\.[a-z]{2,5}(?::[0-9]{1,5})?(?:/[^ \n<>]*)?)")
             .case_insensitive(true)
@@ -156,27 +125,13 @@ lazy_static! {
     };
 }
 
-lazy_static! {
-    static ref EMOJI_MATCHER: Regex = Regex::new(r"<(a?):([^:\n]+):([0-9]+)>").unwrap();
-}
-
-lazy_static! {
-    static ref JUMP_LINK_MATCHER: Regex =
-        Regex::new(r"https://(?:canary|ptb)?\.?discordapp.com/channels/\d*/(\d*)/(\d*)").unwrap();
-}
-
-lazy_static! {
-    static ref START_WITH_NUMBER_MATCHER: Regex = Regex::new(r"^(\d+)").unwrap();
-}
-
-lazy_static! {
-    static ref USERNAME_WITH_DISCRIMINATOR: Regex = Regex::new(r"([!#]*)#(\d{4})").unwrap();
-}
-
 /// Takes a string and returns `(username, #discriminator)`
 pub fn split_name(input: &str) -> Option<(&str, &str)> {
     match USERNAME_WITH_DISCRIMINATOR.captures(input) {
-        Some(captures) => Some((captures.get(1).unwrap().as_str(), captures.get(2).unwrap().as_str())),
+        Some(captures) => {
+            println!("Captures: {:#?}", captures);
+            Some((captures.get(1).unwrap().as_str(), captures.get(2).unwrap().as_str()))
+        }
         None => None,
     }
 }

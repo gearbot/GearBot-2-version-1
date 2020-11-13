@@ -1,12 +1,8 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 
 pub use emoji::*;
-
-// TODO: Remove this when they are all used.
-#[allow(dead_code)]
-pub mod matchers;
-
 pub mod emoji;
+pub mod matchers;
 pub mod pattern;
 
 const MARKDOWN_REPALCEMENTS: &[&str; 7] = &["\\", "*", "_", "~", "|", "{", ">"];
@@ -30,13 +26,12 @@ fn replace_urls(before: String, msg: &mut String) {
 
 fn replace_emotes(before: String, msg: &mut String) {
     for em in matchers::get_emotes(&before).iter().rev() {
-        // println!("{:?}", em);
         msg.insert_str(em.start(), "\\");
         msg.insert_str(em.end() + 1, "\\");
     }
 }
 
-pub fn replace_lookalikes(msg: &mut String) -> String {
+fn replace_lookalikes(msg: &mut String) -> String {
     msg.replace('`', "ˋ")
 }
 
@@ -64,8 +59,6 @@ pub fn clean(msg: &str, markdown: bool, links: bool, emotes: bool, lookalikes: b
         replace_emotes(msg.clone(), &mut msg);
     }
 
-    // println!("{:?}", msg);
-
     msg
 }
 
@@ -79,7 +72,7 @@ pub fn snowflake_timestamp(snowflake: u64) -> DateTime<Utc> {
 pub fn age(old: DateTime<Utc>, new: DateTime<Utc>, max_parts: i8) -> String {
     let mut seconds = new.signed_duration_since(old).num_seconds();
     let mut parts = 0;
-    let mut output = "".to_string();
+    let mut output = String::with_capacity(20);
 
     let years = (seconds as f64 / (60.0 * 60.0 * 24.0 * 365.25)) as i64;
     if years > 0 {
