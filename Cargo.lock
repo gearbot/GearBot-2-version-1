@@ -458,9 +458,9 @@ dependencies = [
 
 [[package]]
 name = "fluent-bundle"
-version = "0.13.1"
+version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a79916560098f0a57215a489e37b7fc83088949eab7f7977dcc329b254d50c17"
+checksum = "092ebd50cd3f8a6d664bf156e3550d2f7232fbe446da6707d727cca53f707ce2"
 dependencies = [
  "fluent-langneg",
  "fluent-syntax",
