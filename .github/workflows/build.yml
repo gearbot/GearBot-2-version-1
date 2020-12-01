@@ -59,21 +59,22 @@ jobs:
         with:
           name: GearBot
           path: target/release/gearbot
-  docker_container:
-    name: Create Docker Container
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v1
-      - name: Login to Docker Hub
-        uses: docker/login-action@v1
-        with:
-          username: aenterprise
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build Docker image
-        run: |
-          docker build -t gearbot/gearbot:latest .
-      - name: Push container to Docker Hub
-        run: |
-          docker push gearbot/gearbot:latest
+  # Uncomment when we need it
+  # docker_container:
+  #   name: Create Docker Container
+  #   runs-on: ubuntu-latest
+  #   needs: test
+  #   steps:
+  #     - name: Checkout sources
+  #       uses: actions/checkout@v1
+  #     - name: Login to Docker Hub
+  #       uses: docker/login-action@v1
+  #       with:
+  #         username: aenterprise
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
+  #     - name: Build Docker image
+  #       run: |
+  #         docker build -t gearbot/gearbot:latest .
+  #     - name: Push container to Docker Hub
+  #       run: |
+  #         docker push gearbot/gearbot:latest

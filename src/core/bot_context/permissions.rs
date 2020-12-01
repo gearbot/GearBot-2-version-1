@@ -195,7 +195,7 @@ fn cascade_node(
     // also when the parent is not available
     // unless we have an explicit grant
     let denied = not_negated_denies.contains(node.command_permission)
-        || !parent_available & &!permissions.contains(node.command_permission);
+        || !parent_available & !permissions.contains(node.command_permission);
 
     if !denied {
         permissions.insert(node.command_permission)
@@ -208,7 +208,7 @@ fn cascade_node(
         }
     }
     // we did not have this command, we do have one of it's subcommands and this command does not do anything itself, grant access as it only gives help info
-    if denied & &!not_negated_denies.contains(node.command_permission) & &any_granted & &node.handler.is_none() {
+    if denied & !not_negated_denies.contains(node.command_permission) & any_granted & node.handler.is_none() {
         permissions.insert(node.command_permission)
     }
 }

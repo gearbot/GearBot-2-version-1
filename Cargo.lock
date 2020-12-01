@@ -429,9 +429,9 @@ dependencies = [
 
 [[package]]
 name = "flexi_logger"
-version = "0.16.2"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c37586928c27a25ff5fce49ff3f8e071b3beeef48b4f004fe7d40d75a26e3db5"
+checksum = "d16c5bcdbb607a77ae7edfc2601174c10c4f00a6da9ba322326efd6daff222d7"
 dependencies = [
  "atty",
  "chrono",
@@ -458,9 +458,9 @@ dependencies = [
 
 [[package]]
 name = "fluent-bundle"
-version = "0.13.2"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "092ebd50cd3f8a6d664bf156e3550d2f7232fbe446da6707d727cca53f707ce2"
+checksum = "a79916560098f0a57215a489e37b7fc83088949eab7f7977dcc329b254d50c17"
 dependencies = [
  "fluent-langneg",
  "fluent-syntax",
@@ -1311,9 +1311,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.5.2"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
+checksum = "f53cef67919d7d247eb9a2f128ca9e522789967ef1eb4ccd8c71a95a8aedf596"
 
 [[package]]
 name = "opaque-debug"
@@ -2083,9 +2083,9 @@ checksum = "238ce071d267c5710f9d31451efec16c5ee22de34df17cc05e56cbc92e967117"
 
 [[package]]
 name = "tokio"
-version = "0.2.23"
+version = "0.2.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6d7ad61edd59bfcc7e80dababf0f4aed2e6d5e0ba1659356ae889752dfc12ff"
+checksum = "5d34ca54d84bf2b5b4d7d31e901a8464f7b60ac145a284fba25ceb801f2ddccd"
 dependencies = [
  "bytes",
  "fnv",
@@ -2104,9 +2104,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "0.2.6"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e44da00bfc73a25f814cd8d7e57a68a5c31b74b3152a0a1d1f590c97ed06265a"
+checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2280,9 +2280,9 @@ dependencies = [
 
 [[package]]
 name = "twilight-http"
-version = "0.2.3"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21046840ce9f3100861d5d0ac6f0a9b8a43de766b60bd46bd60204c0ddf83b28"
+checksum = "55347da5b5820db2407a50b06f80e514f80c7eef2b91be5a2b6da433bb3a875b"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -2300,9 +2300,9 @@ dependencies = [
 
 [[package]]
 name = "twilight-model"
-version = "0.2.2"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ba5ff4c1b1dfe2596d1f74740fd43bb1b127abbc4c30a162c85c454f2556bd1"
+checksum = "a321f3cc39485b72fae4feab5c7fa95b78f2e8c8ea703884a3b16890d6916e5b"
 dependencies = [
  "bitflags",
  "serde",

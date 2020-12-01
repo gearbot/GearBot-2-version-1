@@ -52,7 +52,7 @@ pub async fn run(ctx: Arc<BotContext>, mut receiver: UnboundedReceiver<LogData>)
                         if let Some(sender) = outputs.get(channel_id) {
                             //sender found, try try to re-use it
                             let owned_sender = sender.clone();
-                            if let Err(_) = owned_sender.send(log.clone()) {
+                            if owned_sender.send(log.clone()).is_err() {
                                 // fail, channel must have expired, setup a new one
                                 let (sender, receiver) = unbounded_channel();
                                 tokio::spawn(pump(ctx.clone(), receiver, log.guild, *channel_id));
@@ -278,8 +278,7 @@ async fn send(
         }
         LogStyle::Embed => {
             let mut out = vec![];
-            while let Some(_) = todo.first() {
-                let data = todo.remove(0);
+            for data in todo.drain(..) {
                 let user = match ctx.get_user(data.source_user).await {
                     Ok(user) => user,
                     Err(e) => {
@@ -302,7 +301,7 @@ async fn send(
                 }
             }
             let (webhook_id, token) = webhook_info.as_ref().unwrap();
-            if let Err(e) = ctx.http.execute_webhook(webhook_id.clone(), token).embeds(out).await {
+            if let Err(e) = ctx.http.execute_webhook(*webhook_id, token).embeds(out).await {
                 match e {
                     Error::Response { status, .. } => {
                         if status == StatusCode::NOT_FOUND {

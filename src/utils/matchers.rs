@@ -128,10 +128,7 @@ lazy_static! {
 /// Takes a string and returns `(username, #discriminator)`
 pub fn split_name(input: &str) -> Option<(&str, &str)> {
     match USERNAME_WITH_DISCRIMINATOR.captures(input) {
-        Some(captures) => {
-            println!("Captures: {:#?}", captures);
-            Some((captures.get(1).unwrap().as_str(), captures.get(2).unwrap().as_str()))
-        }
+        Some(captures) => Some((captures.get(1).unwrap().as_str(), captures.get(2).unwrap().as_str())),
         None => None,
     }
 }

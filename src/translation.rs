@@ -257,7 +257,6 @@ pub fn load_translations() -> Translations {
 mod tests {
     use super::{GearBotString, TRANSLATION_DIR};
     use lazy_static::lazy_static;
-    use serde_json;
     use std::collections::HashMap;
     use std::fs;
 
