@@ -2252,9 +2252,9 @@ dependencies = [
 
 [[package]]
 name = "twilight-http"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c0187cc65bb4fbb1cf1c423cbf7440c272ce80bdee95e7df796344a53ab1ea1"
+checksum = "af074bac6e8ca57f7127b9da58945af0a58f1651f79519d0bf70df34797a537e"
 dependencies = [
  "bytes",
  "futures-channel",
