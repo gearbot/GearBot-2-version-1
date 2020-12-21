@@ -27,7 +27,7 @@ rand = "0.7"
 regex = "1.4"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1"
-sqlx =  { version = "0.4.1", default-features = false, features = ["postgres", "json", "runtime-tokio-rustls", "macros", "migrate"] }
+sqlx =  { version = "0.4.2", default-features = false, features = ["postgres", "json", "runtime-tokio-rustls", "macros", "migrate"] }
 tokio = { version = "0.2", default-features = false, features = ["macros", "sync", "rt-core"] }
 toml = "0.5"
 twilight-embed-builder = "0.2"
