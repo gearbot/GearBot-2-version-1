@@ -175,6 +175,7 @@ async fn can_send(
     let ok = match style {
         LogStyle::Text => ctx
             .get_channel_permissions_for(ctx.bot_user.id, *channel_id)
+            .await
             .contains(Permissions::SEND_MESSAGES),
         LogStyle::Embed => {
             if webhook_info.is_none() {
@@ -196,6 +197,7 @@ async fn get_webhook(
         //nope, can we make one?
         if ctx
             .get_channel_permissions_for(ctx.bot_user.id, *channel_id)
+            .await
             .contains(Permissions::MANAGE_WEBHOOKS)
         {
             let webhook = ctx

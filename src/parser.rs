@@ -123,31 +123,31 @@ impl Parser {
         let ctx = Arc::clone(&parser.ctx);
 
         let channel_id = message.channel_id;
-        let channel = match ctx.cache.get_channel(channel_id) {
+        let channel = match ctx.cache.get_channel(channel_id).await {
             Some(channel) => channel,
             None => return Err(EventHandlerError::UnknownChannel(channel_id)),
         };
 
-        let author = match ctx.cache.get_user(message.author.id) {
+        let author = match ctx.cache.get_user(message.author.id).await {
             Some(author) => author,
             None => return Err(EventHandlerError::UnknownUser(message.author.id)),
         };
 
         //get optional guild and member, as well as a config and calculate user permissions
         let (guild, member, config, permissions) = if !channel.is_dm() {
-            let guild = match ctx.cache.get_guild(&message.guild_id.unwrap()) {
+            let guild = match ctx.cache.get_guild(&message.guild_id.unwrap()).await {
                 Some(guild) => guild,
                 None => return Err(EventHandlerError::UnknownGuild(message.guild_id.unwrap())),
             };
 
-            let member = match ctx.cache.get_member(&guild.id, &message.author.id) {
+            let member = match ctx.cache.get_member(&guild.id, &message.author.id).await {
                 Some(member) => member,
                 None => return Err(EventHandlerError::UnknownUser(message.author.id)),
             };
 
             let config = ctx.get_config(guild.id).await?;
 
-            let permissions = ctx.get_permissions_for(&guild, &member, &config);
+            let permissions = ctx.get_permissions_for(&guild, &member, &config).await;
 
             (Some(guild), Some(member), config, permissions)
         } else {
@@ -186,7 +186,7 @@ impl Parser {
         }
 
         //check if we can send a reply
-        if !context.bot_has_channel_permissions(Permissions::SEND_MESSAGES) {
+        if !context.bot_has_channel_permissions(Permissions::SEND_MESSAGES).await {
             let msg = &context.message;
             info!(
                 "{}#{} ({}) tried to run the {} command in #{} ({}) but I lack send message permissions to execute the command",
@@ -200,7 +200,10 @@ impl Parser {
 
             let dm_channel = context.get_dm_for_author().await?;
 
-            let key = if context.author_has_channel_permissions(Permissions::MANAGE_CHANNELS) {
+            let key = if context
+                .author_has_channel_permissions(Permissions::MANAGE_CHANNELS)
+                .await
+            {
                 GearBotString::UnableToReplyForManager
             } else {
                 GearBotString::UnableToReply
@@ -286,13 +289,14 @@ impl Parser {
         self.index < self.parts.len()
     }
 
-    fn get_member(&mut self) -> Result<Arc<CachedMember>, ParseError> {
+    async fn get_member(&mut self) -> Result<Arc<CachedMember>, ParseError> {
         let cache = &Arc::clone(&self.ctx).cache;
-        let guild = self.get_guild()?;
+        let guild = self.get_guild().await?;
 
         match self.get_affected_user()? {
             Some(id) => cache
                 .get_member(&guild.id, &UserId(id))
+                .await
                 .ok_or(ParseError::MemberNotFoundById(id)),
             None => {
                 // Might be a (partial) name
@@ -308,7 +312,7 @@ impl Parser {
 
                 let mut matches = vec![];
 
-                let members = guild.members.read().unwrap();
+                let members = guild.members.read().await;
                 for member in members.values() {
                     // If we have a discriminator, we have a full name, don't accept partials.
                     // note that this does not mean there can only be 1 match as # is valid for nicknames (but not usernames)
@@ -320,7 +324,7 @@ impl Parser {
                         }
                     }
 
-                    let user = member.user(cache);
+                    let user = member.user(cache).await;
                     match discriminator {
                         Some(discriminator) => {
                             if user.username == name && user.discriminator == discriminator {
@@ -364,10 +368,11 @@ impl Parser {
         }
     }
 
-    fn get_guild(&self) -> Result<Arc<CachedGuild>, ParseError> {
+    async fn get_guild(&self) -> Result<Arc<CachedGuild>, ParseError> {
         self.ctx
             .cache
             .get_guild(&self.get_guild_id()?)
+            .await
             .ok_or(ParseError::CorruptCache)
     }
 
@@ -378,7 +383,7 @@ impl Parser {
             None => {
                 // reverse our get_next and make the member getter deal with it
                 self.index -= 1;
-                Ok(self.get_member()?.user(&self.ctx.cache))
+                Ok(self.get_member().await?.user(&self.ctx.cache).await)
             }
         }
     }
@@ -391,9 +396,9 @@ impl Parser {
         }
     }
 
-    pub fn get_member_or(&mut self, alternative: Arc<CachedMember>) -> Result<Arc<CachedMember>, ParseError> {
+    pub async fn get_member_or(&mut self, alternative: Arc<CachedMember>) -> Result<Arc<CachedMember>, ParseError> {
         if self.has_next() {
-            Ok(self.get_member()?)
+            Ok(self.get_member().await?)
         } else {
             Ok(alternative)
         }

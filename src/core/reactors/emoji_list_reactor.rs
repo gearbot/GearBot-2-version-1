@@ -33,7 +33,7 @@ impl EmojiListReactor {
     ) -> Result<(), ReactorError> {
         if member.is_some() {
             // If we have a cached member, we have a guild id
-            if let Some(guild) = ctx.cache.get_guild(&reaction.guild_id.unwrap()) {
+            if let Some(guild) = ctx.cache.get_guild(&reaction.guild_id.unwrap()).await {
                 let pages = guild.emoji.len() as u8 + 1;
                 self.page = scroll_page(pages, self.page, &emoji);
                 let embed = gen_emoji_page(self.page, pages, &guild, &ctx.get_config(guild.id).await?, ctx).await?;
@@ -93,11 +93,15 @@ pub async fn gen_emoji_page(
         let role_info = if emoji.roles.is_empty() {
             gear_no.to_string()
         } else {
-            let temp = emoji
-                .roles
-                .iter()
-                .map(|e| guild.get_role(e).map_or("Unknown role".to_string(), |r| r.name.clone()))
-                .collect::<Vec<String>>();
+            let mut temp = vec![];
+            for role in &emoji.roles {
+                temp.push(
+                    guild
+                        .get_role(role)
+                        .await
+                        .map_or("Unknown role".to_string(), |r| r.name.clone()),
+                )
+            }
             temp.join(", ")
         };
 

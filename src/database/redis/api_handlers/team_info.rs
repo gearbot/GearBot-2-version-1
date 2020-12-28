@@ -1,5 +1,5 @@
 use crate::core::BotContext;
-use crate::database::redis::api_structs::ReplyData;
+use crate::database::redis::api_handlers::api_structs::ReplyData;
 use crate::error::ApiMessageError;
 use std::sync::Arc;
 

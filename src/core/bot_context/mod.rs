@@ -20,7 +20,7 @@ pub use stats::BotStats;
 use crate::cache::Cache;
 use crate::core::logpump::LogData;
 use crate::core::GuildConfig;
-use crate::database::api_structs::{RawTeamMembers, TeamInfo, TeamMember};
+use crate::database::redis::api_handlers::api_structs::{RawTeamMembers, TeamInfo, TeamMember};
 use crate::database::DataStorage;
 use crate::translation::{GearBotString, Translations};
 use crate::SchemeInfo;
@@ -64,7 +64,7 @@ pub struct BotContext {
 }
 
 impl BotContext {
-    pub fn new(
+    pub async fn new(
         bot_core: (Cache, Cluster, SchemeInfo),
         http_info: (HttpClient, CurrentUser),
         datastore: DataStorage,
@@ -79,12 +79,7 @@ impl BotContext {
             ..scheme_info.cluster_id * scheme_info.shards_per_cluster + scheme_info.shards_per_cluster
         {
             shard_states.insert(i, ShardState::PendingCreation);
-            bot_core
-                .0
-                .missing_per_shard
-                .write()
-                .expect("Global shard state tracking got poisoned!")
-                .insert(i, AtomicU64::new(0));
+            bot_core.0.missing_per_shard.write().await.insert(i, AtomicU64::new(0));
         }
 
         let global_admins = global_admins.into_iter().map(UserId).collect();

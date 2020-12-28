@@ -15,7 +15,7 @@ pub async fn handle_event<'a>(shard_id: u64, event: Event, ctx: Arc<BotContext>)
 
             let p = match msg.guild_id {
                 Some(guild_id) => {
-                    let guild = ctx.cache.get_guild(&guild_id);
+                    let guild = ctx.cache.get_guild(&guild_id).await;
                     match guild {
                         Some(g) => {
                             if !g.complete.load(Ordering::SeqCst) {

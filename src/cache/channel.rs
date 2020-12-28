@@ -7,6 +7,7 @@ use super::{is_default, Cache, CachedUser};
 use std::sync::Arc;
 
 const NO_PERMISSIONS: &[PermissionOverwrite] = &[];
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum CachedChannel {
@@ -302,26 +303,28 @@ impl CachedChannel {
         }
     }
 
-    pub fn from_private(channel: &PrivateChannel, cache: &Cache) -> Self {
+    pub async fn from_private(channel: &PrivateChannel, cache: &Cache) -> Self {
         if channel.recipients.len() == 1 {
             CachedChannel::DM {
                 id: channel.id,
                 receiver: cache
                     .get_user(channel.recipients[0].id)
+                    .await
                     .unwrap_or_else(|| Arc::new(CachedUser::from_user(&channel.recipients[0]))),
             }
         } else {
+            let mut receivers = vec![];
+            for user in &channel.recipients {
+                receivers.push(
+                    cache
+                        .get_user(channel.recipients[0].id)
+                        .await
+                        .unwrap_or_else(|| Arc::new(CachedUser::from_user(&user))),
+                )
+            }
             CachedChannel::GroupDM {
                 id: channel.id,
-                receivers: channel
-                    .recipients
-                    .iter()
-                    .map(|user| {
-                        cache
-                            .get_user(channel.recipients[0].id)
-                            .unwrap_or_else(|| Arc::new(CachedUser::from_user(user)))
-                    })
-                    .collect(),
+                receivers,
             }
         }
     }

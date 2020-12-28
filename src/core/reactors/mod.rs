@@ -42,7 +42,7 @@ impl Reactor {
         reaction: &Reaction,
     ) -> Result<Self, ReactorError> {
         let member = match &reaction.guild_id {
-            Some(guild_id) => ctx.cache.get_member(guild_id, &reaction.user_id),
+            Some(guild_id) => ctx.cache.get_member(guild_id, &reaction.user_id).await,
             None => None,
         };
         let new = match self {

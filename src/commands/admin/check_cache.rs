@@ -10,20 +10,8 @@ use crate::error::CommandResult;
 
 pub async fn check_cache(ctx: CommandContext) -> CommandResult {
     let mut counts: HashMap<UserId, Vec<GuildId>> = HashMap::new();
-    for guild in ctx
-        .bot_context
-        .cache
-        .guilds
-        .read()
-        .expect("Global guild cache got poisoned!")
-        .values()
-    {
-        for member in guild
-            .members
-            .read()
-            .expect("Guild inner members cache got poisoned!")
-            .values()
-        {
+    for guild in ctx.bot_context.cache.guilds.read().await.values() {
+        for member in guild.members.read().await.values() {
             let mut list = match counts.get(&member.user_id) {
                 Some(list) => list.clone(),
                 None => vec![],
@@ -37,14 +25,7 @@ pub async fn check_cache(ctx: CommandContext) -> CommandResult {
     let mut think_no_servers = 0;
     let mut no_servers = 0;
 
-    for user in ctx
-        .bot_context
-        .cache
-        .users
-        .read()
-        .expect("Global users cache got corrupted!")
-        .values()
-    {
+    for user in ctx.bot_context.cache.users.read().await.values() {
         let tracked = user.mutual_servers.load(Ordering::SeqCst) as usize;
         let empty = vec![];
         let real = counts.get(&user.id).unwrap_or(&empty);
@@ -92,13 +73,7 @@ pub async fn check_cache(ctx: CommandContext) -> CommandResult {
         .field(
             EmbedFieldBuilder::new(
                 "Unique users in cache",
-                ctx.bot_context
-                    .cache
-                    .users
-                    .read()
-                    .expect("Global users cache got corrupted!")
-                    .len()
-                    .to_string(),
+                ctx.bot_context.cache.users.read().await.len().to_string(),
             )?
             .build(),
         )
@@ -109,6 +84,7 @@ pub async fn check_cache(ctx: CommandContext) -> CommandResult {
             )?
             .build(),
         )
+        /*
         .field(
             EmbedFieldBuilder::new(
                 "Total users in cache",
@@ -116,15 +92,9 @@ pub async fn check_cache(ctx: CommandContext) -> CommandResult {
                     .cache
                     .guilds
                     .read()
-                    .expect("Global guilds cache got corrupted!")
+                    .await
                     .values()
-                    .map(|guild| {
-                        guild
-                            .members
-                            .read()
-                            .expect("Guild inner members cache got poisoned!")
-                            .len()
-                    })
+                    .map(|guild| guild.members.read().await.len())
                     .sum::<usize>()
                     .to_string(),
             )?
@@ -137,23 +107,16 @@ pub async fn check_cache(ctx: CommandContext) -> CommandResult {
                     .cache
                     .guilds
                     .read()
-                    .expect("Global guild cache got poisoned!")
+                    .await
                     .values()
                     .map(|guild| {
                         guild
                             .members
                             .read()
-                            .expect("Guild inner members cache got poisoned!")
+                            .await
                             .values()
                             .map(|member| {
-                                if ctx
-                                    .bot_context
-                                    .cache
-                                    .users
-                                    .read()
-                                    .expect("Global users cache got poisoned!")
-                                    .contains_key(&member.user_id)
-                                {
+                                if ctx.bot_context.cache.users.read().await.contains_key(&member.user_id) {
                                     0
                                 } else {
                                     1
@@ -166,6 +129,7 @@ pub async fn check_cache(ctx: CommandContext) -> CommandResult {
             )?
             .build(),
         )
+         */
         .field(EmbedFieldBuilder::new("Users who think they have no mutuals", think_no_servers.to_string())?.build())
         .field(EmbedFieldBuilder::new("Users without mutual servers", no_servers.to_string())?.build())
         .build()?;

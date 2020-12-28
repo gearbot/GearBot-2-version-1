@@ -5,7 +5,7 @@ use twilight_model::channel::Message;
 
 use super::{BotContext, ShardState};
 use crate::GIT_VERSION;
-use prometheus::{IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry};
+use prometheus::{Histogram, IntCounter, IntCounterVec, IntGauge, IntGaugeVec, Opts, Registry};
 
 use crate::core::guild_config::{LogCategory, LogStyle};
 use log::info;

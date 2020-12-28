@@ -11,7 +11,7 @@ use crate::core::guild_config::{GuildConfig, PermissionGroup};
 use twilight_model::channel::permission_overwrite::PermissionOverwriteType;
 
 impl BotContext {
-    pub fn get_guild_permissions_for_member(
+    pub async fn get_guild_permissions_for_member(
         &self,
         member: &Arc<CachedMember>,
         guild: &Arc<CachedGuild>,
@@ -24,7 +24,7 @@ impl BotContext {
         let mut permissions = Permissions::empty();
 
         for role_id in &member.roles {
-            if let Some(role) = guild.get_role(role_id) {
+            if let Some(role) = guild.get_role(role_id).await {
                 permissions |= role.permissions;
             }
         }
@@ -36,18 +36,18 @@ impl BotContext {
         }
     }
 
-    pub fn get_guild_permissions_for(&self, guild_id: &GuildId, user_id: &UserId) -> Permissions {
-        match self.cache.get_guild(guild_id) {
-            Some(guild) => match self.cache.get_member(guild_id, user_id) {
-                Some(member) => self.get_guild_permissions_for_member(&member, &guild),
+    pub async fn get_guild_permissions_for(&self, guild_id: &GuildId, user_id: &UserId) -> Permissions {
+        match self.cache.get_guild(guild_id).await {
+            Some(guild) => match self.cache.get_member(guild_id, user_id).await {
+                Some(member) => self.get_guild_permissions_for_member(&member, &guild).await,
                 None => Permissions::empty(),
             },
             None => Permissions::empty(),
         }
     }
 
-    pub fn get_channel_permissions_for(&self, user_id: UserId, channel_id: ChannelId) -> Permissions {
-        if let Some(channel) = self.cache.get_channel(channel_id) {
+    pub async fn get_channel_permissions_for(&self, user_id: UserId, channel_id: ChannelId) -> Permissions {
+        if let Some(channel) = self.cache.get_channel(channel_id).await {
             if channel.is_dm() {
                 return Permissions::SEND_MESSAGES
                     | Permissions::EMBED_LINKS
@@ -57,12 +57,14 @@ impl BotContext {
                     | Permissions::READ_MESSAGE_HISTORY;
             }
 
-            let mut permissions = self.get_guild_permissions_for(&channel.get_guild_id().unwrap(), &user_id);
+            let mut permissions = self
+                .get_guild_permissions_for(&channel.get_guild_id().unwrap(), &user_id)
+                .await;
             //admins don't give a **** about overrides
             if permissions.contains(Permissions::ADMINISTRATOR) {
                 return Permissions::all();
             }
-            if let Some(member) = &self.cache.get_member(&channel.get_guild_id().unwrap(), &user_id) {
+            if let Some(member) = &self.cache.get_member(&channel.get_guild_id().unwrap(), &user_id).await {
                 let overrides = channel.get_permission_overrides();
                 let mut everyone_allowed = Permissions::empty();
                 let mut everyone_denied = Permissions::empty();
@@ -106,7 +108,7 @@ impl BotContext {
         }
     }
 
-    pub fn get_permissions_for(
+    pub async fn get_permissions_for(
         &self,
         guild: &Arc<CachedGuild>,
         member: &Arc<CachedMember>,
@@ -115,7 +117,7 @@ impl BotContext {
         let mut permissions = GearBotPermissions::empty();
         let mut not_negated_denies = GearBotPermissions::empty();
 
-        let discord_permissions = self.get_guild_permissions_for_member(member, guild);
+        let discord_permissions = self.get_guild_permissions_for_member(member, guild).await;
 
         //these are already sorted by priority upon loading
         for group in &config.permission_groups {

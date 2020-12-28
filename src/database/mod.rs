@@ -3,8 +3,7 @@ pub mod configs;
 mod crypto;
 use crypto::EncryptionKey;
 
-mod redis;
-pub use redis::{api_structs, Redis};
+pub mod redis;
 
 pub mod structures;
 use structures::{StoredUserMessage, UserMessage};
@@ -12,6 +11,7 @@ use structures::{StoredUserMessage, UserMessage};
 use twilight_model::channel::{Attachment, Message};
 use twilight_model::id::{ChannelId, GuildId, MessageId, UserId, WebhookId};
 
+use crate::database::redis::Redis;
 use crate::database::structures::WebhookInfo;
 use crate::error::{DatabaseError, StartupError};
 use crate::BotConfig;

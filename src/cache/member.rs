@@ -51,9 +51,11 @@ impl CachedMember {
         }
     }
 
-    pub fn user(&self, cache: &Cache) -> Arc<CachedUser> {
+    //TODO: is this worth panicking over?
+    pub async fn user(&self, cache: &Cache) -> Arc<CachedUser> {
         cache
             .get_user(self.user_id)
+            .await
             .expect("User got nuked from the global cache too early!")
     }
 

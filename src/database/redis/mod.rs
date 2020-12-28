@@ -2,15 +2,16 @@ use darkredis::ConnectionPool;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::core::BotContext;
-use crate::database::redis::api_structs::{ApiRequest, Reply, Request};
+use crate::database::redis::api_handlers::api_structs::{ApiRequest, Reply, Request};
+use crate::database::redis::api_handlers::mutual_guilds::get_mutual_guilds;
+use crate::database::redis::api_handlers::team_info::get_team_info;
+use crate::database::redis::api_handlers::user_info::get_user_info;
 use crate::error::{ApiCommunicaionError, DatabaseError};
 use crate::gearbot_error;
 use futures_util::StreamExt;
 use std::sync::Arc;
-use team_info::get_team_info;
 
-pub mod api_structs;
-mod team_info;
+pub mod api_handlers;
 
 /// An abstraction layer around a connection to Redis.
 ///
@@ -89,6 +90,8 @@ impl Redis {
 
                 let result = match message.request {
                     Request::TeamInfo => get_team_info(ctx.clone()).await,
+                    Request::UserInfo(user_id) => get_user_info(&ctx, user_id).await,
+                    Request::MutualGuilds(user_id) => get_mutual_guilds(&ctx, &user_id).await,
                 };
 
                 match result {

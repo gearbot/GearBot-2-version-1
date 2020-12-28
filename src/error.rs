@@ -178,13 +178,19 @@ impl fmt::Display for EmojiError {
 }
 
 #[derive(Debug)]
-pub enum ApiMessageError {}
+pub enum ApiMessageError {
+    Parse(ParseError),
+    Database(DatabaseError),
+}
 
 impl error::Error for ApiMessageError {}
 
 impl fmt::Display for ApiMessageError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.write_str("An error occured getting a message from the API!")
+        match self {
+            ApiMessageError::Parse(e) => write!(f, "Failed when processing api input: {}", e),
+            ApiMessageError::Database(e) => write!(f, "Database failure: {}", e),
+        }
     }
 }
 
@@ -579,5 +585,11 @@ impl From<DatabaseError> for OtherFailure {
 impl From<twilight_http::Error> for OtherFailure {
     fn from(e: twilight_http::Error) -> Self {
         OtherFailure::TwilightHttp(e)
+    }
+}
+
+impl From<DatabaseError> for ApiMessageError {
+    fn from(e: DatabaseError) -> Self {
+        ApiMessageError::Database(e)
     }
 }

@@ -38,7 +38,7 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
         None => {
             // we already know for sure the user will exist
             let user = ctx.get_user(user.id).await?;
-            ctx.bot_context.cache.update_user(user.clone());
+            ctx.bot_context.cache.update_user(user.clone()).await;
             user.public_flags.unwrap_or_else(UserFlags::empty)
         }
     };
@@ -103,12 +103,12 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
         utils::age(created_at, Utc::now(), 2)
     );
 
-    let cached_member = ctx.get_member(&user.id);
+    let cached_member = ctx.get_member(&user.id).await;
 
     match &cached_member {
         Some(member) => {
             let color = match member.roles.first() {
-                Some(role) => ctx.get_role(role).unwrap().color,
+                Some(role) => ctx.get_role(role).await.unwrap().color,
                 None => USER_INFO_COLOR,
             };
             builder = builder.color(color)?;
@@ -159,7 +159,7 @@ pub async fn userinfo(mut ctx: CommandContext) -> CommandResult {
     }
 
     let is_banned = cached_member.is_none()
-        && ctx.bot_has_guild_permissions(Permissions::BAN_MEMBERS)
+        && ctx.bot_has_guild_permissions(Permissions::BAN_MEMBERS).await
         && ctx.get_ban(user.id).await?.is_some();
 
     if is_banned {

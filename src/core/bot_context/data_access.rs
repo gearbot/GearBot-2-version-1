@@ -23,7 +23,7 @@ const USER_CACHE_DURATION: u32 = 3600;
 
 impl BotContext {
     pub async fn get_user(&self, user_id: UserId) -> Result<Arc<CachedUser>, ParseError> {
-        if let Some(user) = self.cache.get_user(user_id) {
+        if let Some(user) = self.cache.get_user(user_id).await {
             return Ok(user);
         }
 

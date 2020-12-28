@@ -89,7 +89,7 @@ async fn real_main() -> Result<(), StartupError> {
     let http = builder.build()?;
     // Validate token and figure out who we are
     let bot_user = http.current_user().await?;
-    info!(
+    println!(
         "Token validated, connecting to discord as {}#{}",
         bot_user.name, bot_user.discriminator
     );
@@ -214,7 +214,7 @@ async fn run(
 
                     if let Err(e) = result {
                         gearbot_error!("Cold resume defrosting failed: {}", e);
-                        cache.reset();
+                        cache.reset().await;
                     } else {
                         gearbot_important!("Cold resume defrosting completed in {}ms!", start.elapsed().as_millis());
                         cb = cb.resume_sessions(map);
@@ -231,15 +231,18 @@ async fn run(
 
     let (sender, receiver) = mpsc::unbounded_channel();
 
-    let context = Arc::new(BotContext::new(
-        (cache, cluster, scheme_info),
-        (http, bot_user),
-        datastore,
-        translations,
-        config.global_admins,
-        stats,
-        sender,
-    ));
+    let context = Arc::new(
+        BotContext::new(
+            (cache, cluster, scheme_info),
+            (http, bot_user),
+            datastore,
+            translations,
+            config.global_admins,
+            stats,
+            sender,
+        )
+        .await,
+    );
     let ctx = context.clone();
     let mut _logpump_task = tokio::spawn(logpump::run(ctx, receiver));
 

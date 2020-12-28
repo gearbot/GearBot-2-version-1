@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use twilight_model::guild::{DefaultMessageNotificationLevel, Guild, PartialGuild, PremiumTier, VerificationLevel};
 use twilight_model::id::{ChannelId, GuildId, RoleId, UserId};
 
 use super::{is_default, Cache, CachedChannel, CachedEmoji, CachedMember, CachedRole};
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct CachedGuild {
@@ -46,8 +47,8 @@ pub struct CachedGuild {
     pub member_count: AtomicU64, //own field because we do not rely on the guild create info for this but rather the
 }
 
-impl From<Guild> for CachedGuild {
-    fn from(guild: Guild) -> Self {
+impl CachedGuild {
+    pub async fn from_guild(guild: Guild) -> Self {
         let mut cached_guild = CachedGuild {
             id: guild.id,
             name: guild.name,
@@ -79,10 +80,7 @@ impl From<Guild> for CachedGuild {
 
         //handle roles
         {
-            let mut roles = cached_guild
-                .roles
-                .write()
-                .expect("Guild inner roles cache got poisoned!");
+            let mut roles = cached_guild.roles.write().await;
             for (role_id, role) in guild.roles {
                 roles.insert(role_id, Arc::new(CachedRole::from_role(&role)));
             }
@@ -90,10 +88,7 @@ impl From<Guild> for CachedGuild {
 
         //channels
         {
-            let mut channels = cached_guild
-                .channels
-                .write()
-                .expect("Guild inner channels cache got poisoned!");
+            let mut channels = cached_guild.channels.write().await;
             for (channel_id, channel) in guild.channels {
                 channels.insert(
                     channel_id,
@@ -110,10 +105,8 @@ impl From<Guild> for CachedGuild {
         cached_guild.emoji.sort_by(|a, b| a.id.cmp(&b.id));
         cached_guild
     }
-}
 
-impl CachedGuild {
-    pub fn defrost(cache: &Cache, cold_guild: ColdStorageGuild) -> Self {
+    pub async fn defrost(cache: &Cache, cold_guild: ColdStorageGuild) -> Self {
         let mut guild = CachedGuild {
             id: cold_guild.id,
             name: cold_guild.name,
@@ -144,26 +137,23 @@ impl CachedGuild {
         };
 
         {
-            let mut roles = guild.roles.write().expect("Guild inner roles cache got poisoned!");
+            let mut roles = guild.roles.write().await;
             for role in cold_guild.roles {
                 roles.insert(role.id, Arc::new(role));
             }
         }
 
         {
-            let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
+            let mut members = guild.members.write().await;
             for member in cold_guild.members {
-                let user = cache.get_user(member.user_id).unwrap();
+                let user = cache.get_user(member.user_id).await.unwrap();
                 user.mutual_servers.fetch_add(1, Ordering::SeqCst);
                 members.insert(member.user_id, Arc::new(member));
             }
         }
 
         {
-            let mut channels = guild
-                .channels
-                .write()
-                .expect("Guild inner channels cache got poisoned!");
+            let mut channels = guild.channels.write().await;
             for channel in cold_guild.channels {
                 channels.insert(channel.get_id(), Arc::new(channel));
             }
@@ -175,7 +165,7 @@ impl CachedGuild {
         guild
     }
 
-    pub fn update(&self, other: &PartialGuild) -> Self {
+    pub async fn update(&self, other: &PartialGuild) -> Self {
         let mut guild = CachedGuild {
             id: other.id,
             name: other.name.clone(),
@@ -206,35 +196,22 @@ impl CachedGuild {
         };
 
         {
-            let mut roles = guild.roles.write().expect("Guild inner roles cache got poisoned!");
+            let mut roles = guild.roles.write().await;
             for role in other.roles.values() {
                 roles.insert(role.id, Arc::new(CachedRole::from_role(role)));
             }
         }
 
         {
-            let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
-            for guard in self
-                .members
-                .read()
-                .expect("Guild inner members cache got poisoned!")
-                .values()
-            {
+            let mut members = guild.members.write().await;
+            for guard in self.members.read().await.values() {
                 members.insert(guard.user_id, guard.clone());
             }
         }
 
         {
-            let mut channels = guild
-                .channels
-                .write()
-                .expect("Guild inner channels cache got poisoned!");
-            for guard in self
-                .channels
-                .read()
-                .expect("Guild inner channels cache got poisoned!")
-                .values()
-            {
+            let mut channels = guild.channels.write().await;
+            for guard in self.channels.read().await.values() {
                 channels.insert(guard.get_id(), guard.clone());
             }
         }
@@ -244,12 +221,8 @@ impl CachedGuild {
         guild
     }
 
-    pub fn get_role(&self, role_id: &RoleId) -> Option<Arc<CachedRole>> {
-        self.roles
-            .read()
-            .expect("Global role cache got poisoned!")
-            .get(role_id)
-            .cloned()
+    pub async fn get_role(&self, role_id: &RoleId) -> Option<Arc<CachedRole>> {
+        self.roles.read().await.get(role_id).cloned()
     }
 
     pub fn get_icon_url(&self, animated: bool) -> Option<String> {
@@ -264,6 +237,10 @@ impl CachedGuild {
             }
             None => None,
         }
+    }
+
+    pub async fn get_member(&self, user_id: &UserId) -> Option<Arc<CachedMember>> {
+        self.members.read().await.get(user_id).cloned()
     }
 }
 
@@ -318,8 +295,8 @@ pub struct ColdStorageGuild {
     pub preferred_locale: String,
 }
 
-impl From<Arc<CachedGuild>> for ColdStorageGuild {
-    fn from(cached_guild: Arc<CachedGuild>) -> Self {
+impl ColdStorageGuild {
+    pub async fn from_cached_guild(cached_guild: Arc<CachedGuild>) -> Self {
         let guild = cached_guild;
         let mut csg = ColdStorageGuild {
             id: guild.id,
@@ -347,7 +324,7 @@ impl From<Arc<CachedGuild>> for ColdStorageGuild {
             preferred_locale: guild.preferred_locale.clone(),
         };
         {
-            let mut roles = guild.roles.write().expect("Guild inner roles cache got poisoned!");
+            let mut roles = guild.roles.write().await;
             for role in roles.values() {
                 csg.roles.push(CachedRole::from(role));
             }
@@ -359,19 +336,14 @@ impl From<Arc<CachedGuild>> for ColdStorageGuild {
         }
 
         {
-            let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
+            let mut members = guild.members.write().await;
             for member in members.values() {
                 csg.members.push(member.duplicate());
             }
             members.clear();
         }
 
-        for channel in guild
-            .channels
-            .read()
-            .expect("Guild inner channels cache got poisoned!")
-            .values()
-        {
+        for channel in guild.channels.read().await.values() {
             csg.channels.push(match channel.as_ref() {
                 CachedChannel::TextChannel {
                     id,

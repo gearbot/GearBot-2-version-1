@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use futures_util::future;
 use log::{debug, info, trace, warn};
@@ -26,9 +26,10 @@ pub use role::CachedRole;
 pub use user::CachedUser;
 
 use crate::core::{BotContext, BotStats, ShardState};
-use crate::database::Redis;
+use crate::database::redis::Redis;
 use crate::error::{ColdResumeError, DatabaseError};
 use crate::{gearbot_error, gearbot_important, gearbot_info, gearbot_warn};
+use tokio::sync::RwLock;
 
 pub struct Cache {
     //cluster info
@@ -69,19 +70,13 @@ impl Cache {
         }
     }
 
-    pub fn reset(&self) {
-        self.guilds.write().expect("Global guilds cache got poisoned!").clear();
-        self.guild_channels
-            .write()
-            .expect("Global guild channels cache got poisoned!")
-            .clear();
-        self.users.write().expect("Global users cache got poisoned!").clear();
-        self.emoji.write().expect("Global emoji cache got poisoned").clear();
+    pub async fn reset(&self) {
+        self.guilds.write().await.clear();
+        self.guild_channels.write().await.clear();
+        self.users.write().await.clear();
+        self.emoji.write().await.clear();
         self.filling.store(true, Ordering::SeqCst);
-        self.private_channels
-            .write()
-            .expect("Global private channel cache got poisoned!")
-            .clear();
+        self.private_channels.write().await.clear();
     }
 
     pub async fn update(&self, shard_id: u64, event: &Event, ctx: Arc<BotContext>) {
@@ -89,34 +84,26 @@ impl Cache {
             Event::Ready(ready) => {
                 self.missing_per_shard
                     .write()
-                    .expect("Global shard state tracking got poisoned!")
+                    .await
                     .insert(shard_id, AtomicU64::new(ready.guilds.len() as u64));
                 // just in case somehow got here without getting any re-identifying event
                 // shouldn't happen but memory leaks are very bad
                 for gid in ready.guilds.keys() {
-                    if let Some(guild) = self.get_guild(gid) {
-                        self.nuke_guild_cache(&guild)
+                    if let Some(guild) = self.get_guild(gid).await {
+                        self.nuke_guild_cache(&guild).await
                     }
                 }
             }
             Event::GuildCreate(e) => {
                 trace!("Received guild create event for {} ({})", e.name, e.id);
-                if let Some(cached_guild) = self
-                    .guilds
-                    .read()
-                    .expect("Global guilds cache got poisoned!")
-                    .get(&e.id)
-                {
-                    self.nuke_guild_cache(cached_guild)
+                if let Some(cached_guild) = self.guilds.read().await.get(&e.id) {
+                    self.nuke_guild_cache(cached_guild).await
                 }
-                let guild = CachedGuild::from(e.0.clone());
+                let guild = CachedGuild::from_guild(e.0.clone()).await;
 
                 {
                     //fine to always grab a write lock here, we update from the main loop itself
-                    let mut unavailable = self
-                        .unavailable_guilds
-                        .write()
-                        .expect("Unavailable guilds got poisoned!");
+                    let mut unavailable = self.unavailable_guilds.write().await;
                     if let Some(index) = unavailable.iter().position(|id| *id == guild.id) {
                         //guild is available again
                         unavailable.remove(index);
@@ -126,11 +113,8 @@ impl Cache {
                 }
 
                 {
-                    let mut guild_channels = self
-                        .guild_channels
-                        .write()
-                        .expect("Global guild channels cache got poisoned!");
-                    let gc = guild.channels.read().expect("Guild inner channel cache got poisoned!");
+                    let mut guild_channels = self.guild_channels.write().await;
+                    let gc = guild.channels.read().await;
                     for channel in gc.values() {
                         guild_channels.insert(channel.get_id(), channel.clone());
                     }
@@ -138,46 +122,33 @@ impl Cache {
                 }
 
                 {
-                    let mut emoji_cache = self.emoji.write().expect("Global emoji cache got poisoned!");
+                    let mut emoji_cache = self.emoji.write().await;
                     for emoji in &guild.emoji {
                         emoji_cache.insert(emoji.id, emoji.clone());
                     }
                     self.stats.emoji_count.add(guild.emoji.len() as i64);
                 }
 
-                self.stats
-                    .role_count
-                    .add(guild.roles.read().expect("Guild inner roles cache got poisoned!").len() as i64);
+                self.stats.role_count.add(guild.roles.read().await.len() as i64);
 
                 //we usually don't need this mutable but acquire a write lock regardless to prevent potential deadlocks
-                let mut list = self.unavailable_guilds.write().unwrap();
+                let mut list = self.unavailable_guilds.write().await;
                 if let Some(index) = list.iter().position(|id| id.0 == guild.id.0) {
                     list.remove(index);
                     gearbot_info!("Guild {}, ``{}`` is available again!", guild.name, guild.id);
                 }
 
-                self.guilds
-                    .write()
-                    .expect("Global guild cache got poisoned!")
-                    .insert(e.id, Arc::new(guild));
+                self.guilds.write().await.insert(e.id, Arc::new(guild));
                 self.stats.guild_counts.partial.inc();
             }
             Event::GuildUpdate(update) => {
                 trace!("Receive guild update for {} ({})", update.name, update.id);
 
-                match self.get_guild(&update.id) {
+                match self.get_guild(&update.id).await {
                     Some(old_guild) => {
-                        let guild = old_guild.update(&update.0);
-                        self.stats.role_count.sub(
-                            old_guild
-                                .roles
-                                .read()
-                                .expect("Guild inner role cache got poisoned!")
-                                .len() as i64,
-                        );
-                        self.stats
-                            .role_count
-                            .add(guild.roles.read().expect("Guild inner role cache got poisoned!").len() as i64);
+                        let guild = old_guild.update(&update.0).await;
+                        self.stats.role_count.sub(old_guild.roles.read().await.len() as i64);
+                        self.stats.role_count.add(guild.roles.read().await.len() as i64);
                     }
                     None => {
                         gearbot_warn!(
@@ -190,11 +161,11 @@ impl Cache {
             }
             Event::GuildEmojisUpdate(_) => {}
             Event::GuildDelete(guild) => {
-                if let Some(cached_guild) = self.get_guild(&guild.id) {
+                if let Some(cached_guild) = self.get_guild(&guild.id).await {
                     if guild.unavailable {
-                        self.guild_unavailable(&cached_guild);
+                        self.guild_unavailable(&cached_guild).await;
                     }
-                    self.nuke_guild_cache(&cached_guild)
+                    self.nuke_guild_cache(&cached_guild).await
                 }
             }
             Event::MemberChunk(chunk) => {
@@ -205,16 +176,16 @@ impl Cache {
                     chunk.nonce,
                     chunk.guild_id
                 );
-                match self.get_guild(&chunk.guild_id) {
+                match self.get_guild(&chunk.guild_id).await {
                     Some(guild) => {
                         let mut count = 0;
                         for (user_id, member) in &chunk.members {
-                            let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
+                            let mut members = guild.members.write().await;
                             if !members.contains_key(user_id) {
                                 count += 1;
-                                self.get_or_insert_user(&member.user);
+                                self.get_or_insert_user(&member.user).await;
                                 let member = Arc::new(CachedMember::from_member(member));
-                                let count = member.user(self).mutual_servers.fetch_add(1, Ordering::SeqCst) + 1;
+                                let count = member.user(self).await.mutual_servers.fetch_add(1, Ordering::SeqCst) + 1;
 
                                 trace!(
                                     "{} received for {}, they are now in {} mutuals",
@@ -237,14 +208,14 @@ impl Cache {
                             let shard_missing = self
                                 .missing_per_shard
                                 .read()
-                                .expect("Global shard state tracking got poisoned!")
+                                .await
                                 .get(&shard_id)
                                 .unwrap()
                                 .fetch_sub(1, Ordering::Relaxed);
                             if shard_missing == 1 {
                                 //this shard is ready
                                 info!("All guilds cached for shard {}", shard_id);
-                                if chunk.nonce.is_none() && self.shard_cached(shard_id) {
+                                if chunk.nonce.is_none() && self.shard_cached(shard_id).await {
                                     let c = ctx.clone();
                                     tokio::spawn(async move {
                                         if let Err(e) = c
@@ -305,11 +276,11 @@ impl Cache {
                         match guild_id {
                             Some(guild_id) => {
                                 let channel = CachedChannel::from_guild_channel(guild_channel, guild_id);
-                                match self.get_guild(&guild_id) {
+                                match self.get_guild(&guild_id).await {
                                     Some(guild) => {
                                         let arced = Arc::new(channel);
-                                        guild.channels.write().expect("Guild inner channel cache got poisoned!").insert(arced.get_id(), arced.clone());
-                                        self.guild_channels.write().expect("Global guild channels cache got poisoned!").insert(arced.get_id(), arced);
+                                        guild.channels.write().await.insert(arced.get_id(), arced.clone());
+                                        self.guild_channels.write().await.insert(arced.get_id(), arced);
                                         self.stats.channel_count.inc();
                                     }
                                     None => gearbot_error!(
@@ -326,7 +297,7 @@ impl Cache {
                         }
                     }
                     Channel::Private(private_channel) => {
-                        self.insert_private_channel(private_channel);
+                        self.insert_private_channel(private_channel).await;
                     }
                 };
             }
@@ -340,19 +311,12 @@ impl Cache {
                             GuildChannel::Voice(voice) => voice.guild_id,
                         };
                         match guild_id {
-                            Some(guild_id) => match self.get_guild(&guild_id) {
+                            Some(guild_id) => match self.get_guild(&guild_id).await {
                                 Some(guild) => {
                                     let channel = CachedChannel::from_guild_channel(guild_channel, guild.id);
                                     let arced = Arc::new(channel);
-                                    guild
-                                        .channels
-                                        .write()
-                                        .expect("Guild inner channels cache got poisoned!")
-                                        .insert(arced.get_id(), arced.clone());
-                                    self.guild_channels
-                                        .write()
-                                        .expect("Global guild channel cache got poisoned!")
-                                        .insert(arced.get_id(), arced);
+                                    guild.channels.write().await.insert(arced.get_id(), arced.clone());
+                                    self.guild_channels.write().await.insert(arced.get_id(), arced);
                                 }
                                 None => gearbot_warn!(
                                     "Got a channel update for guild ``{}`` but we do not have this guild cached!",
@@ -365,7 +329,7 @@ impl Cache {
                         }
                     }
                     Channel::Private(private) => {
-                        self.insert_private_channel(private);
+                        self.insert_private_channel(private).await;
                     }
                 }
             }
@@ -382,17 +346,10 @@ impl Cache {
                             GuildChannel::Category(category) => (category.guild_id, category.id),
                         };
                         match guild_id {
-                            Some(guild_id) => match self.get_guild(&guild_id) {
+                            Some(guild_id) => match self.get_guild(&guild_id).await {
                                 Some(guild) => {
-                                    self.guild_channels
-                                        .write()
-                                        .expect("Global guild channels cache got poisoned!")
-                                        .remove(&channel_id);
-                                    guild
-                                        .channels
-                                        .write()
-                                        .expect("Guild inner channels cache got poisoned!")
-                                        .remove(&channel_id);
+                                    self.guild_channels.write().await.remove(&channel_id);
+                                    guild.channels.write().await.remove(&channel_id);
                                     self.stats.channel_count.dec();
                                 }
                                 None => {
@@ -406,15 +363,9 @@ impl Cache {
                     }
                     //Do these even ever get deleted?
                     Channel::Private(channel) => {
-                        self.private_channels
-                            .write()
-                            .expect("Global private channels cache got poisoned!")
-                            .remove(&channel.id);
+                        self.private_channels.write().await.remove(&channel.id);
                         if channel.recipients.len() == 1 {
-                            self.dm_channels_by_user
-                                .write()
-                                .expect("Global DM channel cache got poisoned!")
-                                .remove(&channel.recipients[0].id);
+                            self.dm_channels_by_user.write().await.remove(&channel.recipients[0].id);
                         }
                     }
                 }
@@ -422,10 +373,10 @@ impl Cache {
 
             Event::MemberAdd(event) => {
                 debug!("{} joined {}", event.user.id, event.guild_id);
-                match self.get_guild(&event.guild_id) {
+                match self.get_guild(&event.guild_id).await {
                     Some(guild) => {
-                        let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
-                        let user = self.get_or_insert_user(&event.user);
+                        let mut members = guild.members.write().await;
+                        let user = self.get_or_insert_user(&event.user).await;
                         if !members.contains_key(&event.user.id) {
                             let member = CachedMember::from_member(&event.0);
                             let count = user.mutual_servers.fetch_add(1, Ordering::SeqCst) + 1;
@@ -445,9 +396,9 @@ impl Cache {
 
             Event::MemberUpdate(event) => {
                 trace!("{} updated in {}", event.user.id, event.guild_id);
-                match ctx.cache.get_guild(&event.guild_id) {
+                match ctx.cache.get_guild(&event.guild_id).await {
                     Some(guild) => {
-                        match ctx.cache.get_user(event.user.id) {
+                        match ctx.cache.get_user(event.user.id).await {
                             Some(user) => {
                                 if !user.is_same_as(&event.user) {
                                     //just update the global cache if it's different, we will receive an event for all mutual servers if the inner user changed
@@ -455,11 +406,7 @@ impl Cache {
                                     new_user
                                         .mutual_servers
                                         .store(user.mutual_servers.load(Ordering::SeqCst), Ordering::SeqCst);
-                                    ctx.cache
-                                        .users
-                                        .write()
-                                        .expect("Global user cache got poisoned!")
-                                        .insert(event.user.id, new_user);
+                                    ctx.cache.users.write().await.insert(event.user.id, new_user);
                                 }
                             }
                             None => {
@@ -468,11 +415,11 @@ impl Cache {
                                         "Received a member update with an uncached inner user: {}",
                                         event.user.id
                                     );
-                                    ctx.cache.get_or_insert_user(&event.user);
+                                    ctx.cache.get_or_insert_user(&event.user).await;
                                 }
                             }
                         }
-                        let mut members = guild.members.write().expect("Guild inner members cache got poisoned!");
+                        let mut members = guild.members.write().await;
                         if members.contains_key(&event.user.id) {
                             let g = {
                                 let member = members.get(&event.user.id).unwrap();
@@ -500,23 +447,15 @@ impl Cache {
 
             Event::MemberRemove(event) => {
                 debug!("{} left {}", event.user.id, event.guild_id);
-                match self.get_guild(&event.guild_id) {
-                    Some(guild) => match guild
-                        .members
-                        .write()
-                        .expect("Guild inner member cache got poisoned!")
-                        .remove(&event.user.id)
-                    {
+                match self.get_guild(&event.guild_id).await {
+                    Some(guild) => match guild.members.write().await.remove(&event.user.id) {
                         Some(member) => {
-                            let count = member.user(self).mutual_servers.fetch_sub(1, Ordering::SeqCst) - 1;
+                            let count = member.user(self).await.mutual_servers.fetch_sub(1, Ordering::SeqCst) - 1;
 
                             debug!("{} is now in {} mutual servers", member.user_id, count);
                             if count == 0 {
                                 debug!("purging {} from the user cache", member.user_id);
-                                self.users
-                                    .write()
-                                    .expect("Global users cache got poisoned!")
-                                    .remove(&member.user_id);
+                                self.users.write().await.remove(&member.user_id);
                                 self.stats.user_counts.unique.dec();
                             }
                             self.stats.user_counts.total.dec();
@@ -539,12 +478,12 @@ impl Cache {
                 }
             }
 
-            Event::RoleCreate(event) => match self.get_guild(&event.guild_id) {
+            Event::RoleCreate(event) => match self.get_guild(&event.guild_id).await {
                 Some(guild) => {
                     guild
                         .roles
                         .write()
-                        .expect("Guild inner roles cache got poisoned!")
+                        .await
                         .insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
                     self.stats.role_count.inc();
                 }
@@ -554,12 +493,12 @@ impl Cache {
                 ),
             },
 
-            Event::RoleUpdate(event) => match self.get_guild(&event.guild_id) {
+            Event::RoleUpdate(event) => match self.get_guild(&event.guild_id).await {
                 Some(guild) => {
                     guild
                         .roles
                         .write()
-                        .expect("Guild inner role cache got poisoned!")
+                        .await
                         .insert(event.role.id, Arc::new(CachedRole::from_role(&event.role)));
                 }
                 None => gearbot_warn!(
@@ -568,13 +507,9 @@ impl Cache {
                 ),
             },
 
-            Event::RoleDelete(event) => match self.get_guild(&event.guild_id) {
+            Event::RoleDelete(event) => match self.get_guild(&event.guild_id).await {
                 Some(guild) => {
-                    guild
-                        .roles
-                        .write()
-                        .expect("Guild inner roles cache got poisoned!")
-                        .remove(&event.role_id);
+                    guild.roles.write().await.remove(&event.role_id);
                     self.stats.role_count.dec();
                 }
                 None => gearbot_warn!(
@@ -587,23 +522,20 @@ impl Cache {
         };
     }
 
-    fn guild_unavailable(&self, guild: &Arc<CachedGuild>) {
+    async fn guild_unavailable(&self, guild: &Arc<CachedGuild>) {
         info!(
             "Guild \"{}\", ``{}`` became unavailable due to an outage",
             guild.name, guild.id
         );
         self.stats.guild_counts.outage.inc();
-        let mut list = self.unavailable_guilds.write().unwrap();
+        let mut list = self.unavailable_guilds.write().await;
         list.push(guild.id);
     }
 
-    fn nuke_guild_cache(&self, guild: &Arc<CachedGuild>) {
+    async fn nuke_guild_cache(&self, guild: &Arc<CachedGuild>) {
         {
-            let mut channels = self
-                .guild_channels
-                .write()
-                .expect("Global guild channels cache got poisoned!");
-            let guild_channels = guild.channels.read().expect("Guild inner channels cache got poisoned!");
+            let mut channels = self.guild_channels.write().await;
+            let guild_channels = guild.channels.read().await;
             for channel in guild_channels.values() {
                 channels.remove(&channel.get_id());
             }
@@ -611,8 +543,8 @@ impl Cache {
         }
 
         {
-            let mut users = self.users.write().expect("Global user cache got poisoned!");
-            let members = guild.members.read().expect("Guild inner members cache got poisoned!");
+            let mut users = self.users.write().await;
+            let members = guild.members.read().await;
             for member in members.values() {
                 match users.get(&member.user_id) {
                     Some(user) => {
@@ -629,20 +561,15 @@ impl Cache {
         }
 
         {
-            let mut emoji_cache = self.emoji.write().expect("Global emoji cache got poisoned!");
+            let mut emoji_cache = self.emoji.write().await;
             for emoji in &guild.emoji {
                 emoji_cache.remove(&emoji.id);
             }
         }
         self.stats.emoji_count.sub(guild.emoji.len() as i64);
-        self.stats
-            .role_count
-            .sub(guild.roles.read().expect("Guild inner roles cache got poisoned!").len() as i64);
+        self.stats.role_count.sub(guild.roles.read().await.len() as i64);
 
-        self.guilds
-            .write()
-            .expect("Global guild cache got poisoned!")
-            .remove(&guild.id);
+        self.guilds.write().await.remove(&guild.id);
 
         if !guild.complete.load(Ordering::SeqCst) {
             self.stats.guild_counts.partial.dec();
@@ -651,107 +578,80 @@ impl Cache {
         }
     }
 
-    pub fn insert_private_channel(&self, private_channel: &PrivateChannel) -> Arc<CachedChannel> {
-        let channel = CachedChannel::from_private(private_channel, self);
+    pub async fn insert_private_channel(&self, private_channel: &PrivateChannel) -> Arc<CachedChannel> {
+        let channel = CachedChannel::from_private(private_channel, self).await;
         let arced = Arc::new(channel);
         if let CachedChannel::DM { receiver, .. } = arced.as_ref() {
             self.dm_channels_by_user
                 .write()
-                .expect("Global DM channels cache got poisoned!")
+                .await
                 .insert(receiver.id, arced.clone());
         }
 
         self.private_channels
             .write()
-            .expect("Global private channels cache got poisoned!")
+            .await
             .insert(arced.get_id(), arced.clone());
         arced
     }
 
-    pub fn get_or_insert_user(&self, user: &User) -> Arc<CachedUser> {
-        match self.get_user(user.id) {
+    pub async fn get_or_insert_user(&self, user: &User) -> Arc<CachedUser> {
+        match self.get_user(user.id).await {
             Some(user) => user,
             None => {
                 let arc = Arc::new(CachedUser::from_user(user));
-                self.users
-                    .write()
-                    .expect("Global users cache got poisoned!")
-                    .insert(arc.id, arc.clone());
+                self.users.write().await.insert(arc.id, arc.clone());
                 self.stats.user_counts.unique.inc();
                 arc
             }
         }
     }
 
-    pub fn get_guild(&self, guild_id: &GuildId) -> Option<Arc<CachedGuild>> {
-        match self
-            .guilds
-            .read()
-            .expect("Global guild cache got poisoned!")
-            .get(guild_id)
-        {
+    pub async fn get_guild(&self, guild_id: &GuildId) -> Option<Arc<CachedGuild>> {
+        match self.guilds.read().await.get(guild_id) {
             Some(guild) => Some(guild.clone()),
             None => None,
         }
     }
 
-    pub fn get_channel(&self, channel_id: ChannelId) -> Option<Arc<CachedChannel>> {
-        match self
-            .guild_channels
-            .read()
-            .expect("Global guild channels cache got poisoned!")
-            .get(&channel_id)
-        {
+    pub async fn get_mutual_guilds(&self, user_id: &UserId) -> Vec<Arc<CachedGuild>> {
+        let guilds = self.guilds.read().await;
+        let mut out = vec![];
+        for guild in guilds.values() {
+            if guild.members.read().await.contains_key(user_id) {
+                out.push(guild.clone())
+            }
+        }
+        out
+    }
+
+    pub async fn get_channel(&self, channel_id: ChannelId) -> Option<Arc<CachedChannel>> {
+        match self.guild_channels.read().await.get(&channel_id) {
             Some(channel) => Some(channel.clone()),
-            None => match self
-                .private_channels
-                .read()
-                .expect("Global private channels cache got poisoned!")
-                .get(&channel_id)
-            {
+            None => match self.private_channels.read().await.get(&channel_id) {
                 Some(channel) => Some(channel.clone()),
                 None => None,
             },
         }
     }
 
-    pub fn get_dm_channel_for(&self, user_id: UserId) -> Option<Arc<CachedChannel>> {
-        match self
-            .dm_channels_by_user
-            .read()
-            .expect("Global DM channels cache got poisoned!")
-            .get(&user_id)
-        {
+    pub async fn get_dm_channel_for(&self, user_id: UserId) -> Option<Arc<CachedChannel>> {
+        match self.dm_channels_by_user.read().await.get(&user_id) {
             Some(channel) => Some(channel.clone()),
             None => None,
         }
     }
 
-    pub fn get_user(&self, user_id: UserId) -> Option<Arc<CachedUser>> {
-        match self
-            .users
-            .read()
-            .expect("Global users cache got poisoned!")
-            .get(&user_id)
-        {
+    pub async fn get_user(&self, user_id: UserId) -> Option<Arc<CachedUser>> {
+        match self.users.read().await.get(&user_id) {
             Some(guard) => Some(guard.clone()),
             None => None,
         }
     }
 
-    pub fn get_member(&self, guild_id: &GuildId, user_id: &UserId) -> Option<Arc<CachedMember>> {
-        match self
-            .guilds
-            .read()
-            .expect("Global guilds cache got poisoned!")
-            .get(guild_id)
-        {
-            Some(guild) => match guild
-                .members
-                .read()
-                .expect("Guild inner members cache got poisoned!")
-                .get(&user_id)
-            {
+    pub async fn get_member(&self, guild_id: &GuildId, user_id: &UserId) -> Option<Arc<CachedMember>> {
+        match self.guilds.read().await.get(guild_id) {
+            Some(guild) => match guild.members.read().await.get(&user_id) {
                 Some(member) => Some(member.clone()),
                 None => None,
             },
@@ -760,15 +660,12 @@ impl Cache {
     }
 
     /// we get member updates for all
-    pub fn update_user(&self, new: Arc<CachedUser>) {
-        match self.get_user(new.id) {
+    pub async fn update_user(&self, new: Arc<CachedUser>) {
+        match self.get_user(new.id).await {
             Some(old) => {
                 let updated = update_user_with_user(old, new);
                 let user = Arc::new(updated);
-                self.users
-                    .write()
-                    .expect("Global users cache got poisoned!")
-                    .insert(user.id, user);
+                self.users.write().await.insert(user.id, user);
             }
             None => {
                 gearbot_warn!(
@@ -783,15 +680,9 @@ impl Cache {
 
     pub async fn prepare_cold_resume(&self, redis_pool: &Redis) -> (usize, usize) {
         //clear global caches so arcs can be cleaned up
-        self.guild_channels
-            .write()
-            .expect("Global guild channels cache got poisoned!")
-            .clear();
+        self.guild_channels.write().await.clear();
         //we do not want to drag along DM channels, we get guild creates for them when they send a message anyways
-        self.private_channels
-            .write()
-            .expect("Global private channels cache got poisoned!")
-            .clear();
+        self.private_channels.write().await.clear();
 
         //let's go to hyperspeed
         let mut tasks = vec![];
@@ -803,19 +694,11 @@ impl Cache {
         let mut count = 0;
         let mut list = vec![];
 
-        for guild in self.guilds.read().expect("Global guild cache got poisoned!").values() {
-            count += guild
-                .members
-                .read()
-                .expect("Guild inner members cache got poisoned!")
-                .len()
-                + guild
-                    .channels
-                    .read()
-                    .expect("Guild inner channels cache got poisoned!")
-                    .len()
+        for guild in self.guilds.read().await.values() {
+            count += guild.members.read().await.len()
+                + guild.channels.read().await.len()
                 + guild.emoji.len()
-                + guild.roles.read().expect("Guild inner roles cache got poisoned!").len();
+                + guild.roles.read().await.len();
             list.push(guild.id);
             if count > 100000 {
                 work_orders.push(list);
@@ -837,7 +720,7 @@ impl Cache {
 
         count = 0;
         let user_chunks = {
-            let users = self.users.write().expect("Global users cache got poisoned!");
+            let users = self.users.write().await;
             let chunks = (users.len() / 100000 + 1) as usize;
             let mut user_work_orders: Vec<Vec<UserId>> = vec![vec![]; chunks];
             for user in users.values() {
@@ -854,7 +737,7 @@ impl Cache {
         };
 
         future::join_all(user_tasks).await;
-        self.users.write().expect("Global users cache got poisoned!").clear();
+        self.users.write().await.clear();
         (guild_chunks, user_chunks)
     }
 
@@ -867,10 +750,10 @@ impl Cache {
         debug!("Guild dumper {} started freezing {} guilds", index, todo.len());
         let mut to_dump = Vec::with_capacity(todo.len());
         {
-            let mut guilds = self.guilds.write().expect("Global guilds cache got poisoned!");
+            let mut guilds = self.guilds.write().await;
             for key in todo {
                 let g = guilds.remove(&key).unwrap();
-                to_dump.push(ColdStorageGuild::from(g));
+                to_dump.push(ColdStorageGuild::from_cached_guild(g).await);
             }
         }
 
@@ -892,12 +775,7 @@ impl Cache {
         debug!("Worker {} freezing {} users", index, todo.len());
         let mut chunk = Vec::with_capacity(todo.len());
         for key in todo {
-            let user = self
-                .users
-                .write()
-                .expect("Global user cache got poisoned!")
-                .remove(&key)
-                .unwrap();
+            let user = self.users.write().await.remove(&key).unwrap();
 
             chunk.push(CachedUser {
                 id: user.id,
@@ -937,10 +815,7 @@ impl Cache {
                 return Err(e);
             }
         }
-        self.stats
-            .user_counts
-            .unique
-            .set(self.users.read().expect("User cache got poisoned!").len() as i64);
+        self.stats.user_counts.unique.set(self.users.read().await.len() as i64);
 
         let mut guild_defrosters = Vec::with_capacity(guild_chunks);
 
@@ -978,7 +853,7 @@ impl Cache {
 
         debug!("Worker {} found {} users to defrost", index, users.len());
 
-        let mut cached_users = self.users.write().expect("User cache got poisoned!");
+        let mut cached_users = self.users.write().await;
         for user in users.drain(..) {
             cached_users.insert(user.id, Arc::new(user));
         }
@@ -996,57 +871,39 @@ impl Cache {
 
         debug!("Worker {} found {} guilds to defrost", index, guilds.len());
         for cold_guild in guilds.drain(..) {
-            let guild = CachedGuild::defrost(&self, cold_guild);
+            let guild = CachedGuild::defrost(&self, cold_guild).await;
 
-            self.stats
-                .role_count
-                .add(guild.roles.read().expect("Guild role cache got poisoned!").len() as i64);
+            self.stats.role_count.add(guild.roles.read().await.len() as i64);
             {
-                let mut guild_channels = self.guild_channels.write().expect("Guild channels cache got poisoned!");
-                for channel in guild
-                    .channels
-                    .read()
-                    .expect("A guilds inner channel cache got poisoned!")
-                    .values()
-                {
+                let mut guild_channels = self.guild_channels.write().await;
+                for channel in guild.channels.read().await.values() {
                     guild_channels.insert(channel.get_id(), channel.clone());
                 }
                 self.stats.channel_count.add(guild_channels.len() as i64);
             }
 
             {
-                let mut emoji = self.emoji.write().expect("Global emoji cache got poisoned!");
+                let mut emoji = self.emoji.write().await;
                 for e in &guild.emoji {
                     emoji.insert(e.id, e.clone());
                 }
             }
             self.stats.emoji_count.add(guild.emoji.len() as i64);
 
-            self.stats.user_counts.total.add(
-                guild
-                    .members
-                    .read()
-                    .expect("Guild inner members cache got poisoned!")
-                    .len() as i64,
-            );
+            self.stats
+                .user_counts
+                .total
+                .add(guild.members.read().await.len() as i64);
 
-            self.guilds
-                .write()
-                .expect("Global guilds cache got poisoned!")
-                .insert(guild.id, Arc::new(guild));
+            self.guilds.write().await.insert(guild.id, Arc::new(guild));
             self.stats.guild_counts.loaded.inc();
         }
 
         Ok(())
     }
 
-    pub fn shard_cached(&self, shard_id: u64) -> bool {
-        match self
-            .missing_per_shard
-            .read()
-            .expect("Global shard state tracking cache got poisoned!")
-            .get(&shard_id)
-        {
+    pub async fn shard_cached(&self, shard_id: u64) -> bool {
+        match self.missing_per_shard.read().await.get(&shard_id) {
             Some(atomic) => atomic.load(Ordering::Relaxed) == 0,
             None => true, //we cold resumed so have everything
         }
