@@ -37,6 +37,7 @@ pub struct Database {
 
 impl BotConfig {
     pub fn new(filename: &str) -> Result<Self, StartupError> {
+        println!("{}", filename);
         let config_file = fs::read_to_string(filename).map_err(|_| StartupError::NoConfig)?;
         match toml::from_str::<BotConfig>(&config_file) {
             Err(_) => Err(StartupError::InvalidConfig),
