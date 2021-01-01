@@ -7,6 +7,7 @@ use twilight_model::id::UserId;
 pub async fn get_user_info(ctx: &Arc<BotContext>, user: UserId) -> Result<ReplyData, ApiMessageError> {
     let info = match ctx.get_user(user).await {
         Ok(info) => Some(UserInfo {
+            id: info.id.to_string(),
             name: info.username.clone(),
             discriminator: info.discriminator.clone(),
             avatar: info.avatar.clone(),

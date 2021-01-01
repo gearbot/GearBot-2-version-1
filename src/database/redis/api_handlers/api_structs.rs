@@ -76,6 +76,7 @@ pub struct TeamSocials {
 
 #[derive(Debug, Serialize)]
 pub struct UserInfo {
+    pub id: String,
     pub name: String,
     pub discriminator: String,
     #[serde(skip_serializing_if = "is_default")]
