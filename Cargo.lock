@@ -2378,9 +2378,9 @@ dependencies = [
 
 [[package]]
 name = "twilight-gateway"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "991b2ae8f7416dfc8bf660549f612ad51ecc5ffc74681d14dc18b85a9cae1ec4"
+checksum = "9bf302fe8fb0b875963cb31b77fa38b5288d8a4c42a1c43937fc7c89184ffd19"
 dependencies = [
  "async-tungstenite",
  "bitflags",
