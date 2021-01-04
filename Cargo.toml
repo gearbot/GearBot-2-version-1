@@ -14,7 +14,7 @@ chrono = "0.4"
 ctrlc = { version = "3", features = ["termination"] }
 darkredis = "0.7"
 flexi_logger = { version = "0.16", default-features = false, features = ["colors", "specfile", "compress"] }
-fluent-bundle = "0.13"
+fluent-bundle = "0.14"
 futures-util = { version = "0.3", default-features = false }
 git-version = "0.3"
 hyper = { version = "0.13", default-features = false }
