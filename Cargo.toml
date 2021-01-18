@@ -33,7 +33,7 @@ toml = "0.5"
 twilight-embed-builder = "0.2"
 twilight-gateway = { version="0.2", default-features=false, features=["rustls", "simd-json", "simd-zlib"] }
 twilight-http = "0.2"
-twilight-model = "0.2"
+twilight-model = "0.3"
 #twilight-embed-builder = { git="https://github.com/Erk-/twilight", branch="fix/webhook-execute-204-broken"}
 #twilight-gateway = { git="https://github.com/Erk-/twilight", branch="fix/webhook-execute-204-broken"}
 #twilight-http = { git="https://github.com/Erk-/twilight", branch="fix/webhook-execute-204-broken"}
