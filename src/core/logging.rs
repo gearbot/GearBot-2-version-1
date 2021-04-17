@@ -10,9 +10,8 @@ use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
 use twilight_http::Client as HttpClient;
 use twilight_model::user::CurrentUser;
-use twilight_util::link::webhook::parse as parse_webhook;
 
-use crate::core::BotConfig;
+use super::bot_config::{BotConfig, WebhookComponents};
 use crate::error::StartupError;
 use crate::gearbot_error;
 use crate::utils::Emoji;
@@ -101,7 +100,7 @@ pub fn initialize(http: HttpClient, config: &BotConfig, user: CurrentUser) -> Re
     Ok(())
 }
 
-pub fn run_logging_queue(http: HttpClient, queue: LogQueue, url: String, user: Arc<CurrentUser>) {
+pub fn run_logging_queue(http: HttpClient, queue: LogQueue, url: WebhookComponents, user: Arc<CurrentUser>) {
     //TODO: when we get too far behind group into a file
     tokio::spawn(async move {
         loop {
@@ -140,14 +139,13 @@ pub fn run_logging_queue(http: HttpClient, queue: LogQueue, url: String, user: A
 
 async fn send_webhook(
     http: &HttpClient,
-    url: &str,
+    webhook: &WebhookComponents,
     user: &CurrentUser,
     message: &str,
 ) -> Result<(), twilight_http::Error> {
-    let (id, token) = parse_webhook(url).unwrap();
     let executor = {
         let raw = http
-            .execute_webhook(id, token.unwrap())
+            .execute_webhook(webhook.id, &webhook.token)
             .content(message)
             .username(&user.name);
 
@@ -160,6 +158,7 @@ async fn send_webhook(
     if let Err(e) = executor.await {
         log::error!("Log failure: {}", e);
     }
+
     Ok(())
 }
 

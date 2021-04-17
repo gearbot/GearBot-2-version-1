@@ -1,8 +1,9 @@
-use std::collections::HashMap;
 use std::fs;
+use std::{collections::HashMap, convert::TryFrom};
 
 use serde::Deserialize;
-use twilight_model::id::EmojiId;
+use twilight_model::id::{EmojiId, WebhookId};
+use twilight_util::link::webhook::parse as parse_webhook;
 
 use crate::error::StartupError;
 use crate::utils::{emoji, matchers, EmojiOverride};
@@ -25,8 +26,28 @@ pub struct Tokens {
 
 #[derive(Deserialize, Debug)]
 pub struct Logging {
-    pub important_logs: String,
-    pub info_logs: String,
+    pub important_logs: WebhookComponents,
+    pub info_logs: WebhookComponents,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(try_from = "&str")]
+pub struct WebhookComponents {
+    pub id: WebhookId,
+    pub token: String,
+}
+
+impl TryFrom<&str> for WebhookComponents {
+    type Error = StartupError;
+
+    fn try_from(url: &str) -> Result<Self, Self::Error> {
+        let (id, token) = parse_webhook(url).map_err(|_| StartupError::InvalidConfig)?;
+        let token = token.ok_or(StartupError::InvalidConfig)?;
+        Ok(Self {
+            id,
+            token: token.to_owned(),
+        })
+    }
 }
 
 #[derive(Deserialize, Debug)]
