@@ -17,10 +17,12 @@ use crate::core::bot_context::BotContext;
 use crate::core::guild_config::LogStyle;
 use crate::error::OtherFailure;
 use crate::gearbot_error;
+
 use hyper::StatusCode;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::sync::{mpsc::UnboundedReceiver, Mutex};
 use tokio::time::timeout;
 use twilight_http::Error;
 use twilight_model::guild::Permissions;
@@ -28,9 +30,18 @@ use twilight_model::id::{ChannelId, GuildId, WebhookId};
 use unic_langid::LanguageIdentifier;
 
 type LogReceiver = UnboundedReceiver<Vec<LogData>>;
+/// A time synchronization lock for a logging channel. Used to ensure
+/// that messages always arrive in-order.
+///
+/// The `bool` represents the channel's validity for logging. Defaults to true.
+///
+/// A pump may change it to `false` to mark that a guild no longer needs this channel
+/// to get logs anymore to avoid leaking memory.
+type ChannelLock = Arc<Mutex<bool>>;
 
 pub async fn run(ctx: Arc<BotContext>, mut top_receiver: UnboundedReceiver<LogData>) {
     log::info!("Logpump started!");
+    let mut channel_sync_locks: HashMap<ChannelId, ChannelLock> = HashMap::new();
     loop {
         let mut to_send: Vec<Arc<LogData>> = Vec::with_capacity(BATCH_SIZE);
 
@@ -68,7 +79,22 @@ pub async fn run(ctx: Arc<BotContext>, mut top_receiver: UnboundedReceiver<LogDa
                             continue;
                         }
 
-                        tokio::spawn(pump(ctx.clone(), to_send, guild_id, *channel_id));
+                        let channel_lock = Arc::clone(
+                            &channel_sync_locks
+                                .entry(*channel_id)
+                                .or_insert(Arc::new(Mutex::new(true))),
+                        );
+
+                        if let Ok(lock) = channel_lock.try_lock() {
+                            if *lock == false {
+                                // A pump marked this channel as useless, so deallocate the lock since
+                                // theres a chance we will never use it again.
+                                channel_sync_locks.remove(channel_id);
+                                continue;
+                            }
+                        }
+
+                        tokio::spawn(pump(ctx.clone(), to_send, guild_id, *channel_id, channel_lock));
                     }
                 }
             }
@@ -81,14 +107,25 @@ pub async fn run(ctx: Arc<BotContext>, mut top_receiver: UnboundedReceiver<LogDa
     }
 }
 
-async fn pump(ctx: Arc<BotContext>, mut to_send: Vec<Arc<LogData>>, guild_id: GuildId, channel_id: ChannelId) {
+async fn pump(
+    ctx: Arc<BotContext>,
+    mut to_send: Vec<Arc<LogData>>,
+    guild_id: GuildId,
+    channel_id: ChannelId,
+    channel_lock: ChannelLock,
+) {
+    // Ensure that only one task at a time can send logs for a channel.
+    //
+    // Humans are bad at piecing together out of order events, so this ensures that a specific channel gets all of its messages
+    // delivered in order, between batches, regardless of how many pumps are currently active for a channel to scale across
+    // a large number of incoming logs.
+    let mut time_sync_barrier = channel_lock.lock().await;
+
     let log_count = to_send.len();
     ctx.stats.logpump_stats.active_pumps.inc();
     let mut webhook_info = None;
     'outer: loop {
-        // TODO: Can you even change a configuration this fast?
-        // Re-fetch config on each iteration in case it updated
-        // returns the sending future for central handling of errors.
+        // Re-fetch config on each iteration in case it updated between long synchronization wait times
         match ctx.get_config(guild_id).await {
             Ok(config) => {
                 // this is checked to not be empty.
@@ -101,6 +138,7 @@ async fn pump(ctx: Arc<BotContext>, mut to_send: Vec<Arc<LogData>>, guild_id: Gu
                             guild_id
                         );
                         // If the guild doesn't want this channel to get logs anymore, quit early and don't try sending them.
+                        *time_sync_barrier = false;
                         break;
                     }
                 };
@@ -168,7 +206,7 @@ async fn pump(ctx: Arc<BotContext>, mut to_send: Vec<Arc<LogData>>, guild_id: Gu
                             if let Err(e) = ctx.datastore.remove_webhook(channel_id).await {
                                 gearbot_error!("Failed to remove webhook {} from the database: {}", channel_id, e);
                             }
-                            // Break from the sending loo so we can try and get a new, valid, webhook.
+                            // Break from the sending loop so we can try and get a new, valid, webhook.
                             continue 'outer;
                         }
                         Err(e) => gearbot_error!("Logpump failure: {}", e),
