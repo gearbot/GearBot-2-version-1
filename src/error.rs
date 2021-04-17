@@ -1,6 +1,6 @@
 use std::{error, fmt, io};
 
-use serde::export::Formatter;
+use std::fmt::Formatter;
 use twilight_embed_builder::{
     EmbedAuthorNameError, EmbedBuildError, EmbedColorError, EmbedDescriptionError, EmbedFieldError,
     EmbedFooterTextError, ImageSourceUrlError,

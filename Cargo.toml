@@ -13,35 +13,32 @@ bitflags = "1.2"
 chrono = "0.4"
 ctrlc = { version = "3", features = ["termination"] }
 darkredis = "0.8"
-flexi_logger = { version = "0.16", default-features = false, features = ["colors", "specfile", "compress"] }
-fluent-bundle = "0.13"
+flexi_logger = { version = "0.17", default-features = false, features = ["colors", "specfile", "compress"] }
+fluent-bundle = "0.15"
 futures-util = { version = "0.3", default-features = false }
 git-version = "0.3"
 hyper = { version = "0.14", default-features = false, features = ["server"] }
+intl-memoizer = "0.5"
 lazy_static = "1.4"
 log = "0.4"
 num-integer="0.1"
 once_cell = "1.5"
-prometheus = { version = "0.11", default-features = false }
+prometheus = { version = "0.12", default-features = false }
 rand = "0.8"
 regex = "1.4"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1"
 sqlx =  { version = "0.5", default-features = false, features = ["postgres", "json", "runtime-tokio-rustls", "macros", "migrate"] }
-tokio = { version = "1.1", default-features = false, features = ["macros", "sync", "rt-multi-thread"] }
+tokio = { version = "1.5", default-features = false, features = ["macros", "sync", "rt-multi-thread"] }
 toml = "0.5"
 twilight-embed-builder = "0.3"
-twilight-gateway = { version="0.3", default-features=false, features=["rustls", "simd-json", "simd-zlib"] }
+twilight-gateway = { version="0.3", default-features=false, features = ["rustls", "simd-json", "simd-zlib"] }
 twilight-http = "0.3"
 twilight-model = "0.3"
 twilight-util = { version = "0.3", default-features = false, features = ["link"] }
-#twilight-embed-builder = { git="https://github.com/Erk-/twilight", branch="fix/webhook-execute-204-broken"}
-#twilight-gateway = { git="https://github.com/Erk-/twilight", branch="fix/webhook-execute-204-broken"}
-#twilight-http = { git="https://github.com/Erk-/twilight", branch="fix/webhook-execute-204-broken"}
-#twilight-model = { git="https://github.com/Erk-/twilight", branch="fix/webhook-execute-204-broken"}
 url = "2.2"
 unic-langid = { version = "0.9", features = ["macros", "serde"] }
-uuid = { version = "0.8", features = ["serde", "v4"], default_features = false }
+uuid = { version = "0.8", features = ["serde", "v4"], default-features = false }
 
 [profile.dev]
 debug = 0

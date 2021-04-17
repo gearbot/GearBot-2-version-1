@@ -61,7 +61,7 @@ pub struct SchemeInfo {
 }
 
 fn main() -> Result<(), StartupError> {
-    let mut runtime = Runtime::new()?;
+    let runtime = Runtime::new()?;
 
     runtime.block_on(async move { real_main().await })?;
 

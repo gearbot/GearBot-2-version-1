@@ -3,8 +3,11 @@ use std::collections::HashMap;
 use std::fs;
 use std::sync::Arc;
 
-use fluent_bundle::{concurrent::FluentBundle, FluentArgs, FluentError, FluentResource, FluentValue};
+use fluent_bundle::{bundle::FluentBundle as RawBundle, FluentArgs, FluentError, FluentResource, FluentValue};
+use intl_memoizer::concurrent::IntlLangMemoizer as Memoizer;
 use unic_langid::{langid, LanguageIdentifier};
+
+type FluentBundle = RawBundle<FluentResource, Memoizer>;
 
 use crate::gearbot_warn;
 
@@ -17,7 +20,7 @@ const FAILED_TRANSLATE_FALLBACK_MSG: &str =
 pub const DEFAULT_LANG: LanguageIdentifier = langid!("en_US");
 
 /// The transations for all languages that the bot can handle.
-pub struct Translations(HashMap<LanguageIdentifier, Arc<FluentBundle<FluentResource>>>);
+pub struct Translations(HashMap<LanguageIdentifier, Arc<FluentBundle>>);
 
 pub struct FluArgs<'a>(FluentArgs<'a>);
 
@@ -30,7 +33,7 @@ impl<'a> FluArgs<'a> {
     where
         P: Into<FluentValue<'a>>,
     {
-        self.0.add(key, value.into());
+        self.0.set(key, value.into());
         self
     }
 
@@ -49,7 +52,7 @@ impl Translations {
         if let Some(expected_msg) = lang_bundle.get_message(string_key.as_str()) {
             let mut errors = Vec::new();
 
-            let pattern = expected_msg.value.unwrap();
+            let pattern = expected_msg.value().unwrap();
 
             let value = lang_bundle.format_pattern(pattern, None, &mut errors);
 
@@ -63,7 +66,7 @@ impl Translations {
             if let Some(fallback_msg) = fallback_bundle.get_message(string_key.as_str()) {
                 let mut errors = Vec::new();
 
-                let pattern = fallback_msg.value.unwrap();
+                let pattern = fallback_msg.value().unwrap();
 
                 let value = lang_bundle.format_pattern(pattern, None, &mut errors);
 
@@ -93,7 +96,7 @@ impl Translations {
         if let Some(expected_msg) = lang_bundle.get_message(string_key.as_str()) {
             let mut errors = Vec::new();
 
-            let pattern = expected_msg.value.unwrap();
+            let pattern = expected_msg.value().unwrap();
 
             let value = lang_bundle.format_pattern(pattern, Some(args), &mut errors);
 
@@ -107,7 +110,7 @@ impl Translations {
             if let Some(fallback_msg) = fallback_bundle.get_message(string_key.as_str()) {
                 let mut errors = Vec::new();
 
-                let pattern = fallback_msg.value.unwrap();
+                let pattern = fallback_msg.value().unwrap();
 
                 let value = lang_bundle.format_pattern(pattern, Some(args), &mut errors);
 
@@ -122,7 +125,7 @@ impl Translations {
         }
     }
 
-    pub fn get_translator(&self, lang: &LanguageIdentifier) -> Arc<FluentBundle<FluentResource>> {
+    pub fn get_translator(&self, lang: &LanguageIdentifier) -> Arc<FluentBundle> {
         Arc::clone(self.0.get(lang).unwrap())
     }
 }
@@ -228,7 +231,8 @@ pub fn load_translations() -> Translations {
             .unwrap_or_else(|_| panic!("{} was not a valid language identifier!", lang_dir_name));
 
         // Make the bundle of the specific language
-        let mut bundle = FluentBundle::new(&[langid.clone()]);
+        let locales = vec![langid.clone()];
+        let mut bundle = FluentBundle::new_concurrent(locales);
         bundle.set_use_isolating(false);
         for t_file in fs::read_dir(lang_dir.path()).unwrap() {
             let t_file = {

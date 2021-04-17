@@ -3,9 +3,7 @@ use std::io;
 use std::sync::Arc;
 
 use flexi_logger::writers::LogWriter;
-use flexi_logger::{
-    colored_opt_format, Age, Cleanup, Criterion, DeferredNow, Duplicate, Logger, Naming, ReconfigurationHandle,
-};
+use flexi_logger::{colored_opt_format, Age, Cleanup, Criterion, DeferredNow, Duplicate, Logger, LoggerHandle, Naming};
 use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
 use twilight_http::Client as HttpClient;
@@ -18,7 +16,7 @@ use crate::utils::Emoji;
 use std::sync::RwLock;
 use std::time::Duration;
 
-static LOGGER_HANDLE: OnceCell<ReconfigurationHandle> = OnceCell::new();
+static LOGGER_HANDLE: OnceCell<LoggerHandle> = OnceCell::new();
 type LogQueue = Arc<RwLock<VecDeque<String>>>;
 
 struct WebhookLogger {
