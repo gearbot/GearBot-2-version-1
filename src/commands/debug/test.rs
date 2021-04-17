@@ -3,7 +3,7 @@ use crate::core::CommandContext;
 use crate::error::CommandResult;
 
 pub async fn test(ctx: CommandContext) -> CommandResult {
-    for _ in 1..60 {
+    for _ in 1..5 {
         ctx.log(
             LogType::CommandUsed {
                 command: "test".to_string(),

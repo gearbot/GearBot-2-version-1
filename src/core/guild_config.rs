@@ -38,7 +38,7 @@ pub struct MessageLogs {
     pub ignore_bots: bool,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq)]
 pub enum LogStyle {
     Text,
     Embed,

@@ -3,6 +3,10 @@ mod log_filter;
 mod log_type;
 
 const GEARBOT_LOGO: &str = include_str!("../../../assets/logo");
+const GEARBOT_EMBED_SENDER: &str = "GearBot moderation logs";
+const DISCORD_SIZE_LIMIT: usize = 2000;
+const BATCH_SIZE: usize = 20;
+const RECV_TIMEOUT: Duration = Duration::from_secs(4);
 
 pub use log_data::LogData;
 pub use log_filter::LogFilter;
@@ -13,28 +17,42 @@ use crate::core::bot_context::BotContext;
 use crate::core::guild_config::LogStyle;
 use crate::error::OtherFailure;
 use crate::gearbot_error;
-use futures_util::FutureExt;
 use hyper::StatusCode;
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::time::timeout;
 use twilight_http::Error;
 use twilight_model::guild::Permissions;
 use twilight_model::id::{ChannelId, GuildId, WebhookId};
 use unic_langid::LanguageIdentifier;
 
-pub async fn run(ctx: Arc<BotContext>, mut receiver: UnboundedReceiver<LogData>) {
+type LogReceiver = UnboundedReceiver<Vec<LogData>>;
+
+pub async fn run(ctx: Arc<BotContext>, mut top_receiver: UnboundedReceiver<LogData>) {
     log::info!("Logpump started!");
-    let mut outputs: HashMap<ChannelId, UnboundedSender<Arc<LogData>>> = HashMap::new();
     loop {
-        //it's impossible to drop the sender at this time
-        let log = Arc::new(receiver.recv().await.unwrap());
+        let mut to_send: Vec<Arc<LogData>> = Vec::with_capacity(BATCH_SIZE);
+
+        // Sit and wait until we have something to do.
+        let first_log = top_receiver.recv().await.unwrap();
+
+        to_send.push(Arc::new(first_log));
+
+        // If its a slow period, this will return early and give us whats around.
+        receive_up_to(BATCH_SIZE, &mut top_receiver, &mut to_send).await;
+
+        let log = to_send
+            .first()
+            .expect("bug: original log that started pup wasn't added to send list");
+
         log::debug!("log data received: {:?}", log);
         let guild_id = log.guild;
         match ctx.get_config(guild_id).await {
             Ok(config) => {
                 for (channel_id, log_config) in &config.log_channels {
+                    // Cheap clone since its just a bunch of `Arc`s inside.
+                    let to_send = to_send.clone();
                     //check if it could go to this channel
                     if log_config.categories.contains(&log.log_type.get_category())
                         && !log_config.disabled_keys.contains(&log.log_type.dataless())
@@ -49,25 +67,8 @@ pub async fn run(ctx: Arc<BotContext>, mut receiver: UnboundedReceiver<LogData>)
                         if matches {
                             continue;
                         }
-                        //see if we have a sender from last time
-                        if let Some(sender) = outputs.get(channel_id) {
-                            //sender found, try try to re-use it
-                            let owned_sender = sender.clone();
-                            if owned_sender.send(log.clone()).is_err() {
-                                // fail, channel must have expired, setup a new one
-                                let (sender, receiver) = unbounded_channel();
-                                tokio::spawn(pump(ctx.clone(), receiver, log.guild, *channel_id));
-                                ctx.stats.logpump_stats.active_pumps.inc();
-                                let _ = sender.send(log.clone());
-                                outputs.insert(*channel_id, sender);
-                            }
-                        } else {
-                            //we do not, create a new one and send the log
-                            let (sender, receiver) = unbounded_channel();
-                            tokio::spawn(pump(ctx.clone(), receiver, guild_id, *channel_id));
-                            let _ = sender.send(log.clone());
-                            outputs.insert(*channel_id, sender);
-                        }
+
+                        tokio::spawn(pump(ctx.clone(), to_send, guild_id, *channel_id));
                     }
                 }
             }
@@ -80,171 +81,209 @@ pub async fn run(ctx: Arc<BotContext>, mut receiver: UnboundedReceiver<LogData>)
     }
 }
 
-async fn pump(
-    ctx: Arc<BotContext>,
-    mut receiver: UnboundedReceiver<Arc<LogData>>,
-    guild_id: GuildId,
-    channel_id: ChannelId,
-) {
-    let batch_size = 20;
-    let mut todo: Vec<Arc<LogData>> = vec![];
-    let mut leftover: Vec<String> = vec![];
+async fn pump(ctx: Arc<BotContext>, mut to_send: Vec<Arc<LogData>>, guild_id: GuildId, channel_id: ChannelId) {
+    let log_count = to_send.len();
+    ctx.stats.logpump_stats.active_pumps.inc();
     let mut webhook_info = None;
     'outer: loop {
-        if todo.len() < batch_size {
-            //refill pls
-            let mut received = receive_up_to(batch_size, &mut receiver).await;
-            ctx.stats.logpump_stats.pending_logs.sub(received.len() as i64);
-            todo.append(&mut received);
-            if todo.is_empty() {
-                // all out of refills, time to self-destruct
-                return;
-            }
-        }
-        // re-fetch config on each iteration in case it updated
-        //returns the sending future for central handling of errors
+        // TODO: Can you even change a configuration this fast?
+        // Re-fetch config on each iteration in case it updated
+        // returns the sending future for central handling of errors.
         match ctx.get_config(guild_id).await {
             Ok(config) => {
-                if let Some(channel_config) = config.log_channels.get(&channel_id) {
-                    //config found, validate we have the correct permissions
-                    //we are not checking for embed permissions since this will be handled by a webhook later
-
-                    //TODO: alert if we are missing permissions?
-
-                    let mut style = Some(channel_config.style.clone());
-                    while let Some(s) = &style {
-                        match can_send(&ctx, &channel_id, s, &mut webhook_info).await {
-                            Ok(ok) => {
-                                if ok {
-                                    break;
-                                } else {
-                                    style = s.get_fallback();
-                                }
-                            }
-                            Err(e) => {
-                                gearbot_error!("Failed to determine if we can log or not, did the database die? Falling back just in case. {}", e);
-                                style = s.get_fallback();
-                            }
-                        }
-                    }
-
-                    if let Some(style) = &style {
-                        if let Err(e) = send(
-                            &ctx,
-                            &mut todo,
-                            &mut leftover,
-                            style,
-                            &config.language,
+                // this is checked to not be empty.
+                let channel_config = match config.log_channels.get(&channel_id) {
+                    Some(c) => c,
+                    None => {
+                        log::warn!(
+                            "Channel {} (in guild {}) was removed as log channel but something still tried to log to it!",
                             channel_id,
-                            &mut webhook_info,
-                            channel_config.timestamps,
-                        )
-                        .await
-                        {
-                            gearbot_error!("Logpump failure: {}", e)
-                        }
-                    } else {
-                        //we can't log anything, hit the self-destruct
-                        break 'outer;
+                            guild_id
+                        );
+                        // If the guild doesn't want this channel to get logs anymore, quit early and don't try sending them.
+                        break;
                     }
-                } else {
-                    log::warn!(
-                        "Channel {} (in guild {}) was removed as log channel but something still tried to log to it!",
-                        channel_id,
-                        guild_id
-                    )
+                };
+
+                // config found, validate we have the correct permissions
+                // we are not checking for embed permissions since this will be handled by a webhook later
+
+                let mut style = Some(channel_config.style);
+
+                // Worst case, if someones permissions are really messed up, they lose this log batch.
+                if let Some(s) = &style {
+                    match try_configure_to_send(&ctx, &channel_id, s, &mut webhook_info).await {
+                        Ok(CanSend::MissingWebHook) => style = s.get_fallback(),
+                        Ok(CanSend::MissingPermissions) => {
+                            log::warn!("Missing permissions to log in channel {}, quitting pump", channel_id);
+                            // If we can't log here, every attempt will fail anyway.
+                            break;
+                        }
+                        Ok(CanSend::Yes) => {}
+                        Err(e) => {
+                            gearbot_error!("Failed to determine if we can log or not, did the database die? Falling back just in case. {}", e);
+                            style = s.get_fallback();
+                        }
+                    }
                 }
+
+                let style = match &style {
+                    Some(s) => s,
+                    // we can't log anything, hit the self-destruct
+                    None => break,
+                };
+
+                let send_style = match &webhook_info {
+                    Some(info) => SendStyle::Webhook(info),
+                    // We can't log anything here either.
+                    //
+                    // If the webhook gets trashed in the send loop and `try_configure_to_send` fails to get a new one,
+                    // then we really cant do anything.
+                    None if *style == LogStyle::Embed => {
+                        gearbot_error!("Webhook information wasn't present with embed log styling");
+                        break;
+                    }
+                    None => SendStyle::Channel, // We aren't using a webhook
+                };
+
+                while !to_send.is_empty() {
+                    match send(
+                        &ctx,
+                        &mut to_send,
+                        send_style,
+                        &config.language,
+                        channel_id,
+                        channel_config.timestamps,
+                    )
+                    .await
+                    {
+                        Ok(None) => continue, // We weren't using a webhook.
+                        Ok(Some(WebhookValidity::Valid)) => continue,
+                        Ok(Some(WebhookValidity::Unusable)) => {
+                            // The webhook isn't valid any longer, remove it.
+                            //
+                            // On the next iteration, try to get a new one or otherwise abort if nothing
+                            // can be logged via webhook anymore.
+                            webhook_info = None;
+                            if let Err(e) = ctx.datastore.remove_webhook(channel_id).await {
+                                gearbot_error!("Failed to remove webhook {} from the database: {}", channel_id, e);
+                            }
+                            // Break from the sending loo so we can try and get a new, valid, webhook.
+                            continue 'outer;
+                        }
+                        Err(e) => gearbot_error!("Logpump failure: {}", e),
+                    }
+                }
+
+                // We've finished sending the batch we got assigned, quit.
+                break;
             }
             Err(e) => gearbot_error!("Failed to retrieve guild config {}: {}", guild_id, e),
         }
     }
-    receiver.close();
-    let mut count = 0;
-    // TODO: Clean this up.
-    while receiver.recv().now_or_never().is_some() {
-        count += 1;
-    }
-    ctx.stats.logpump_stats.pending_logs.sub(count);
+
+    ctx.stats.logpump_stats.pending_logs.sub(log_count as i64);
     ctx.stats.logpump_stats.active_pumps.dec();
 }
 
-async fn can_send(
+enum CanSend {
+    MissingPermissions,
+    MissingWebHook,
+    Yes,
+}
+
+async fn try_configure_to_send(
     ctx: &Arc<BotContext>,
     channel_id: &ChannelId,
     style: &LogStyle,
     webhook_info: &mut Option<(WebhookId, String)>,
-) -> Result<bool, OtherFailure> {
-    let ok = match style {
-        LogStyle::Text => ctx
-            .get_channel_permissions_for(ctx.bot_user.id, *channel_id)
-            .await
-            .contains(Permissions::SEND_MESSAGES),
+) -> Result<CanSend, OtherFailure> {
+    match style {
+        LogStyle::Text => {
+            if ctx
+                .get_channel_permissions_for(ctx.bot_user.id, *channel_id)
+                .await
+                .contains(Permissions::SEND_MESSAGES)
+            {
+                Ok(CanSend::Yes)
+            } else {
+                Ok(CanSend::MissingPermissions)
+            }
+        }
         LogStyle::Embed => {
             if webhook_info.is_none() {
-                //do we have one in the database?
+                // Is there a webhook stored in the database?
                 *webhook_info = get_webhook(ctx, channel_id).await?;
             }
-            webhook_info.is_some()
+
+            if webhook_info.is_some() {
+                Ok(CanSend::Yes)
+            } else {
+                Ok(CanSend::MissingWebHook)
+            }
         }
-    };
-    Ok(ok)
+    }
 }
 
 async fn get_webhook(
     ctx: &Arc<BotContext>,
     channel_id: &ChannelId,
 ) -> Result<Option<(WebhookId, String)>, OtherFailure> {
-    let mut webhook_info = ctx.datastore.get_webhook_parts(*channel_id).await?;
-    if webhook_info.is_none() {
-        //nope, can we make one?
-        if ctx
-            .get_channel_permissions_for(ctx.bot_user.id, *channel_id)
-            .await
-            .contains(Permissions::MANAGE_WEBHOOKS)
-        {
-            let webhook = ctx
-                .http
-                .create_webhook(*channel_id, "GearBot moderation logs")
-                .avatar(GEARBOT_LOGO)
-                .await?;
-            let token = webhook.token.unwrap();
-            ctx.datastore
-                .insert_webhook(*channel_id, webhook.id, token.clone())
-                .await?;
-            webhook_info = Some((webhook.id, token))
+    let webhook_info = match ctx.datastore.get_webhook_parts(*channel_id).await? {
+        Some(hook) => Some(hook),
+        None => {
+            // Didn't have a webhook, see if we are allowed to create them.
+            if ctx
+                .get_channel_permissions_for(ctx.bot_user.id, *channel_id)
+                .await
+                .contains(Permissions::MANAGE_WEBHOOKS)
+            {
+                let webhook = ctx
+                    .http
+                    .create_webhook(*channel_id, GEARBOT_EMBED_SENDER)
+                    .avatar(GEARBOT_LOGO)
+                    .await?;
+
+                let token = webhook.token.unwrap();
+                ctx.datastore
+                    .insert_webhook(*channel_id, webhook.id, token.clone())
+                    .await?;
+
+                Some((webhook.id, token))
+            } else {
+                None
+            }
         }
-    }
+    };
+
     Ok(webhook_info)
+}
+
+#[derive(Clone, Copy)]
+enum SendStyle<'a> {
+    Channel,
+    Webhook(&'a (WebhookId, String)),
+}
+
+enum WebhookValidity {
+    Valid,
+    Unusable,
 }
 
 async fn send(
     ctx: &Arc<BotContext>,
     todo: &mut Vec<Arc<LogData>>,
-    left_over: &mut Vec<String>,
-    log_style: &LogStyle,
+    style: SendStyle<'_>,
     language: &LanguageIdentifier,
     channel_id: ChannelId,
-    webhook_info: &mut Option<(WebhookId, String)>,
     timestamp: bool,
-) -> Result<(), twilight_http::Error> {
-    match log_style {
-        LogStyle::Text => {
-            let mut output = String::from("");
-            //grab leftovers from last iteration
-            while let Some(item) = left_over.first() {
-                if output.len() + item.len() < 2000 {
-                    output += item;
-                    output += "\n";
-                    left_over.remove(0);
-                } else {
-                    break;
-                }
-            }
-
-            //keep grabbing items while we have some left
+) -> Result<Option<WebhookValidity>, twilight_http::Error> {
+    match style {
+        SendStyle::Channel => {
+            let mut output = String::new();
 
             while let Some(item) = todo.first() {
-                // get the user responsible
+                // Get the user responsible for causing the log event.
                 let user = match ctx.get_user(item.source_user).await {
                     Ok(user) => user,
                     Err(e) => {
@@ -257,7 +296,7 @@ async fn send(
                 let timestamp = if timestamp {
                     format!("`[{}]`", chrono::Utc::now().format("%T").to_string())
                 } else {
-                    String::from("")
+                    String::new()
                 };
 
                 let mut extra = format!(
@@ -266,21 +305,24 @@ async fn send(
                     item.log_type.emoji().for_chat(),
                     item.log_type.to_text(&ctx, language, &user, &item.source_channel)
                 );
-                extra.truncate(2000);
-                //only add to the output and remove from todo if it actually fits
-                if output.len() + extra.len() < 2000 {
+                extra.truncate(DISCORD_SIZE_LIMIT);
+
+                // Only add to the output and remove from todo if it actually fits
+                if output.len() + extra.len() < DISCORD_SIZE_LIMIT {
                     output += &extra;
                     output += "\n";
                     todo.remove(0);
                 } else {
-                    //didn't fit, we're done here
+                    // The message can't grow any longer without violating the size limit, time to send it.
                     break;
                 }
             }
-            // assembly done, pack it into the future
+
+            // Assembly done, pack it into the future
             ctx.http.create_message(channel_id).content(output).unwrap().await?;
+            Ok(None)
         }
-        LogStyle::Embed => {
+        SendStyle::Webhook(webhook) => {
             let mut out = vec![];
             for data in todo.drain(..) {
                 let user = match ctx.get_user(data.source_user).await {
@@ -304,40 +346,31 @@ async fn send(
                     }
                 }
             }
-            let (webhook_id, token) = webhook_info.as_ref().unwrap();
-            if let Err(e) = ctx.http.execute_webhook(*webhook_id, token).embeds(out).await {
-                match e {
-                    Error::Response { status, .. } => {
-                        if status == StatusCode::NOT_FOUND {
-                            //webhook is gone, remove it
-                            *webhook_info = None;
-                            if let Err(e) = ctx.datastore.remove_webhook(channel_id).await {
-                                gearbot_error!("Failed to remove webhook {} from the database: {}", channel_id, e)
-                            }
-                        }
-                    }
-                    _ => gearbot_error!("Logpump failure: {}", e),
+
+            let (webhook_id, token) = webhook;
+            match ctx.http.execute_webhook(*webhook_id, token).embeds(out).await {
+                Err(Error::Response { status, .. }) if status == StatusCode::NOT_FOUND => {
+                    Ok(Some(WebhookValidity::Unusable))
                 }
+                Err(e) => Err(e),
+                Ok(_) => Ok(Some(WebhookValidity::Valid)),
             }
         }
     }
-    Ok(())
 }
 
-async fn receive_up_to(count: usize, receiver: &mut UnboundedReceiver<Arc<LogData>>) -> Vec<Arc<LogData>> {
-    let mut out = vec![];
-    if let Ok(log_data) = tokio::time::timeout(Duration::from_secs(6), receiver.recv()).await {
-        //since we never drop the sender, we can never get a none value
+async fn receive_up_to(count: usize, receiver: &mut UnboundedReceiver<LogData>, out: &mut Vec<Arc<LogData>>) {
+    if let Ok(log_data) = timeout(RECV_TIMEOUT, receiver.recv()).await {
+        // Since we never drop the sender, this can't fail.
         let log_data = log_data.unwrap();
-        out.push(log_data);
+        out.push(Arc::new(log_data));
         if count > 1 {
-            while let Some(data) = receiver.recv().await {
-                out.push(data);
+            while let Ok(Some(data)) = timeout(RECV_TIMEOUT, receiver.recv()).await {
+                out.push(Arc::new(data));
                 if out.len() >= count {
                     break;
                 }
             }
         }
     }
-    out
 }
