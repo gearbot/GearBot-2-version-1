@@ -7,13 +7,12 @@ use std::process;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use futures_util::stream::StreamExt;
 use git_version::git_version;
 use log::{debug, info};
-use tokio::{self, runtime::Runtime, stream::StreamExt, sync::mpsc};
+use tokio::{self, runtime::Runtime, sync::mpsc};
 use twilight_gateway::{cluster::ShardScheme, shard::ResumeSession, Cluster, Event};
-use twilight_http::{
-    client::Proxy, request::channel::message::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient,
-};
+use twilight_http::{request::channel::allowed_mentions::AllowedMentionsBuilder, Client as HttpClient};
 use twilight_model::{
     gateway::{
         payload::update_status::UpdateStatusInfo,
@@ -80,13 +79,10 @@ async fn real_main() -> Result<(), StartupError> {
         .token(&config.tokens.discord)
         .default_allowed_mentions(AllowedMentionsBuilder::new().build_solo());
     if let Some(proxy_url) = &config.proxy_url {
-        builder = builder
-            .proxy(Proxy::all(proxy_url).unwrap())
-            .proxy_http(true)
-            .ratelimiter(None);
+        builder = builder.proxy(proxy_url, true).ratelimiter(None);
     }
 
-    let http = builder.build()?;
+    let http = builder.build();
     // Validate token and figure out who we are
     let bot_user = http.current_user().await?;
     println!(
@@ -257,7 +253,7 @@ async fn run(
     ctrlc::set_handler(move || {
         // We need a seperate runtime, because at this point in the program,
         // the tokio::main instance isn't running anymore.
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
         let _ = rt.block_on(shutdown_ctx.initiate_cold_resume());
         process::exit(0);
     })
@@ -266,7 +262,7 @@ async fn run(
     gearbot_info!("The cluster is going online!");
     let up_cluster = context.cluster.clone();
     tokio::spawn(async move {
-        tokio::time::delay_for(Duration::from_secs(1)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
         up_cluster.up().await;
     });
 
@@ -322,7 +318,7 @@ async fn run_metrics_server(stats: Arc<BotStats>) {
     });
 
     let addr = std::net::SocketAddr::from(([127, 0, 0, 1], 9091));
-    let server = hyper::Server::bind(&addr).serve(metric_service);
+    let server = hyper::server::Server::bind(&addr).serve(metric_service);
     if let Err(e) = server.await {
         gearbot_error!("The metrics server failed: {}", e)
     }

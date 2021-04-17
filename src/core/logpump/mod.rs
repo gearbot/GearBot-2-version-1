@@ -13,6 +13,7 @@ use crate::core::bot_context::BotContext;
 use crate::core::guild_config::LogStyle;
 use crate::error::OtherFailure;
 use crate::gearbot_error;
+use futures_util::FutureExt;
 use hyper::StatusCode;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -159,7 +160,8 @@ async fn pump(
     }
     receiver.close();
     let mut count = 0;
-    while receiver.try_recv().is_ok() {
+    // TODO: Clean this up.
+    while receiver.recv().now_or_never().is_some() {
         count += 1;
     }
     ctx.stats.logpump_stats.pending_logs.sub(count);
@@ -329,7 +331,7 @@ async fn receive_up_to(count: usize, receiver: &mut UnboundedReceiver<Arc<LogDat
         let log_data = log_data.unwrap();
         out.push(log_data);
         if count > 1 {
-            while let Ok(data) = receiver.try_recv() {
+            while let Some(data) = receiver.recv().await {
                 out.push(data);
                 if out.len() >= count {
                     break;

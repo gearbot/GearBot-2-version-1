@@ -96,6 +96,15 @@ pub enum CachedChannel {
         parent_id: Option<ChannelId>,
         permission_overrides: Vec<PermissionOverwrite>, //they might not allow for text, but they do have overrides
     },
+    StageChannel {
+        id: ChannelId,
+        guild_id: GuildId,
+        position: i64,
+        //should be always present in guild create,
+        name: String,
+        parent_id: Option<ChannelId>,
+        permission_overrides: Vec<PermissionOverwrite>,
+    },
 }
 
 impl CachedChannel {
@@ -111,6 +120,7 @@ impl CachedChannel {
             CachedChannel::Category { id, .. } => *id,
             CachedChannel::AnnouncementsChannel { id, .. } => *id,
             CachedChannel::StoreChannel { id, .. } => *id,
+            CachedChannel::StageChannel { id, .. } => *id,
         }
     }
 
@@ -124,6 +134,7 @@ impl CachedChannel {
             CachedChannel::Category { guild_id, .. } => Some(*guild_id),
             CachedChannel::AnnouncementsChannel { guild_id, .. } => Some(*guild_id),
             CachedChannel::StoreChannel { guild_id, .. } => Some(*guild_id),
+            CachedChannel::StageChannel { guild_id, .. } => Some(*guild_id),
         }
     }
 
@@ -139,6 +150,7 @@ impl CachedChannel {
             CachedChannel::Category { position, .. } => *position,
             CachedChannel::AnnouncementsChannel { position, .. } => *position,
             CachedChannel::StoreChannel { position, .. } => *position,
+            CachedChannel::StageChannel { position, .. } => *position,
         }
     }
 
@@ -151,9 +163,11 @@ impl CachedChannel {
             CachedChannel::Category { name, .. } => name,
             CachedChannel::AnnouncementsChannel { name, .. } => name,
             CachedChannel::StoreChannel { name, .. } => name,
+            CachedChannel::StageChannel { name, .. } => name,
         }
     }
 
+    // TODO: Deref this.
     pub fn get_topic(&self) -> &Option<String> {
         match self {
             CachedChannel::TextChannel { topic, .. } => topic,
@@ -163,6 +177,7 @@ impl CachedChannel {
             CachedChannel::Category { .. } => &None,
             CachedChannel::AnnouncementsChannel { .. } => &None,
             CachedChannel::StoreChannel { .. } => &None,
+            CachedChannel::StageChannel { .. } => &None,
         }
     }
 
@@ -188,6 +203,9 @@ impl CachedChannel {
             CachedChannel::StoreChannel {
                 permission_overrides, ..
             } => permission_overrides,
+            CachedChannel::StageChannel {
+                permission_overrides, ..
+            } => permission_overrides,
         }
     }
 
@@ -200,6 +218,7 @@ impl CachedChannel {
             CachedChannel::Category { .. } => false,
             CachedChannel::AnnouncementsChannel { .. } => false,
             CachedChannel::StoreChannel { .. } => false,
+            CachedChannel::StageChannel { .. } => false,
         }
     }
 
@@ -293,6 +312,14 @@ impl CachedChannel {
                 parent_id,
             },
             ChannelType::GuildStore => CachedChannel::StoreChannel {
+                id,
+                guild_id,
+                position,
+                name,
+                parent_id,
+                permission_overrides,
+            },
+            ChannelType::GuildStageVoice => CachedChannel::StageChannel {
                 id,
                 guild_id,
                 position,

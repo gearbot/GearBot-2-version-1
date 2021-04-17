@@ -8,6 +8,7 @@ use twilight_gateway::Event;
 use twilight_model::channel::{Channel, GuildChannel, PrivateChannel};
 use twilight_model::gateway::payload::RequestGuildMembers;
 use twilight_model::gateway::presence::{ActivityType, Status};
+use twilight_model::guild::GuildStatus;
 use twilight_model::id::{ChannelId, EmojiId, GuildId, UserId};
 use twilight_model::user::User;
 
@@ -88,9 +89,11 @@ impl Cache {
                     .insert(shard_id, AtomicU64::new(ready.guilds.len() as u64));
                 // just in case somehow got here without getting any re-identifying event
                 // shouldn't happen but memory leaks are very bad
-                for gid in ready.guilds.keys() {
-                    if let Some(guild) = self.get_guild(gid).await {
-                        self.nuke_guild_cache(&guild).await
+                for guild in &ready.guilds {
+                    if let GuildStatus::Online(guild) = guild {
+                        if let Some(guild) = self.get_guild(&guild.id).await {
+                            self.nuke_guild_cache(&guild).await
+                        }
                     }
                 }
             }
@@ -179,9 +182,10 @@ impl Cache {
                 match self.get_guild(&chunk.guild_id).await {
                     Some(guild) => {
                         let mut count = 0;
-                        for (user_id, member) in &chunk.members {
+                        for member in &chunk.members {
+                            let user_id = member.user.id;
                             let mut members = guild.members.write().await;
-                            if !members.contains_key(user_id) {
+                            if !members.contains_key(&user_id) {
                                 count += 1;
                                 self.get_or_insert_user(&member.user).await;
                                 let member = Arc::new(CachedMember::from_member(member));
@@ -193,7 +197,7 @@ impl Cache {
                                     guild.id,
                                     count,
                                 );
-                                members.insert(*user_id, member);
+                                members.insert(user_id, member);
                             }
                         }
                         self.stats.user_counts.total.add(count);

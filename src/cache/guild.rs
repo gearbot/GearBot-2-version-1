@@ -81,24 +81,24 @@ impl CachedGuild {
         //handle roles
         {
             let mut roles = cached_guild.roles.write().await;
-            for (role_id, role) in guild.roles {
-                roles.insert(role_id, Arc::new(CachedRole::from_role(&role)));
+            for role in guild.roles {
+                roles.insert(role.id, Arc::new(CachedRole::from_role(&role)));
             }
         }
 
         //channels
         {
             let mut channels = cached_guild.channels.write().await;
-            for (channel_id, channel) in guild.channels {
+            for channel in guild.channels {
                 channels.insert(
-                    channel_id,
+                    channel.id(),
                     Arc::new(CachedChannel::from_guild_channel(&channel, guild.id)),
                 );
             }
         }
 
         //emoji
-        for (_, emoji) in guild.emojis {
+        for emoji in guild.emojis {
             cached_guild.emoji.push(Arc::new(CachedEmoji::from(emoji)));
         }
 
@@ -197,7 +197,7 @@ impl CachedGuild {
 
         {
             let mut roles = guild.roles.write().await;
-            for role in other.roles.values() {
+            for role in &other.roles {
                 roles.insert(role.id, Arc::new(CachedRole::from_role(role)));
             }
         }
@@ -429,6 +429,21 @@ impl ColdStorageGuild {
                     parent_id,
                     permission_overrides,
                 } => CachedChannel::StoreChannel {
+                    id: *id,
+                    guild_id: *guild_id,
+                    position: *position,
+                    name: name.clone(),
+                    parent_id: *parent_id,
+                    permission_overrides: permission_overrides.clone(),
+                },
+                CachedChannel::StageChannel {
+                    id,
+                    guild_id,
+                    position,
+                    name,
+                    parent_id,
+                    permission_overrides,
+                } => CachedChannel::StageChannel {
                     id: *id,
                     guild_id: *guild_id,
                     position: *position,

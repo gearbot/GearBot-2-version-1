@@ -10,6 +10,7 @@ use log::{Level, LevelFilter, Record};
 use once_cell::sync::OnceCell;
 use twilight_http::Client as HttpClient;
 use twilight_model::user::CurrentUser;
+use twilight_util::link::webhook::parse as parse_webhook;
 
 use crate::core::BotConfig;
 use crate::error::StartupError;
@@ -127,12 +128,12 @@ pub fn run_logging_queue(http: HttpClient, queue: LogQueue, url: String, user: A
                 if let Err(e) = send_webhook(&http, &url, &user, &message).await {
                     if e.to_string().contains("Response got 429: Response") {
                         queue.write().unwrap().push_front(message);
-                        tokio::time::delay_for(Duration::from_secs(1)).await;
+                        tokio::time::sleep(Duration::from_secs(1)).await;
                     }
                 }
             }
 
-            tokio::time::delay_for(Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
 }
@@ -143,9 +144,10 @@ async fn send_webhook(
     user: &CurrentUser,
     message: &str,
 ) -> Result<(), twilight_http::Error> {
+    let (id, token) = parse_webhook(url).unwrap();
     let executor = {
         let raw = http
-            .execute_webhook_from_url(url)?
+            .execute_webhook(id, token.unwrap())
             .content(message)
             .username(&user.name);
 
